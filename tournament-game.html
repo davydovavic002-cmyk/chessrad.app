@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Турнирная Игра - Шахматы Онлайн</title>
+    <link rel="stylesheet" href="/css/chessboard-1.0.0.min.css">
+    <link rel="stylesheet" href="/css/tournament-game.css">
+</head>
+<body>
+
+    <div class="container">
+        <div class="game-area">
+            <div id="opponent-info" class="player-panel">
+                <span class="player-name">Загрузка...</span>
+                <div id="opponent-timer" class="timer">05:00</div>
+            </div>
+
+            <div id="myBoard"></div>
+
+            <div id="me-info" class="player-panel">
+                <span class="player-name">Вы</span>
+                <div id="me-timer" class="timer">05:00</div>
+            </div>
+
+            <div id="turn-info" class="waiting-turn">Ожидание начала...</div>
+        </div>
+
+        <div class="info-panel">
+            <div class="status-box">
+                <h3>Статус</h3>
+                <p id="status">Подключение к серверу...</p>
+            </div>
+
+            <div class="controls">
+                <button id="resign-btn">Сдаться</button>
+                <button id="return-to-tournament-btn">В лобби турнира</button>
+            </div>
+
+            <div class="debug-box">
+                <h3>История (PGN)</h3>
+                <pre id="pgn">-</pre>
+                <p style="font-size: 10px; color: #555;">FEN: <span id="fen">-</span></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/jquery-3.4.1.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/js/chessboard-1.0.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.2/chess.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="/js/tournament-game.js"></script>
+</body>
+</html>
