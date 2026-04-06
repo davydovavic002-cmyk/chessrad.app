@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Редактор библиотеки - ChessRad</title>
+    <link rel="stylesheet" href="/css/chessboard-1.0.0.min.css">
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+    <style>
+        :root { --primary-blue: #3498db; --bg-light: #f4f7f6; }
+        body { background: var(--bg-light); font-family: 'Segoe UI', sans-serif; }
+
+        .editor-container { max-width: 1600px; margin: 20px auto; display: flex; gap: 20px; padding: 0 20px; align-items: flex-start; }
+
+        /* Левая панель с доской */
+        .board-section { flex: 0 0 400px; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); position: sticky; top: 20px; }
+
+        /* Правая панель со структурой */
+        .form-section { flex: 1; min-width: 0; }
+
+        /* Разделы */
+        .big-folder-container { background: white; border-radius: 10px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); overflow: hidden; }
+        .big-folder-header { background: #f8f9fa; padding: 12px 15px; cursor: pointer; display: flex; align-items: center; font-weight: bold; border-bottom: 1px solid #eee; font-size: 16px; }
+        .big-folder-header i { margin-right: 10px; color: var(--primary-blue); }
+
+        /* Сетка папок */
+        .big-folder-content { padding: 15px; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+
+        .folder-card { background: #fff; border: 1px solid #eee; border-radius: 8px; padding: 15px 5px; text-align: center; cursor: pointer; transition: 0.2s; }
+        .folder-card:hover { border-color: var(--primary-blue); background: #f0f7ff; transform: translateY(-2px); }
+        .folder-card div:first-child { font-size: 24px; margin-bottom: 5px; }
+        .folder-card strong { font-size: 14px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .folder-card .count { font-size: 11px; color: #999; margin-top: 4px; }
+
+        /* Список позиций - УВЕЛИЧЕННЫЕ ПЛИТКИ */
+        .positions-sortable-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px; }
+        .pos-sort-item { display: flex; align-items: center; background: white; border: 1px solid #eee; padding: 10px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        .pos-mini-preview { width: 120px; height: 120px; border-radius: 6px; border: 1px solid #ddd; overflow: hidden; background: #eee; }
+        .pos-details { flex: 1; padding: 0 15px; overflow: hidden; }
+        .pos-details strong { font-size: 15px; display: block; color: #2c3e50; margin-bottom: 5px; }
+
+        /* Модалка */
+        .modal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
+        .modal-content { background: white; padding: 30px; border-radius: 15px; width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px; }
+        .form-group input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+
+        .btn-save-main { background: #2ecc71; color: white; border: none; padding: 14px; border-radius: 8px; width: 100%; font-weight: bold; cursor: pointer; font-size: 15px; }
+        .btn-edit-small { border:none; background:#f0f4f8; cursor:pointer; color: var(--primary-blue); padding: 8px; border-radius: 6px; }
+
+        .back-btn { margin-bottom: 20px; cursor: pointer; color: var(--primary-blue); font-weight: bold; display: flex; align-items: center; gap: 8px; font-size: 16px; }
+        #fen-display { background: #2c3e50; color: #fff; padding: 10px; margin-top: 10px; border-radius: 6px; font-family: monospace; font-size: 11px; word-break: break-all; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<div class="editor-container">
+    <div class="board-section">
+        <h3 style="margin-top:0">Конструктор</h3>
+        <div id="board" style="width: 100%;"></div>
+        <div id="fen-display">FEN: start</div>
+        <div style="margin-top: 15px; display: flex; gap: 10px;">
+            <button onclick="board.start()" style="flex:1; padding: 10px;">Начальная</button>
+            <button onclick="board.clear()" style="flex:1; padding: 10px;">Очистить</button>
+        </div>
+        <button class="btn-save-main" style="margin-top: 15px;" onclick="openSaveModal()">
+            <i class="fas fa-plus"></i> Сохранить позицию
+        </button>
+    </div>
+
+    <div class="form-section">
+        <div id="library-view">
+            <h2 style="margin-top:0; font-size: 24px;">Библиотека разделов</h2>
+            <div id="big-folders-root"></div>
+        </div>
+
+        <div id="folder-detail-view" class="hidden">
+            <div class="back-btn" onclick="showRoot()"><i class="fas fa-arrow-left"></i> Назад</div>
+            <h3 id="current-folder-title" style="margin-top:0; color: var(--primary-blue);">Папка</h3>
+            <div id="positions-sortable" class="positions-sortable-list"></div>
+        </div>
+    </div>
+</div>
+
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <h3 id="modal-title" style="margin-top:0">Сохранение</h3>
+        <input type="hidden" id="edit-pos-id">
+
+        <div class="form-group">
+            <label>Название позиции</label>
+            <input type="text" id="pos-title" placeholder="Например: Мат в 1 ход">
+        </div>
+
+        <div class="form-group">
+            <label>Раздел (Надпапка)</label>
+            <input type="text" id="pos-big-folder" list="big-folder-list" placeholder="Например: Эндшпиль">
+            <datalist id="big-folder-list"></datalist>
+        </div>
+
+        <div class="form-group">
+            <label>Папка (Тема)</label>
+            <input type="text" id="pos-category" list="category-list" placeholder="Например: Вилки">
+            <datalist id="category-list"></datalist>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button class="btn-save-main" onclick="savePositionData()">Записать</button>
+            <button onclick="closeModal()" style="background:#eee; border:none; padding:12px; border-radius:8px; cursor:pointer; flex:1">Отмена</button>
+        </div>
+    </div>
+</div>
+
+<script src="/js/jquery-3.4.1.min.js"></script>
+<script src="/js/chessboard-1.0.0.min.js"></script>
+
+<script>
+    let board = Chessboard('board', {
+        draggable: true, dropOffBoard: 'trash', sparePieces: true, position: 'start',
+        onChange: (oldP, newP) => {
+            document.getElementById('fen-display').innerText = 'FEN: ' + Chessboard.objToFen(newP) + ' w - - 0 1';
+        }
+    });
+
+    let allPositions = [];
+
+    async function loadLibrary() {
+        const res = await fetch('/api/positions');
+        allPositions = await res.json();
+        updateDatalists();
+        renderBigFolders();
+    }
+
+    function updateDatalists() {
+        const bigs = [...new Set(allPositions.map(p => p.big_folder || 'Без раздела'))];
+        const cats = [...new Set(allPositions.map(p => p.category || 'Общее'))];
+        document.getElementById('big-folder-list').innerHTML = bigs.map(b => `<option value="${b}">`).join('');
+        document.getElementById('category-list').innerHTML = cats.map(c => `<option value="${c}">`).join('');
+    }
+
+    function renderBigFolders() {
+        const root = document.getElementById('big-folders-root');
+        root.innerHTML = '';
+        const bigs = [...new Set(allPositions.map(p => p.big_folder || 'Без раздела'))].sort();
+
+        bigs.forEach(bigName => {
+            const section = document.createElement('div');
+            section.className = 'big-folder-container';
+            const subPositions = allPositions.filter(p => (p.big_folder || 'Без раздела') === bigName);
+            const subFolders = [...new Set(subPositions.map(p => p.category || 'Общее'))].sort();
+
+            section.innerHTML = `
+                <div class="big-folder-header" onclick="$(this).next().slideToggle(150)">
+                    <i class="fas fa-layer-group"></i> ${bigName}
+                </div>
+                <div class="big-folder-content">
+                    ${subFolders.map(sub => `
+                        <div class="folder-card" onclick="openFolder('${bigName}', '${sub}')">
+                            <div>📂</div>
+                            <strong>${sub}</strong>
+                            <div class="count">${subPositions.filter(p => p.category === sub).length} поз.</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            root.appendChild(section);
+        });
+    }
+
+    function openFolder(big, sub) {
+        document.getElementById('library-view').classList.add('hidden');
+        document.getElementById('folder-detail-view').classList.remove('hidden');
+        document.getElementById('current-folder-title').innerText = `${big} / ${sub}`;
+
+        const list = document.getElementById('positions-sortable');
+        list.innerHTML = '';
+        const folderItems = allPositions
+            .filter(p => (p.big_folder || 'Без раздела') === big && (p.category || 'Общее') === sub)
+            .sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+
+        folderItems.forEach(pos => {
+            const item = document.createElement('div');
+            item.className = 'pos-sort-item';
+            item.dataset.id = pos.id;
+            item.innerHTML = `
+                <div class="drag-handle" style="cursor:grab; padding:10px; color:#ccc"><i class="fas fa-grip-lines"></i></div>
+                <div id="mini-${pos.id}" class="pos-mini-preview"></div>
+                <div class="pos-details"><strong>${pos.title}</strong></div>
+                <div style="display:flex; gap:5px">
+                    <button onclick="editPos(${pos.id})" class="btn-edit-small"><i class="fas fa-edit"></i></button>
+                    <button onclick="deletePos(${pos.id})" class="btn-edit-small" style="color:#e74c3c"><i class="fas fa-trash"></i></button>
+                </div>
+            `;
+            list.appendChild(item);
+            setTimeout(() => Chessboard(`mini-${pos.id}`, { position: pos.fen, draggable: false }), 50);
+        });
+
+        new Sortable(list, {
+            handle: '.drag-handle',
+            animation: 150,
+            onEnd: async () => {
+                const order = Array.from(list.children).map((el, idx) => ({ id: el.dataset.id, order_index: idx }));
+                await fetch('/api/positions/reorder', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ positions: order })
+                });
+            }
+        });
+    }
+
+    function openSaveModal() {
+        document.getElementById('modal-title').innerText = "Новая позиция";
+        document.getElementById('edit-pos-id').value = '';
+        document.getElementById('editModal').style.display = 'flex';
+    }
+
+    function editPos(id) {
+        const pos = allPositions.find(p => p.id == id);
+        document.getElementById('edit-pos-id').value = pos.id;
+        document.getElementById('pos-title').value = pos.title;
+        document.getElementById('pos-big-folder').value = pos.big_folder || '';
+        document.getElementById('pos-category').value = pos.category || '';
+        document.getElementById('editModal').style.display = 'flex';
+        board.position(pos.fen);
+    }
+
+    async function savePositionData() {
+        const id = document.getElementById('edit-pos-id').value;
+        const title = document.getElementById('pos-title').value.trim();
+        const big_folder = document.getElementById('pos-big-folder').value.trim() || 'Без раздела';
+        const category = document.getElementById('pos-category').value.trim() || 'Общее';
+        const fen = document.getElementById('fen-display').innerText.replace('FEN: ', '');
+
+        if (!title) return alert('Название обязательно');
+
+        const method = id ? 'PUT' : 'POST';
+        const url = id ? `/api/positions/${id}` : '/api/positions';
+
+        await fetch(url, {
+            method: method,
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ title, big_folder, category, fen })
+        });
+
+        closeModal();
+        loadLibrary();
+        showRoot();
+    }
+
+    function closeModal() {
+        document.getElementById('editModal').style.display = 'none';
+        document.getElementById('pos-title').value = '';
+    }
+
+    function showRoot() {
+        document.getElementById('library-view').classList.remove('hidden');
+        document.getElementById('folder-detail-view').classList.add('hidden');
+        loadLibrary();
+    }
+
+    async function deletePos(id) {
+        if(confirm('Удалить позицию?')) {
+            await fetch(`/api/positions/${id}`, { method: 'DELETE' });
+            loadLibrary();
+            showRoot();
+        }
+    }
+
+    loadLibrary();
+</script>
+</body>
+</html>
