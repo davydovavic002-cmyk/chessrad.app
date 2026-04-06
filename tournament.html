@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Турнир - Шахматы Онлайн</title>
+    <link rel="stylesheet" href="/css/tournament.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div class="tournament-container">
+
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>Шахматный Турнир</h1>
+            </div>
+
+            <div id="user-status" class="user-profile-box"></div>
+
+            <div class="status-card">
+                <p>Статус: <span id="tournamentstatus">Загрузка...</span></p>
+                <p>Раунд: <span id="roundnumber">0</span></p>
+            </div>
+
+            <div class="actions">
+                <button id="registerBtn" class="btn-primary">Зарегистрироваться</button>
+                </div>
+
+            <div class="participants-section">
+                <h3>Участники <span id="playercount">(0)</span></h3>
+                <ul id="playerlist"></ul>
+            </div>
+
+            <div class="sidebar-footer">
+                <a href="/lobby" class="back-link">← Вернуться в лобби</a>
+            </div>
+        </aside>
+
+        <main class="main-content">
+
+            <section class="section-box">
+                <h2>Пары текущего раунда</h2>
+                <div class="table-wrapper">
+                    <table id="pairingstable">
+                        <thead>
+                            <tr>
+                                <th>⚪ Белые</th>
+                                <th>⚫ Черные</th>
+                                <th>📊 Результат / Вход</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="section-box">
+                <h2>Турнирная таблица</h2>
+                <div class="table-wrapper">
+                    <table id="standingstable">
+                        <thead>
+                            <tr>
+                                <th class="col-rank">#</th>
+                                <th class="col-player">👤 Участник</th>
+                                <th class="col-stat">🏆 Очки</th>
+                                <th class="col-stat">✅ Победы</th>
+                                <th class="col-stat">🤝 Ничьи</th>
+                                <th class="col-stat">❌ Поражения</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            </tbody>
+                    </table>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script src="/js/jquery-3.4.1.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="/js/tournament.js"></script>
+</body>
+</html>
