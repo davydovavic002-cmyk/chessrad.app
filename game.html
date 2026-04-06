@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Игра - Шахматы Онлайн</title>
+
+    <link rel="stylesheet" href="/css/chessboard-1.0.0.min.css">
+    <link rel="stylesheet" href="/css/game.css">
+    <style>
+        /* Стиль для огненной серии в игре */
+        .streak-fire {
+            display: inline-block;
+            margin-bottom: 10px;
+            padding: 5px 15px;
+            border-radius: 20px;
+            background: linear-gradient(45deg, #ff4500, #ff8c00);
+            color: white;
+            font-weight: bold;
+            font-family: 'Inter', sans-serif;
+            box-shadow: 0 0 10px rgba(255, 69, 0, 0.5);
+            animation: pulse-fire 2s infinite;
+            display: none; /* Скрыто, пока серия < 3 */
+        }
+        @keyframes pulse-fire {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+
+        <div class="game-area">
+            <div id="player-streak" class="streak-fire">🔥 Серия побед: <span id="streak-count">0</span></div>
+
+            <div id="turn-info">Ожидание начала игры...</div>
+            <div id="myBoard"></div>
+        </div>
+
+        <div class="info-panel">
+
+            <div class="status-box">
+                <h3>Статус</h3>
+                <p id="status">Подключение к серверу...</p>
+            </div>
+
+            <div class="controls">
+                <button id="find-game-btn">Найти игру</button>
+
+                <div id="game-controls" style="display: none;">
+                    <button id="resign-btn">Сдаться</button>
+                    <button id="rematch-btn" style="display: none;">Реванш</button>
+                </div>
+
+                <a href="/lobby.html" class="button-link">Вернуться в лобби</a>
+            </div>
+
+            <div class="debug-box">
+                <h3>Отладочная информация</h3>
+                <p>FEN: <code id="fen">-</code></p>
+                <p>PGN:</p>
+                <pre id="pgn">-</pre>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="/js/jquery-3.4.1.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/js/chessboard-1.0.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.2/chess.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="/js/game.js"></script>
+
+</body>
+</html>
