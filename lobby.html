@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+
+<html lang="ru">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Лобби - ChessRad</title>
+
+    <link rel="stylesheet" href="/css/style.css">
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+
+    <script src="/socket.io/socket.io.js"></script>
+
+    <style>
+
+        .win-streak-badge {
+
+            background: #2c2c2c;
+
+            padding: 2px 8px;
+
+            border-radius: 10px;
+
+            font-size: 0.9em;
+
+            margin-left: 10px;
+
+        }
+
+        .streak-active {
+
+            color: #ff4500;
+
+            border: 1px solid #ff4500;
+
+        }
+
+
+
+        /* Стили для новой карточки стрика */
+
+        .streak-daily-card {
+
+            position: relative;
+
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+
+            overflow: hidden;
+
+            cursor: pointer;
+
+        }
+
+
+
+        /* Состояние: Нужно выполнить (Огненный градиент) */
+
+        .streak-urgent {
+
+            background: linear-gradient(135deg, #ff9f43 0%, #ff6b6b 100%) !important;
+
+            border: none !important;
+
+            animation: pulse-streak 2s infinite;
+
+        }
+
+        .streak-urgent h3, .streak-urgent p { color: white !important; }
+
+
+
+        /* Состояние: Выполнено (Спокойный зеленый) */
+
+        .streak-completed {
+
+            background: #f0fff4 !important;
+
+            border: 2px solid #2ecc71 !important;
+
+        }
+
+
+
+        /* Состояние: СТРИК СГОРЕЛ (Серый/Мрачный) */
+
+        .streak-broken {
+
+            background: #2d3436 !important;
+
+            border: 2px dashed #636e72 !important;
+
+            opacity: 0.9;
+
+        }
+
+        .streak-broken h3, .streak-broken p { color: #dfe6e9 !important; }
+
+        .streak-broken .card-icon {
+
+            animation: shake-broken 3s infinite;
+
+            filter: grayscale(1);
+
+        }
+
+
+
+        .streak-progress-mini {
+
+            width: 100%;
+
+            height: 6px;
+
+            background: rgba(0,0,0,0.1);
+
+            border-radius: 3px;
+
+            margin-top: 8px;
+
+        }
+
+        #streak-bar-fill {
+
+            height: 100%;
+
+            width: 0%;
+
+            background: #fff;
+
+            border-radius: 3px;
+
+            transition: width 0.5s ease;
+
+        }
+
+        .streak-completed #streak-bar-fill { background: #2ecc71; }
+
+
+
+        /* МОДАЛЬНОЕ ОКНО ВОССТАНОВЛЕНИЯ */
+
+        .restore-modal-overlay {
+
+            position: fixed;
+
+            top: 0; left: 0; width: 100%; height: 100%;
+
+            background: rgba(0,0,0,0.85);
+
+            display: none;
+
+            justify-content: center;
+
+            align-items: center;
+
+            z-index: 1000;
+
+            backdrop-filter: blur(5px);
+
+        }
+
+        .restore-modal {
+
+            background: #1a1a1a;
+
+            padding: 30px;
+
+            border-radius: 20px;
+
+            max-width: 400px;
+
+            text-align: center;
+
+            border: 1px solid #3d3d3d;
+
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+
+        }
+
+        .restore-modal h2 { color: #fff; margin-bottom: 10px; }
+
+        .restore-modal p { color: #b2bec3; margin-bottom: 25px; line-height: 1.5; }
+
+        .restore-icon-big { font-size: 50px; margin-bottom: 15px; display: block; }
+
+        .btn-restore-start {
+
+            background: #0984e3;
+
+            color: white;
+
+            border: none;
+
+            padding: 12px 25px;
+
+            border-radius: 12px;
+
+            font-weight: bold;
+
+            cursor: pointer;
+
+            width: 100%;
+
+            font-size: 1.1em;
+
+            transition: 0.2s;
+
+        }
+
+        .btn-restore-start:hover { background: #74b9ff; transform: translateY(-2px); }
+
+        .btn-restore-close {
+
+            background: transparent;
+
+            color: #636e72;
+
+            border: none;
+
+            margin-top: 15px;
+
+            cursor: pointer;
+
+            text-decoration: underline;
+
+        }
+
+
+
+        @keyframes pulse-streak {
+
+            0% { transform: scale(1); }
+
+            50% { transform: scale(1.02); box-shadow: 0 0 20px rgba(255, 107, 107, 0.4); }
+
+            100% { transform: scale(1); }
+
+        }
+
+
+
+        @keyframes shake-broken {
+
+            0%, 100% { transform: rotate(0deg); }
+
+            10%, 30%, 50% { transform: rotate(-5deg); }
+
+            20%, 40%, 60% { transform: rotate(5deg); }
+
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+
+
+    <div class="lobby-container">
+
+        <header class="lobby-header">
+
+            <div class="logo-area">
+
+                <h1>ChessRad</h1>
+
+                <span class="badge">Online</span>
+
+            </div>
+
+            <div id="user-status" class="user-info"></div>
+
+        </header>
+
+
+
+        <main class="lobby-content">
+
+            <h2>Добро пожаловать в студию</h2>
+
+            <p class="subtitle">Выберите режим игры или проверьте свои достижения</p>
+
+
+
+            <div class="menu-grid">
+
+                <div class="menu-card primary" id="find-game-btn">
+
+                    <div class="card-icon">⚔️</div>
+
+                    <div class="card-text">
+
+                        <h3>Найти игру</h3>
+
+                        <p>Быстрый матч 1x1</p>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="menu-card" id="profile-btn">
+
+                    <div class="card-icon">👤</div>
+
+                    <div class="card-text">
+
+                        <h3>Мой профиль</h3>
+
+                        <p>Статистика и рейтинг</p>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="menu-card" id="tournaments-btn">
+
+                    <div class="card-icon">🏆</div>
+
+                    <div class="card-text">
+
+                        <h3>Турниры</h3>
+
+                        <p>Битва за звание чемпиона</p>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="menu-card streak-daily-card" id="puzzles-btn">
+
+                    <div class="card-icon" id="streak-icon">🔥</div>
+
+                    <div class="card-text">
+
+                        <h3 id="streak-title">Задание дня</h3>
+
+                        <p id="streak-subtitle">Загрузка прогресса...</p>
+
+                        <div class="streak-progress-mini">
+
+                            <div id="streak-bar-fill"></div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+
+                <div id="admin-card-container"></div>
+
+            </div>
+
+
+
+            <div class="lobby-section study-section">
+
+                <h2>Обучение</h2>
+
+                <div id="study-controls">
+
+                    <div class="menu-card primary study-card">
+
+                        <div class="card-text"><h3>Загрузка...</h3></div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </main>
+
+    </div>
+
+
+
+    <div id="restore-streak-modal" class="restore-modal-overlay">
+
+        <div class="restore-modal">
+
+            <span class="restore-icon-big">💔</span>
+
+            <h2>Твой стрик сгорел!</h2>
+
+            <p id="restore-modal-text">Ты не решал задачи более 48 часов. У тебя был стрик в <b>0</b> дней. Хочешь вернуть его?</p>
+
+            <button class="btn-restore-start" id="start-restore-battle">⚔️ Победить бота и вернуть</button>
+
+            <button class="btn-restore-close" onclick="closeRestoreModal()">Позже</button>
+
+        </div>
+
+    </div>
+
+<div id="bot-game-overlay" class="restore-modal-overlay">
+    <div class="restore-modal" style="max-width: 450px; height: 650px; display: flex; flex-direction: column;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h3 style="color: white; margin: 0;">Битва с ботом</h3>
+            <button onclick="closeBotGame()" style="background: none; border: none; color: #ff6b6b; font-size: 30px; cursor: pointer;">&times;</button>
+        </div>
+        <iframe id="bot-game-iframe" src="" style="width: 100%; height: 100%; border: none; border-radius: 12px; background: #1a1a1a;"></iframe>
+    </div>
+</div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+
+// Функции управления модалкой бота (чтобы не дублировать в lobby.js)
+        function openBotGame(mode = 'restore_streak') {
+            const overlay = document.getElementById('bot-game-overlay');
+            const iframe = document.getElementById('bot-game-iframe');
+            iframe.src = `/play-bot.html?mode=${mode}`; // Твой файл с игрой
+            overlay.style.display = 'flex';
+        }
+
+        function closeBotGame() {
+            document.getElementById('bot-game-overlay').style.display = 'none';
+            document.getElementById('bot-game-iframe').src = '';
+            if (typeof setupDailyTaskCard === 'function') setupDailyTaskCard(); // Обновляем карточку
+        }
+
+        // Твои старые функции (openRestoreModal и т.д.)
+        function openRestoreModal(days) {
+            document.getElementById('restore-modal-text').innerHTML = `Ты не решал задачи более 48 часов. Твой стрик в <b>${days} дн.</b> превратился в пепел. Победи бота, чтобы воскресить его!`;
+            document.getElementById('restore-streak-modal').style.display = 'flex';
+        }
+
+        function closeRestoreModal() {
+            document.getElementById('restore-streak-modal').style.display = 'none';
+        }
+
+        // Привязка кнопки старта к новой модалке с iframe
+        document.getElementById('start-restore-battle').onclick = () => {
+            closeRestoreModal();
+            openBotGame('restore_streak');
+        };
+
+        // Слушаем сигнал о победе из iframe
+        window.addEventListener('message', (event) => {
+            if (event.data.type === 'STREAK_RESTORED') {
+                closeBotGame();
+            }
+        });
+    </script>
+
+    <script src="/js/lobby.js"></script>
+
+</body>
+
+</html>
