@@ -1,0 +1,104 @@
+/* Tournament game */
+
+.tournament-game-page {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    padding: 24px;
+}
+
+.tournament-game-layout {
+    display: flex;
+    gap: 28px;
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+.player-panel {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    max-width: 500px;
+    padding: 14px 20px;
+    margin-bottom: 8px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+}
+
+.player-name {
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.timer {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    padding: 4px 12px;
+    background: rgba(255, 255, 255, 0.25);
+    border-radius: var(--radius-sm);
+}
+
+.timer.active-timer {
+    color: var(--peach-600);
+    background: rgba(255, 143, 98, 0.2);
+    animation: timer-pulse 1s infinite;
+}
+
+.waiting-turn {
+    text-align: center;
+    margin-top: 12px;
+    padding: 10px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--peach-600);
+}
+
+.waiting-turn.active-turn {
+    background: rgba(255, 143, 98, 0.15);
+    border-radius: var(--radius-full);
+}
+
+.win { color: var(--emerald); }
+.loss { color: var(--coral); }
+
+#promotion-modal {
+    background: var(--glass-bg-strong) !important;
+    backdrop-filter: blur(var(--glass-blur-lg)) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: var(--radius-lg) !important;
+}
+
+#promotion-modal h3 {
+    color: var(--text-primary) !important;
+    font-family: var(--font-display) !important;
+}
+
+.promo-choice {
+    width: 60px !important;
+    height: 60px !important;
+    font-size: 36px !important;
+    background: rgba(255, 255, 255, 0.4) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: var(--radius-sm) !important;
+    cursor: pointer;
+    transition: transform var(--transition);
+}
+
+.promo-choice:hover {
+    transform: scale(1.1);
+    background: rgba(255, 255, 255, 0.6) !important;
+}
+
+@keyframes timer-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+@media (max-width: 900px) {
+    .tournament-game-layout { flex-direction: column; }
+}

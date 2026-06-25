@@ -1,0 +1,159 @@
+/* ChessRad Design System — Peach Glassmorphism */
+
+:root {
+    --peach-50: #fff8f4;
+    --peach-100: #ffe8dc;
+    --peach-200: #ffd0b8;
+    --peach-300: #ffb088;
+    --peach-400: #ff8f62;
+    --peach-500: #ff7043;
+    --peach-600: #e85a2e;
+    --peach-700: #c44420;
+    --coral: #ff6b6b;
+    --rose: #ff8fa3;
+    --amber: #ffb347;
+    --mint: #6ee7b7;
+    --emerald: #34d399;
+
+    --text-primary: #2d1f1a;
+    --text-secondary: rgba(45, 31, 26, 0.72);
+    --text-muted: rgba(45, 31, 26, 0.5);
+    --text-on-glass: #3d2a22;
+
+    --glass-bg: rgba(255, 255, 255, 0.22);
+    --glass-bg-strong: rgba(255, 255, 255, 0.38);
+    --glass-bg-dark: rgba(255, 200, 170, 0.15);
+    --glass-border: rgba(255, 255, 255, 0.45);
+    --glass-border-soft: rgba(255, 255, 255, 0.25);
+    --glass-shadow: 0 8px 32px rgba(255, 112, 67, 0.12);
+    --glass-shadow-lg: 0 20px 60px rgba(255, 112, 67, 0.18);
+    --glass-blur: 20px;
+    --glass-blur-lg: 32px;
+
+    --radius-sm: 10px;
+    --radius-md: 16px;
+    --radius-lg: 24px;
+    --radius-xl: 32px;
+    --radius-full: 9999px;
+
+    --font-display: 'Syne', system-ui, sans-serif;
+    --font-body: 'Outfit', system-ui, sans-serif;
+
+    --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: var(--font-body);
+    color: var(--text-primary);
+    min-height: 100vh;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    background: linear-gradient(135deg, #fff5f0 0%, #ffe4d6 25%, #ffd4c4 50%, #ffc9b0 75%, #ffb8a0 100%);
+    background-attachment: fixed;
+    position: relative;
+    overflow-x: hidden;
+}
+
+body::before,
+body::after {
+    content: '';
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.5;
+    pointer-events: none;
+    z-index: 0;
+}
+
+body::before {
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(255, 143, 98, 0.4) 0%, transparent 70%);
+    top: -200px;
+    right: -100px;
+    animation: float-orb 20s ease-in-out infinite;
+}
+
+body::after {
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(255, 107, 107, 0.3) 0%, transparent 70%);
+    bottom: -150px;
+    left: -100px;
+    animation: float-orb 25s ease-in-out infinite reverse;
+}
+
+@keyframes float-orb {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(30px, -20px) scale(1.05); }
+    66% { transform: translate(-20px, 30px) scale(0.95); }
+}
+
+h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+}
+
+a {
+    color: var(--peach-600);
+    text-decoration: none;
+    transition: color var(--transition);
+}
+
+a:hover {
+    color: var(--peach-700);
+}
+
+code, pre {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.85em;
+}
+
+::selection {
+    background: rgba(255, 112, 67, 0.3);
+    color: var(--text-primary);
+}
+
+/* SweetAlert2 glass theme override */
+.swal2-popup {
+    background: var(--glass-bg-strong) !important;
+    backdrop-filter: blur(var(--glass-blur-lg)) !important;
+    -webkit-backdrop-filter: blur(var(--glass-blur-lg)) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: var(--radius-lg) !important;
+    box-shadow: var(--glass-shadow-lg) !important;
+    color: var(--text-primary) !important;
+    font-family: var(--font-body) !important;
+}
+
+.swal2-title {
+    font-family: var(--font-display) !important;
+    color: var(--text-primary) !important;
+}
+
+.swal2-confirm {
+    background: linear-gradient(135deg, var(--peach-400), var(--peach-500)) !important;
+    border-radius: var(--radius-sm) !important;
+    font-family: var(--font-body) !important;
+    font-weight: 600 !important;
+}
+
+.swal2-cancel {
+    background: var(--glass-bg) !important;
+    color: var(--text-secondary) !important;
+    border: 1px solid var(--glass-border-soft) !important;
+    border-radius: var(--radius-sm) !important;
+}

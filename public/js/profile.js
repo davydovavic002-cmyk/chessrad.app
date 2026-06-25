@@ -122,9 +122,7 @@ if (user.must_change_password === 1) {
                     libBtn.id = 'lib-btn-link';
                     libBtn.style.marginBottom = '20px';
                     libBtn.innerHTML = `
-                        <a href="/library-editor.html" class="btn btn-primary" style="display: block; text-align: center; background: #3498db; text-decoration: none; padding: 12px; border-radius: 8px; font-weight: bold; color: white;">
-                            📚 Управление библиотекой позиций
-                        </a>`;
+                        <a href="/library-editor.html" class="btn btn-primary btn-block">📚 Управление библиотекой позиций</a>`;
                     el.teacherPanel.prepend(libBtn);
                 }
             }
@@ -148,11 +146,11 @@ if (user.must_change_password === 1) {
             el.roomsList.innerHTML = rooms.length === 0
                 ? '<p class="subtitle">У вас нет активных комнат</p>'
                 : rooms.map(room => `
-                <div class="room-item-card" style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; margin-bottom: 8px; border: 1px solid rgba(255,255,255,0.1);">
-                    <div><span style="font-weight: 800; color: #3498db; font-size: 1.1em;">${room.room_code}</span></div>
-                    <div style="display: flex; gap: 8px;">
-                        <a href="/study.html?room=${room.room_code}" class="btn btn-primary" style="padding: 6px 12px; font-size: 12px; text-decoration: none; border-radius: 4px;">Войти</a>
-                        <button onclick="deleteRoom('${room.room_code}')" class="btn btn-danger" style="padding: 6px 12px; font-size: 12px; border-radius: 4px; border: none; cursor: pointer;">Удалить</button>
+                <div class="room-item">
+                    <div><strong>${room.room_code}</strong></div>
+                    <div style="display:flex;gap:8px;">
+                        <a href="/study.html?room=${room.room_code}" class="btn btn-primary btn-sm">Войти</a>
+                        <button onclick="deleteRoom('${room.room_code}')" class="btn btn-danger btn-sm">Удалить</button>
                     </div>
                 </div>`).join('');
         } catch (err) {

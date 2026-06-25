@@ -104,9 +104,14 @@ $(document).ready(async function() {
 
     socket.on('game:timer', (data) => {
         if (isGameOver) return;
-        const $wt = $('#white-timer'), $bt = $('#black-timer');
-        $wt.text(formatTime(data.white)).toggleClass('active-timer', data.turn === 'w');
-        $bt.text(formatTime(data.black)).toggleClass('active-timer', data.turn === 'b');
+        const $opp = $('#opponent-timer'), $me = $('#me-timer');
+        if (myColor === 'w') {
+            $me.text(formatTime(data.white)).toggleClass('active-timer', data.turn === 'w');
+            $opp.text(formatTime(data.black)).toggleClass('active-timer', data.turn === 'b');
+        } else {
+            $opp.text(formatTime(data.white)).toggleClass('active-timer', data.turn === 'w');
+            $me.text(formatTime(data.black)).toggleClass('active-timer', data.turn === 'b');
+        }
     });
 
     socket.on('game:state', (data) => {
@@ -128,7 +133,7 @@ $(document).ready(async function() {
                 draggable: true,
                 position: data.fen,
                 orientation: myColor === 'w' ? 'white' : 'black',
-                pieceTheme: '/img/chesspieces/wikipedia/{piece}.png',
+                pieceTheme: 'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/img/chesspieces/wikipedia/{piece}.png',
                 onDragStart, onDrop, onSnapEnd
             });
         } else {

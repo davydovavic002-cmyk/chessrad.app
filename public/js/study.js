@@ -6,7 +6,7 @@ window.renderLibraryFolders = null;
 document.addEventListener('DOMContentLoaded', async () => {
     const urlParams = new URLSearchParams(window.location.search);
     const roomCode = urlParams.get('room');
-    if (!roomCode) { window.location.href = '/lobby.html'; return; }
+    if (!roomCode) { window.location.href = '/lobby'; return; }
 
     let user, board = null, game = new Chess(), isTeacher = false;
     let tabs = [{ id: 'play', type: 'play', fen: 'start', shapes: [], pgn: '', customHistory: [] }];

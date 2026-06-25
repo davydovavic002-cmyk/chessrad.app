@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Битва за стрик — ChessRad</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+    <link rel="stylesheet" href="/css/theme.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/play-bot.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+    <div class="play-bot-page page-wrap">
+        <div class="play-bot-container">
+            <div class="play-bot-badge">🔥 Режим восстановления стрика</div>
+            <h2>Победи бота, чтобы вернуть серию!</h2>
+            <div id="myBoard" style="width:360px;"></div>
+            <div class="play-bot-status">
+                <p id="status">Загрузка игры...</p>
+            </div>
+        </div>
+    </div>
+
+<script>
+    function Lozza() {
+        this.on_move = function(fen) {
+            const game = new Chess(fen);
+            const moves = game.moves({ verbose: true });
+            if (!moves.length) return null;
+            moves.sort((a, b) => (b.captured ? 10 : 0) - (a.captured ? 10 : 0));
+            const move = moves[Math.floor(Math.random() * Math.min(moves.length, 3))];
+            return move.from + move.to;
+        };
+    }
+
+    let board = null;
+    const game = new Chess();
+    const engine = new Lozza();
+    const $status = $('#status');
+
+    function onDragStart(source, piece) {
+        if (game.game_over()) return false;
+        if (piece.search(/^b/) !== -1) return false;
+    }
+
+    function makeBotMove() {
+        if (game.game_over()) return;
+        const bestMove = engine.on_move(game.fen());
+        if (bestMove) {
+            game.move({ from: bestMove.substring(0, 2), to: bestMove.substring(2, 4), promotion: 'q' });
+            board.position(game.fen());
+            updateStatus();
+        }
+    }
+
+    function onDrop(source, target) {
+        if (game.move({ from: source, to: target, promotion: 'q' }) === null) return 'snapback';
+        updateStatus();
+        setTimeout(makeBotMove, 250);
+    }
+
+    function onSnapEnd() { board.position(game.fen()); }
+
+    async function updateStatus() {
+        if (game.in_checkmate()) {
+            if (game.turn() === 'b') handleWin();
+            else Swal.fire('Поражение', 'Бот оказался сильнее!', 'error').then(() => location.reload());
+        } else if (game.in_draw()) {
+            Swal.fire('Ничья', 'Нужна только победа!', 'info').then(() => location.reload());
+        } else {
+            const color = game.turn() === 'b' ? 'Черные' : 'Белые';
+            $status.html(color + ' ходят' + (game.in_check() ? ', ШАХ!' : ''));
+        }
+    }
+
+    async function handleWin() {
+        const mode = new URLSearchParams(window.location.search).get('mode');
+        if (mode === 'restore_streak') {
+            try {
+                const res = await fetch('/api/puzzle/restore-streak', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    Swal.fire('Победа!', 'Стрик восстановлен! 🔥', 'success').then(() => {
+                        if (window.parent !== window) window.parent.postMessage({ type: 'STREAK_RESTORED' }, '*');
+                        else window.location.href = '/lobby';
+                    });
+                }
+            } catch {
+                Swal.fire('Ошибка', 'Не удалось восстановить стрик.', 'error');
+            }
+        } else {
+            Swal.fire('Победа!', 'Отличная игра!', 'success').then(() => {
+                if (window.parent !== window) window.parent.postMessage({ type: 'STREAK_RESTORED' }, '*');
+                else window.location.href = '/lobby';
+            });
+        }
+    }
+
+    board = Chessboard('myBoard', {
+        draggable: true,
+        position: 'start',
+        onDragStart, onDrop, onSnapEnd
+    });
+    $status.html('Твой ход (Белые)');
+</script>
+</body>
+</html>

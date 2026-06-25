@@ -1,0 +1,269 @@
+/* Study room — glass overrides */
+
+.study-page {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    padding: 10px;
+}
+
+.study-page .lobby-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px;
+    margin-bottom: 16px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    max-width: 1600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.study-page .logo-area h1 {
+    font-size: 1.4rem;
+    background: linear-gradient(135deg, var(--peach-600), var(--coral));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.study-page .user-badge-text {
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.25);
+    border-radius: var(--radius-full);
+    font-size: 0.9rem;
+}
+
+.main-layout {
+    display: flex;
+    gap: 20px;
+    max-width: 1600px;
+    margin: 0 auto;
+    height: calc(100vh - 100px);
+}
+
+.tabs-sidebar {
+    width: 80px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    align-items: center;
+    padding-top: 10px;
+}
+
+#tabs-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    align-items: center;
+}
+
+.tab-item {
+    width: 60px;
+    height: 60px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border-soft);
+    border-radius: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 10px;
+    transition: var(--transition);
+    color: var(--text-secondary);
+}
+
+.tab-item i { font-size: 20px; margin-bottom: 3px; }
+.tab-item.active {
+    background: linear-gradient(135deg, var(--peach-400), var(--peach-500));
+    color: white;
+    transform: scale(1.05);
+    border-color: transparent;
+}
+.tab-item.active i, .tab-item.active span { color: white; }
+
+.add-tab-btn {
+    width: 55px;
+    height: 55px;
+    border: 2px dashed rgba(255, 143, 98, 0.4);
+    background: none;
+    border-radius: 15px;
+    font-size: 24px;
+    color: var(--peach-400);
+    cursor: pointer;
+    transition: var(--transition);
+}
+.add-tab-btn:hover {
+    border-color: var(--peach-500);
+    color: var(--peach-600);
+    background: rgba(255, 143, 98, 0.1);
+}
+
+.board-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.board-container {
+    position: relative;
+    width: 100%;
+    max-width: 70vh;
+    padding: 15px;
+    background: var(--glass-bg-strong);
+    backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--glass-shadow-lg);
+}
+
+#myBoard { width: 100% !important; }
+#drawing-canvas {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    pointer-events: none;
+    z-index: 10;
+}
+
+#status-msg {
+    margin-bottom: 10px;
+    font-weight: 800;
+    font-size: 14px;
+    text-transform: uppercase;
+    color: var(--peach-600);
+}
+
+.board-controls {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    max-width: 70vh;
+    margin-top: 15px;
+}
+
+.info-panel {
+    width: 350px;
+    padding: 20px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-xl);
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.chat-area {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    flex-grow: 1;
+    overflow-y: auto;
+    border: 1px solid var(--glass-border-soft);
+    min-height: 200px;
+}
+
+.pgn-container { display: flex; flex-wrap: wrap; gap: 5px; padding: 5px; }
+.pgn-move {
+    cursor: pointer;
+    padding: 4px 10px;
+    background: rgba(255, 255, 255, 0.25);
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 14px;
+    transition: var(--transition);
+    color: var(--text-primary);
+}
+.pgn-move:hover { background: rgba(255, 143, 98, 0.25); }
+
+.btn-primary-sm, .btn-secondary, .btn-danger-light, .btn-logout {
+    padding: 10px 16px;
+    border: none;
+    border-radius: var(--radius-md);
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.btn-primary-sm {
+    background: linear-gradient(135deg, var(--peach-400), var(--peach-500));
+    color: white;
+}
+
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.3);
+    color: var(--text-primary);
+    border: 1px solid var(--glass-border-soft);
+}
+
+.btn-danger-light {
+    background: rgba(255, 107, 107, 0.2);
+    color: #dc2626;
+    border: 1px solid rgba(255, 107, 107, 0.3);
+}
+
+.btn-logout {
+    margin-top: auto;
+    background: rgba(45, 31, 26, 0.08);
+    color: var(--text-secondary);
+    border: 1px solid var(--glass-border-soft);
+}
+
+.btn-logout:hover { background: rgba(255, 107, 107, 0.15); color: var(--coral); }
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(45, 31, 26, 0.45);
+    backdrop-filter: blur(8px);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+}
+
+.editor-modal {
+    background: var(--glass-bg-strong);
+    backdrop-filter: blur(var(--glass-blur-lg));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-xl);
+    padding: 24px;
+    box-shadow: var(--glass-shadow-lg);
+}
+
+.editor-layout {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+.editor-tools {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--text-muted);
+}
+
+@media (max-width: 1100px) {
+    .main-layout { flex-direction: column; height: auto; }
+    .info-panel { width: 100%; }
+    .tabs-sidebar { flex-direction: row; width: 100%; overflow-x: auto; }
+    #tabs-list { flex-direction: row; }
+}

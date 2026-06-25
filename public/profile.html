@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мой профиль — ChessRad</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/theme.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/profile.css">
+</head>
+<body>
+    <div id="must-change-modal" class="modal-overlay" style="display:none;">
+        <div class="modal-glass">
+            <h2>Безопасность</h2>
+            <p>Администратор сбросил ваш пароль. Установите новый для продолжения работы.</p>
+            <input type="password" id="force-old-pass" class="form-input" placeholder="Временный пароль">
+            <input type="password" id="force-new-pass" class="form-input mt-2" placeholder="Новый пароль (мин. 6 симв.)">
+            <button onclick="changePassword(true)" class="btn btn-primary btn-block mt-2">Обновить и войти</button>
+            <button onclick="handleLogout()" class="btn btn-ghost btn-block mt-1">Выйти из аккаунта</button>
+            <div id="force-msg" class="status-msg"></div>
+        </div>
+    </div>
+
+    <div class="profile-container page-wrap">
+        <div class="profile-card glass-strong">
+            <h1>Личный кабинет</h1>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <span class="stat-value" id="wins-count">0</span>
+                    <span class="stat-label">Побед</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value" id="draws-count">0</span>
+                    <span class="stat-label">Ничьих</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value" id="losses-count">0</span>
+                    <span class="stat-label">Поражений</span>
+                </div>
+            </div>
+
+            <div class="info-panel">
+                <p>Имя: <strong id="display-username">...</strong></p>
+                <p>Рейтинг: <span id="display-rating" class="rating-badge">0</span></p>
+            </div>
+
+            <div class="info-panel">
+                <h3>Прогресс: <span id="current-rank-text">Загрузка...</span></h3>
+                <div class="progress-container">
+                    <div id="progress-fill-bar" style="width:0%;"></div>
+                </div>
+                <p id="points-to-next-text" class="subtitle">Рассчитываем очки...</p>
+            </div>
+
+            <div class="info-panel">
+                <h3>Трофеи за турниры</h3>
+                <div id="trophy-shelf" class="trophy-shelf">
+                    <p id="no-trophies" class="subtitle">Наград пока нет</p>
+                </div>
+            </div>
+
+            <div class="info-panel">
+                <h3>История матчей</h3>
+                <div class="table-wrapper">
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th>Противник</th>
+                                <th>Результат</th>
+                                <th>Тип</th>
+                            </tr>
+                        </thead>
+                        <tbody id="game-history-list">
+                            <tr><td colspan="3" class="subtitle">История пуста</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="teacher-rooms-panel" class="info-panel" style="display:none;">
+                <h3>Мои учебные комнаты (<span id="rooms-count-label">0</span>/5)</h3>
+                <div id="my-rooms-list" class="rooms-list-container">
+                    <p class="subtitle">Загрузка комнат...</p>
+                </div>
+            </div>
+
+            <div class="info-panel password-section">
+                <h3>Безопасность</h3>
+                <input type="password" id="profile-old-pass" class="form-input" placeholder="Текущий пароль">
+                <input type="password" id="profile-new-pass" class="form-input mt-1" placeholder="Новый пароль">
+                <button onclick="changePassword(false)" class="btn btn-secondary btn-sm mt-2">Сменить пароль</button>
+                <div id="profile-pass-msg" class="status-msg"></div>
+            </div>
+
+            <div class="profile-controls">
+                <a href="/tournament.html" class="btn btn-primary">В турниры</a>
+                <a href="/lobby" class="btn btn-secondary">В лобби</a>
+                <button id="logout-btn" class="btn btn-danger">Выйти</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="/js/profile.js"></script>
+    <script>
+        async function handleLogout() {
+            await fetch('/api/logout', { method: 'POST' });
+            window.location.href = '/';
+        }
+
+        async function changePassword(isForce) {
+            const oldInput = document.getElementById(isForce ? 'force-old-pass' : 'profile-old-pass');
+            const newInput = document.getElementById(isForce ? 'force-new-pass' : 'profile-new-pass');
+            const msgDiv = document.getElementById(isForce ? 'force-msg' : 'profile-pass-msg');
+            const newPassword = newInput.value;
+
+            if (newPassword.length < 6) {
+                msgDiv.textContent = 'Минимум 6 символов';
+                msgDiv.className = 'status-msg error';
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/profile/change-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ oldPassword: oldInput.value, newPassword })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    msgDiv.textContent = 'Пароль обновлён!';
+                    msgDiv.className = 'status-msg success';
+                    if (isForce) {
+                        document.body.classList.remove('modal-open');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        oldInput.value = '';
+                        newInput.value = '';
+                    }
+                } else {
+                    msgDiv.textContent = data.message || 'Ошибка';
+                    msgDiv.className = 'status-msg error';
+                }
+            } catch {
+                msgDiv.textContent = 'Ошибка соединения';
+                msgDiv.className = 'status-msg error';
+            }
+        }
+
+        window.addEventListener('load', () => {
+            const check = setInterval(() => {
+                if (window.userData) {
+                    if (window.userData.must_change_password === 1) {
+                        document.getElementById('must-change-modal').style.display = 'flex';
+                        document.body.classList.add('modal-open');
+                    }
+                    clearInterval(check);
+                }
+            }, 50);
+        });
+
+        document.getElementById('logout-btn').addEventListener('click', handleLogout);
+    </script>
+</body>
+</html>

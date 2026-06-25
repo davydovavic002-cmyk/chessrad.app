@@ -41,7 +41,7 @@ getSolvedCountToday,
     restoreStreak    // Для стрика (10 задач)
 } from './db.js';
 import { Game } from './gamelogic.js';
-import { Tournament } from './tournament.js';
+import { Tournament } from './server/tournament.js';
 
 const app = express();
 
@@ -91,8 +91,8 @@ app.use(session({
     saveUninitialized: false, // Ставим false, чтобы не плодить пустые сессии
     cookie: {
         maxAge: 24 * 60 * 60 * 1000,
-        secure: true
-    }
+        secure: process.env.NODE_ENV === 'production'
+    }
 }));
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-if-env-missing';
 
@@ -276,7 +276,7 @@ app.post('/api/login', authLimiter, async (req, res) => {
             httpOnly: true,
             maxAge: 86400000, // 24 часа
             sameSite: 'Lax',
-            secure: true, // Включай только если есть HTTPS, иначе кука не придет!
+            secure: process.env.NODE_ENV === 'production',
             path: '/'
         });
 
@@ -853,12 +853,12 @@ socket.on('study:draw', async ({ roomCode, tabId, shapes }) => {
         const game = activeGames.get(gameId);
         if (!game || !socket.user) return;
         socket.join(gameId);
-        socket.emit('game:state', {
-            fen: game.chess.fen(),
-            color: game.getPlayerColor(userId),
-            playerWhite: game.playerWhite.user?.username || '?',
-            playerBlack: game.playerBlack.user?.username || '?'
-        });
+        socket.emit('game:state', {
+            fen: game.chess.fen(),
+            color: game.getPlayerColor(userId),
+            playerWhite: { username: game.playerWhite?.username || '?' },
+            playerBlack: { username: game.playerBlack?.username || '?' }
+        });
     });
 
     socket.on('tournament:game:move', ({ gameId, move }) => {
@@ -923,8 +923,9 @@ const startServer = async () => {
         console.log('[DB] Все таблицы проверены и готовы.');
 
         // ВАЖНО: Слушаем именно httpServer, к которому привязаны сокеты!
-        httpServer.listen(3000, '127.0.0.1', () => {
-            console.log(`🚀 Шахматный сервер (API + Sockets) запущен на порту 3000`);
+        const PORT = process.env.PORT || 3569;
+        httpServer.listen(PORT, '127.0.0.1', () => {
+            console.log(`🚀 Шахматный сервер (API + Sockets) запущен на порту ${PORT}`);
             console.log(`🌍 Доступен через Nginx: https://chessrad.app`);
         });
 

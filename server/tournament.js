@@ -1,6 +1,6 @@
 import { TournamentGame } from './tournament-game-logic.js';
 import { randomUUID } from 'crypto';
-import { addTrophyToUser } from './db.js';
+import { addTrophyToUser } from '../db.js';
 
 export class Tournament {
     constructor({ io, games, id, name }) {
@@ -136,6 +136,7 @@ export class Tournament {
         });
 
         this.games.set(newGame.gameId, newGame);
+        newGame.start();
 
         this.io.to(white.socketId).emit('tournament:gameCreated', {
             gameId: newGame.gameId,

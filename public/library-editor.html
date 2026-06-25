@@ -3,70 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Редактор библиотеки - ChessRad</title>
-    <link rel="stylesheet" href="/css/chessboard-1.0.0.min.css">
-    <link rel="stylesheet" href="/css/style.css">
+    <title>Редактор библиотеки — ChessRad</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/theme.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/library-editor.css">
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-
     <style>
-        :root { --primary-blue: #3498db; --bg-light: #f4f7f6; }
-        body { background: var(--bg-light); font-family: 'Segoe UI', sans-serif; }
-
-        .editor-container { max-width: 1600px; margin: 20px auto; display: flex; gap: 20px; padding: 0 20px; align-items: flex-start; }
-
-        /* Левая панель с доской */
-        .board-section { flex: 0 0 400px; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); position: sticky; top: 20px; }
-
-        /* Правая панель со структурой */
-        .form-section { flex: 1; min-width: 0; }
-
-        /* Разделы */
-        .big-folder-container { background: white; border-radius: 10px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); overflow: hidden; }
-        .big-folder-header { background: #f8f9fa; padding: 12px 15px; cursor: pointer; display: flex; align-items: center; font-weight: bold; border-bottom: 1px solid #eee; font-size: 16px; }
-        .big-folder-header i { margin-right: 10px; color: var(--primary-blue); }
-
-        /* Сетка папок */
-        .big-folder-content { padding: 15px; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
-
-        .folder-card { background: #fff; border: 1px solid #eee; border-radius: 8px; padding: 15px 5px; text-align: center; cursor: pointer; transition: 0.2s; }
-        .folder-card:hover { border-color: var(--primary-blue); background: #f0f7ff; transform: translateY(-2px); }
-        .folder-card div:first-child { font-size: 24px; margin-bottom: 5px; }
-        .folder-card strong { font-size: 14px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .folder-card .count { font-size: 11px; color: #999; margin-top: 4px; }
-
-        /* Список позиций - УВЕЛИЧЕННЫЕ ПЛИТКИ */
-        .positions-sortable-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px; }
-        .pos-sort-item { display: flex; align-items: center; background: white; border: 1px solid #eee; padding: 10px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
-        .pos-mini-preview { width: 120px; height: 120px; border-radius: 6px; border: 1px solid #ddd; overflow: hidden; background: #eee; }
-        .pos-details { flex: 1; padding: 0 15px; overflow: hidden; }
-        .pos-details strong { font-size: 15px; display: block; color: #2c3e50; margin-bottom: 5px; }
-
-        /* Модалка */
-        .modal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
-        .modal-content { background: white; padding: 30px; border-radius: 15px; width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px; }
-        .form-group input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
-
-        .btn-save-main { background: #2ecc71; color: white; border: none; padding: 14px; border-radius: 8px; width: 100%; font-weight: bold; cursor: pointer; font-size: 15px; }
-        .btn-edit-small { border:none; background:#f0f4f8; cursor:pointer; color: var(--primary-blue); padding: 8px; border-radius: 6px; }
-
-        .back-btn { margin-bottom: 20px; cursor: pointer; color: var(--primary-blue); font-weight: bold; display: flex; align-items: center; gap: 8px; font-size: 16px; }
-        #fen-display { background: #2c3e50; color: #fff; padding: 10px; margin-top: 10px; border-radius: 6px; font-family: monospace; font-size: 11px; word-break: break-all; }
-        .hidden { display: none !important; }
+        #fen-display { background:rgba(45,31,26,0.08); padding:10px; margin-top:10px; border-radius:var(--radius-sm); font-family:monospace; font-size:11px; word-break:break-all; }
+        .btn-save-main { background:linear-gradient(135deg,var(--emerald),var(--mint)); color:white; border:none; padding:14px; border-radius:var(--radius-md); width:100%; font-weight:700; cursor:pointer; font-family:var(--font-body); }
+        .btn-edit-small { border:none; background:rgba(255,255,255,0.3); cursor:pointer; color:var(--peach-600); padding:8px; border-radius:var(--radius-sm); }
+        .back-btn { margin-bottom:20px; cursor:pointer; color:var(--peach-600); font-weight:700; display:flex; align-items:center; gap:8px; }
+        #editModal { display:none; position:fixed; inset:0; background:rgba(45,31,26,0.45); backdrop-filter:blur(8px); z-index:9999; align-items:center; justify-content:center; }
+        #editModal .modal-content { padding:28px; border-radius:var(--radius-xl); width:400px; max-width:90vw; }
     </style>
 </head>
 <body>
-
+<div class="library-page page-wrap">
+    <a href="/profile.html" class="back-link mb-2">← К профилю</a>
+    <h1>Редактор библиотеки</h1>
 <div class="editor-container">
     <div class="board-section">
         <h3 style="margin-top:0">Конструктор</h3>
         <div id="board" style="width: 100%;"></div>
         <div id="fen-display">FEN: start</div>
-        <div style="margin-top: 15px; display: flex; gap: 10px;">
-            <button onclick="board.start()" style="flex:1; padding: 10px;">Начальная</button>
-            <button onclick="board.clear()" style="flex:1; padding: 10px;">Очистить</button>
+        <div style="margin-top:15px;display:flex;gap:10px;">
+            <button onclick="board.start()" class="btn btn-secondary" style="flex:1;">Начальная</button>
+            <button onclick="board.clear()" class="btn btn-secondary" style="flex:1;">Очистить</button>
         </div>
         <button class="btn-save-main" style="margin-top: 15px;" onclick="openSaveModal()">
             <i class="fas fa-plus"></i> Сохранить позицию
@@ -87,37 +54,34 @@
     </div>
 </div>
 
-<div id="editModal" class="modal">
-    <div class="modal-content">
+<div id="editModal" class="modal-overlay">
+    <div class="modal-glass" style="text-align:left;">
         <h3 id="modal-title" style="margin-top:0">Сохранение</h3>
         <input type="hidden" id="edit-pos-id">
 
         <div class="form-group">
             <label>Название позиции</label>
-            <input type="text" id="pos-title" placeholder="Например: Мат в 1 ход">
+            <input type="text" id="pos-title" class="form-input" placeholder="Например: Мат в 1 ход">
         </div>
-
         <div class="form-group">
             <label>Раздел (Надпапка)</label>
-            <input type="text" id="pos-big-folder" list="big-folder-list" placeholder="Например: Эндшпиль">
+            <input type="text" id="pos-big-folder" class="form-input" list="big-folder-list" placeholder="Например: Эндшпиль">
             <datalist id="big-folder-list"></datalist>
         </div>
-
         <div class="form-group">
             <label>Папка (Тема)</label>
-            <input type="text" id="pos-category" list="category-list" placeholder="Например: Вилки">
+            <input type="text" id="pos-category" class="form-input" list="category-list" placeholder="Например: Вилки">
             <datalist id="category-list"></datalist>
         </div>
-
-        <div style="display: flex; gap: 10px; margin-top: 20px;">
+        <div style="display:flex;gap:10px;margin-top:20px;">
             <button class="btn-save-main" onclick="savePositionData()">Записать</button>
-            <button onclick="closeModal()" style="background:#eee; border:none; padding:12px; border-radius:8px; cursor:pointer; flex:1">Отмена</button>
+            <button onclick="closeModal()" class="btn btn-secondary" style="flex:1;">Отмена</button>
         </div>
     </div>
 </div>
 
-<script src="/js/jquery-3.4.1.min.js"></script>
-<script src="/js/chessboard-1.0.0.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
 
 <script>
     let board = Chessboard('board', {
@@ -274,5 +238,6 @@
 
     loadLibrary();
 </script>
+</div>
 </body>
 </html>

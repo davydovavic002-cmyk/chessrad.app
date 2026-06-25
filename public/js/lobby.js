@@ -80,11 +80,11 @@ async function setupLobbyUI(user) {
 
 
 
-    if (profileBtn) profileBtn.onclick = () => { window.location.href = 'profile.html'; };
+    if (profileBtn) profileBtn.onclick = () => { window.location.href = '/profile.html'; };
 
-    if (findGameBtn) findGameBtn.onclick = () => { window.location.href = 'game.html'; };
+    if (findGameBtn) findGameBtn.onclick = () => { window.location.href = '/game.html'; };
 
-    if (tournamentsBtn) tournamentsBtn.onclick = () => { window.location.href = 'tournament.html'; };
+    if (tournamentsBtn) tournamentsBtn.onclick = () => { window.location.href = '/tournament.html'; };
 
 
 
@@ -99,21 +99,13 @@ async function setupLobbyUI(user) {
         if (adminContainer) {
 
             adminContainer.innerHTML = `
-
-                <div class="menu-card" id="admin-btn" style="border: 2px solid #e74c3c; background: #fff5f5;">
-
+                <div class="menu-card glass-card" id="admin-btn" style="border-color:rgba(255,107,107,0.4);background:rgba(255,107,107,0.1);">
                     <div class="card-icon">⚙️</div>
-
                     <div class="card-text">
-
-                        <h3 style="color: #e74c3c;">Админ-панель</h3>
-
+                        <h3>Админ-панель</h3>
                         <p>Управление игроками</p>
-
                     </div>
-
                 </div>
-
             `;
 
             document.getElementById('admin-btn').onclick = () => { window.location.href = '/admin.html'; };
@@ -138,7 +130,7 @@ async function setupLobbyUI(user) {
 
             await fetch('/api/logout', { method: 'POST', credentials: 'include' });
 
-            window.location.href = '/index.html';
+            window.location.href = '/';
 
         };
 

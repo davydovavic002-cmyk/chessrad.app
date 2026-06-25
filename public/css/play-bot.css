@@ -1,0 +1,52 @@
+/* Play bot (iframe) */
+
+.play-bot-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    position: relative;
+    z-index: 1;
+}
+
+.play-bot-container {
+    text-align: center;
+    width: 100%;
+    max-width: 420px;
+}
+
+.play-bot-badge {
+    display: inline-block;
+    padding: 6px 16px;
+    border-radius: var(--radius-full);
+    background: linear-gradient(135deg, var(--coral), var(--peach-500));
+    color: white;
+    font-weight: 700;
+    font-size: 0.8rem;
+    margin-bottom: 12px;
+    letter-spacing: 0.03em;
+}
+
+.play-bot-container h2 {
+    font-size: 1.2rem;
+    margin-bottom: 16px;
+    color: var(--text-primary);
+}
+
+#myBoard {
+    margin: 0 auto 16px;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    border: 3px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+}
+
+.play-bot-status {
+    padding: 16px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    font-weight: 500;
+}
