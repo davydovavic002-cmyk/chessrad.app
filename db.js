@@ -3,8 +3,11 @@ import { open } from 'sqlite';
 import bcrypt from 'bcrypt';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
 export let db;
+
+const DB_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'db');
 
 const LEVEL_THRESHOLDS = [
     { name: 'Большой мастер', min: 7500 },
@@ -21,7 +24,7 @@ function getLevelByRating(rating) {
 
 export async function getDbConnection() {
     if (!db) {
-        const dbDir = './db';
+        const dbDir = DB_DIR;
         if (!fs.existsSync(dbDir)) {
             fs.mkdirSync(dbDir, { recursive: true });
         }

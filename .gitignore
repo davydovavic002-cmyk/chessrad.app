@@ -1,5 +1,6 @@
 node_modules/
 db/*.db
 db/*.db-*
+db/sessions.db
 .env
 *.log

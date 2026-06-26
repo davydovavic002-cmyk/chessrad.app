@@ -18,30 +18,36 @@ import cors from 'cors';
 import { Chess } from 'chess.js'; // Добавили импорт для проверки ходов на сервере
 import session from 'express-session'; // или const session = require('express-session');
 import sqliteStore from 'connect-sqlite3';
-
 import {
-    db,
-    initDb,
-    addUser,
-    findUserByUsername,
-    findUserById,
-    updateUserStats,
-    createStudyRoom,
-    findStudyRoomByCode,
-    joinStudentToRoom,
-    updateStudyRoomFen,
-    getTeacherRooms,
-getNextPuzzleForUser,
-    solvePuzzleUpdate,
-    deleteStudyRoom,
-    // --- НОВЫЕ ФУНКЦИИ ДЛЯ ПАЗЛОВ ---
-    initPuzzlesTable,
-getSolvedCountToday,
-    completeDailyPuzzles,
-    restoreStreak    // Для стрика (10 задач)
+    db,
+    initDb,
+    addUser,
+    findUserByUsername,
+    findUserById,
+    updateUserStats,
+    createStudyRoom,
+    findStudyRoomByCode,
+    joinStudentToRoom,
+    updateStudyRoomFen,
+    getTeacherRooms,
+    getNextPuzzleForUser,
+    solvePuzzleUpdate,
+    deleteStudyRoom,
+    initPuzzlesTable,
+    getSolvedCountToday,
+    completeDailyPuzzles,
+    restoreStreak
 } from './db.js';
 import { Game } from './gamelogic.js';
 import { Tournament } from './server/tournament.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const DB_DIR = path.join(__dirname, 'db');
+
+if (!fs.existsSync(DB_DIR)) {
+    fs.mkdirSync(DB_DIR, { recursive: true });
+}
 
 const app = express();
 
@@ -82,10 +88,10 @@ const authLimiter = rateLimit({
 
 app.use(session({
     // Указываем SQLite в качестве хранилища
-    store: new SQLiteStore({
-        db: 'chess-app.db',    // Имя твоей базы
-        dir: './db'            // Папка, где она лежит
-    }),
+    store: new SQLiteStore({
+        db: 'chess-app.db',
+        dir: DB_DIR
+    }),
     secret: 'chess-secret-key',
     resave: false,
     saveUninitialized: false, // Ставим false, чтобы не плодить пустые сессии
@@ -95,9 +101,6 @@ app.use(session({
     }
 }));
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-if-env-missing';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // ---------------------------------
 // 2. ГЛОБАЛЬНОЕ СОСТОЯНИЕ СЕРВЕРА
