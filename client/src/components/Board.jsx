@@ -47,7 +47,7 @@ export default function Board({
         : undefined,
       boardStyle: boardWidth
         ? { width: boardWidth, height: boardWidth }
-        : { width: '100%', aspectRatio: '1 / 1' },
+        : { width: '100%', aspectRatio: '1 / 1', height: 'auto' },
     }),
     [
       id,

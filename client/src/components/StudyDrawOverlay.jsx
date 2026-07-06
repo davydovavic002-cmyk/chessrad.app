@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { Children, cloneElement, useCallback, useEffect, useRef, useState } from 'react';
 
 function drawArrowhead(ctx, fromX, fromY, toX, toY, radius = 15) {
   const angle = Math.atan2(toY - fromY, toX - fromX);
@@ -28,9 +28,18 @@ export default function StudyDrawOverlay({
 }) {
   const canvasRef = useRef(null);
   const wrapRef = useRef(null);
+  const measureRef = useRef(null);
   const drawingRef = useRef({ active: false, start: null });
   const shapesRef = useRef(shapes);
   shapesRef.current = shapes;
+  const [boardWidth, setBoardWidth] = useState(null);
+
+  const syncBoardWidth = useCallback(() => {
+    const el = measureRef.current;
+    if (!el) return;
+    const w = el.clientWidth;
+    if (w > 0) setBoardWidth(Math.floor(w));
+  }, []);
 
   const getCellCenter = useCallback(
     (pixelX, pixelY, size) => {
@@ -60,10 +69,8 @@ export default function StudyDrawOverlay({
 
   const redraw = useCallback(() => {
     const canvas = canvasRef.current;
-    const wrap = wrapRef.current;
-    if (!canvas || !wrap) return;
-    const boardEl = wrap.querySelector('[data-board-root]');
-    if (!boardEl) return;
+    const boardEl = measureRef.current;
+    if (!canvas || !boardEl) return;
 
     const w = boardEl.offsetWidth;
     const h = boardEl.offsetHeight;
@@ -103,14 +110,16 @@ export default function StudyDrawOverlay({
   }, [shapes, orientation, redraw]);
 
   useEffect(() => {
-    const wrap = wrapRef.current;
-    if (!wrap) return;
-    const boardEl = wrap.querySelector('[data-board-root]');
-    const ro = new ResizeObserver(() => redraw());
-    if (boardEl) ro.observe(boardEl);
-    ro.observe(wrap);
+    const el = measureRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => {
+      syncBoardWidth();
+      redraw();
+    });
+    ro.observe(el);
+    syncBoardWidth();
     return () => ro.disconnect();
-  }, [redraw]);
+  }, [redraw, syncBoardWidth]);
 
   useEffect(() => {
     const wrap = wrapRef.current;
@@ -169,10 +178,15 @@ export default function StudyDrawOverlay({
     };
   }, [enabled, getCellCenter, onShapesChange]);
 
+  const boardChild =
+    boardWidth != null
+      ? cloneElement(Children.only(children), { boardWidth })
+      : children;
+
   return (
-    <div ref={wrapRef} className="study-draw-wrap" style={{ position: 'relative', width: '100%' }}>
-      <div data-board-root style={{ width: '100%' }}>
-        {children}
+    <div ref={wrapRef} className="study-draw-wrap">
+      <div ref={measureRef} className="study-board-measure">
+        {boardChild}
       </div>
       <canvas
         id="drawing-canvas"

@@ -111,7 +111,7 @@
 
 .study-board-frame {
     width: 100%;
-    max-width: min(900px, calc(100vw - 500px));
+    max-width: min(960px, calc(100vw - 440px));
     max-height: 100%;
     display: flex;
     flex-direction: column;
@@ -123,10 +123,10 @@
 }
 
 .study-board-arena .board-container {
-    width: min(100%, 860px, calc(100dvh - 270px), calc(100vw - 500px));
-    height: auto;
-    max-width: 100%;
+    width: 100%;
+    max-width: min(960px, calc(100dvh - 200px), calc(100vw - 440px));
     aspect-ratio: 1;
+    height: auto;
     padding: 12px;
     box-sizing: border-box;
     flex: 0 0 auto;
@@ -134,7 +134,7 @@
 }
 
 .study-board-frame--controls .board-container {
-    width: min(100%, 860px, calc(100dvh - 320px), calc(100vw - 500px));
+    max-width: min(960px, calc(100dvh - 248px), calc(100vw - 440px));
 }
 
 .study-board-controls {
@@ -147,10 +147,14 @@
     box-sizing: border-box;
 }
 
-/* Width only — never force height on board children (breaks drag ghost pieces). */
-.study-board-arena .study-draw-wrap,
-.study-board-arena .study-draw-wrap [data-board-root] {
-    width: 100% !important;
+.study-draw-wrap {
+    position: relative;
+    width: 100%;
+}
+
+.study-board-measure {
+    width: 100%;
+    line-height: 0;
 }
 
 .study-side-rail {
@@ -346,10 +350,8 @@
 }
 
 #myBoard,
-.study-draw-wrap,
-.study-draw-wrap [data-board-root],
-.study-draw-wrap [data-board-root] > div {
-    width: 100% !important;
+.study-draw-wrap {
+    width: 100%;
 }
 
 #drawing-canvas {
