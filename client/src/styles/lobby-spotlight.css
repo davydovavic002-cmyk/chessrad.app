@@ -1,0 +1,162 @@
+.lobby-spotlight {
+  margin-bottom: 24px;
+  padding: 16px;
+}
+
+.lobby-spotlight h3 {
+  margin: 0 0 12px;
+  font-size: 1rem;
+}
+
+.lobby-spotlight-inner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.lobby-leaders {
+  flex: 1;
+  min-width: 200px;
+}
+
+.lobby-leader-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 14px;
+}
+
+.lobby-leader-rank {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--peach-600, #e67e22);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.lobby-live-board {
+  flex: 0 0 auto;
+}
+
+.library-picker-list {
+  max-height: 280px;
+  overflow-y: auto;
+  margin-top: 12px;
+}
+
+.library-picker-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 10px;
+  margin-bottom: 6px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: var(--glass-bg);
+  cursor: pointer;
+}
+
+.group-standings-table {
+  width: 100%;
+  margin-top: 8px;
+  font-size: 13px;
+  border-collapse: collapse;
+}
+
+.group-standings-table th,
+.group-standings-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--glass-border-soft);
+  text-align: left;
+}
+
+.tournament-league-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+  justify-content: center;
+}
+
+.tournament-league-tabs button {
+  padding: 8px 16px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.tournament-league-tabs button.active {
+  background: var(--peach-600, #e67e22);
+  color: #fff;
+  border-color: transparent;
+}
+
+.tournament-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.tournament-card-tags span {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-weight: 700;
+}
+
+.tag-league {
+  background: rgba(52, 211, 153, 0.2);
+}
+
+.tag-team {
+  background: rgba(99, 102, 241, 0.2);
+}
+
+.tag-demo {
+  background: rgba(255, 179, 71, 0.25);
+}
+
+.team-scores-grid {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+
+.team-score-card {
+  flex: 1;
+  text-align: center;
+  padding: 20px;
+  border-radius: var(--radius-md);
+  background: var(--glass-bg-strong);
+}
+
+.team-score-card.class {
+  border: 2px solid rgba(52, 211, 153, 0.4);
+}
+
+.team-score-card.teacher {
+  border: 2px solid rgba(99, 102, 241, 0.4);
+}
+
+.team-score-card strong {
+  display: block;
+  font-size: 2rem;
+  margin-top: 8px;
+}
+
+.team-score-vs {
+  font-weight: 800;
+  opacity: 0.5;
+}

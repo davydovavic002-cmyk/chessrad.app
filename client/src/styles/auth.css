@@ -1,0 +1,127 @@
+/* Auth / Login */
+
+.auth-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    position: relative;
+    z-index: 1;
+}
+
+.auth-container {
+    width: 100%;
+    max-width: 440px;
+}
+
+.auth-brand {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.auth-brand h1 {
+    font-size: 2.8rem;
+    background: linear-gradient(135deg, var(--peach-500) 0%, var(--coral) 50%, var(--rose) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+}
+
+.auth-brand p {
+    color: var(--text-secondary);
+    font-size: 1.05rem;
+}
+
+.auth-card {
+    padding: 36px;
+    border-radius: var(--radius-xl);
+}
+
+.auth-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 28px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-md);
+    padding: 4px;
+}
+
+.auth-tab {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    background: transparent;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.auth-tab.active {
+    background: rgba(255, 255, 255, 0.5);
+    color: var(--text-primary);
+    box-shadow: 0 2px 8px rgba(255, 112, 67, 0.1);
+}
+
+.auth-form { display: none; }
+.auth-form.active { display: block; }
+
+.auth-form .btn-primary {
+    margin-top: 8px;
+}
+
+.auth-error {
+    color: var(--coral);
+    font-size: 0.9rem;
+    margin-top: 12px;
+    text-align: center;
+    min-height: 1.2em;
+}
+
+.auth-success {
+    color: var(--emerald);
+    font-size: 0.9rem;
+    margin-top: 12px;
+    text-align: center;
+}
+
+.role-select {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.role-option {
+    flex: 1;
+    padding: 14px;
+    border: 1px solid var(--glass-border-soft);
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.2);
+    text-align: center;
+    cursor: pointer;
+    transition: all var(--transition);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.role-option:hover {
+    border-color: var(--peach-300);
+    background: rgba(255, 255, 255, 0.35);
+}
+
+.role-option.selected {
+    border-color: var(--peach-400);
+    background: rgba(255, 143, 98, 0.2);
+    font-weight: 600;
+}
+
+.role-option .role-icon {
+    font-size: 1.5rem;
+    display: block;
+    margin-bottom: 4px;
+}

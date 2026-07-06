@@ -11,6 +11,7 @@ export class TournamentGame {
         this.chess = Chess();
         this.isGameOver = false;
         this.timeLimit = timeLimit || 5 * 60 * 1000;
+        this.onComplete = null;
         this.whiteTime = this.timeLimit;
         this.blackTime = this.timeLimit;
         this.lastTick = Date.now();
@@ -119,6 +120,14 @@ export class TournamentGame {
                 winner,
                 loser,
                 draw
+            });
+        } else if (this.onComplete) {
+            this.onComplete({
+                gameId: this.gameId,
+                winner,
+                loser,
+                draw,
+                reason
             });
         }
     }

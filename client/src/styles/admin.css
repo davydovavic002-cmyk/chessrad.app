@@ -1,0 +1,77 @@
+/* Admin panel */
+
+.admin-page {
+    position: relative;
+    z-index: 1;
+    padding: 32px 24px 48px;
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+.admin-container {
+    padding: 32px;
+    border-radius: var(--radius-xl);
+}
+
+.admin-container header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 28px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--glass-border-soft);
+}
+
+.admin-container h1 {
+    font-size: 1.6rem;
+    background: linear-gradient(135deg, var(--coral), var(--peach-600));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.admin-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border-soft);
+}
+
+.btn-action {
+    padding: 6px 14px;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+    font-family: var(--font-body);
+    margin-right: 4px;
+    transition: all var(--transition);
+}
+
+.btn-reset {
+    background: rgba(255, 179, 71, 0.3);
+    color: #b45309;
+    border: 1px solid rgba(255, 179, 71, 0.4);
+}
+
+.btn-reset:hover { background: rgba(255, 179, 71, 0.5); }
+
+.btn-delete {
+    background: rgba(255, 107, 107, 0.2);
+    color: #dc2626;
+    border: 1px solid rgba(255, 107, 107, 0.3);
+}
+
+.btn-delete:hover { background: rgba(255, 107, 107, 0.35); }
+
+.admin-table-wrap {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--glass-border-soft);
+    overflow: hidden;
+}

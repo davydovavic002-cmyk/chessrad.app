@@ -1,0 +1,90 @@
+/* Mobile responsive pass — key pages */
+
+@media (max-width: 768px) {
+  .lobby-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .lobby-header .user-info {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .menu-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .study-page .main-layout {
+    flex-direction: column;
+  }
+
+  .study-page .tabs-sidebar {
+    width: 100%;
+    max-height: 120px;
+    overflow-x: auto;
+    flex-direction: row;
+  }
+
+  .homework-layout {
+    flex-direction: column;
+  }
+
+  .homework-list {
+    max-height: 200px;
+  }
+
+  .journal-layout {
+    flex-direction: column;
+  }
+
+  .journal-calendar {
+    width: 100%;
+  }
+
+  .group-teacher-grid {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  }
+
+  .group-toolbar {
+    flex-direction: column;
+  }
+
+  .group-toolbar .btn-game,
+  .group-toolbar .btn {
+    width: 100%;
+  }
+
+  .schedule-page-body .schedule-grid {
+    min-width: 600px;
+  }
+
+  .schedule-tz-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .profile-container .profile-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .game-hud h1 {
+    font-size: 1.25rem;
+  }
+
+  .page-wrap {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .calendar-days {
+    grid-template-columns: 1fr;
+  }
+
+  .group-broadcast-panel {
+    padding: 12px;
+  }
+}

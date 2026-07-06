@@ -1,0 +1,333 @@
+.calendar-page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px 16px 60px;
+}
+
+.calendar-week-nav {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.calendar-week-nav button {
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg-strong);
+  border-radius: var(--radius-sm);
+  padding: 8px 16px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.calendar-days {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 600px) {
+  .calendar-days {
+    grid-template-columns: 1fr;
+  }
+}
+
+.calendar-day {
+  padding: 0;
+  min-height: 120px;
+}
+
+.calendar-day-head {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--glass-border-soft);
+  font-size: 13px;
+}
+
+.calendar-day-events {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cal-event {
+  font-size: 12px;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cal-event--lesson {
+  background: rgba(52, 211, 153, 0.12);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+}
+
+.cal-event--hw {
+  background: rgba(255, 179, 71, 0.12);
+  border: 1px solid rgba(255, 179, 71, 0.35);
+  cursor: pointer;
+  color: inherit;
+  width: 100%;
+}
+
+.cal-event-time {
+  font-weight: 700;
+  color: var(--peach-600);
+}
+
+.cal-event-time small {
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.cal-video-link {
+  color: var(--peach-600);
+  font-weight: 600;
+}
+
+.topic-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.topic-chip {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+}
+
+.topic-chip.done {
+  background: rgba(52, 211, 153, 0.2);
+  border: 1px solid rgba(52, 211, 153, 0.4);
+}
+
+.topic-chip.planned {
+  background: rgba(255, 179, 71, 0.15);
+  border: 1px solid rgba(255, 179, 71, 0.35);
+}
+
+.schedule-dual-time {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1.2;
+}
+
+.schedule-dual-time .tz-primary {
+  font-weight: 700;
+  color: #f0d9b5;
+}
+
+.schedule-dual-time .tz-secondary {
+  font-size: 10px;
+  font-weight: 500;
+  color: rgba(240, 217, 181, 0.65);
+}
+
+.schedule-tz-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+}
+
+.schedule-tz-bar label {
+  font-size: 12px;
+  color: #aaa;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.schedule-tz-bar select {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #444;
+  background: #2d2a27;
+  color: #eee;
+  font-size: 12px;
+}
+
+.lesson-slot .video-icon {
+  display: block;
+  margin-top: 4px;
+  font-size: 10px;
+  opacity: 0.9;
+}
+
+.group-study-page {
+  min-height: 100vh;
+  padding: 12px;
+}
+
+.group-teacher-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.group-mini-board {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  padding: 8px;
+}
+
+.group-mini-board h4 {
+  font-size: 12px;
+  margin: 0 0 8px;
+  text-align: center;
+}
+
+.group-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.group-broadcast-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.group-broadcast-panel {
+  max-width: 480px;
+  width: 100%;
+  background: var(--glass-bg-strong);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+}
+
+.group-pairings {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.group-pair-item {
+  padding: 10px;
+  background: var(--glass-bg);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  text-align: center;
+}
+
+.group-phase-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+  justify-content: center;
+}
+
+.group-phase-pill {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--glass-border-soft);
+  opacity: 0.6;
+}
+
+.group-phase-pill.active {
+  opacity: 1;
+  background: rgba(52, 211, 153, 0.2);
+  border-color: rgba(52, 211, 153, 0.5);
+  font-weight: 700;
+}
+
+.group-teacher-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.group-teacher-tabs button {
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.group-teacher-tabs button.active {
+  background: var(--peach-600, #e67e22);
+  color: #fff;
+  border-color: transparent;
+}
+
+.group-panel {
+  margin-bottom: 20px;
+}
+
+.group-board-row {
+  max-width: 420px;
+  margin: 12px auto;
+}
+
+.group-student-main {
+  max-width: 480px;
+}
+
+.group-action-btn {
+  display: block;
+  margin: 16px auto 0;
+  width: auto;
+  min-width: 200px;
+  padding: 12px 20px;
+}
+
+.group-move-badge {
+  font-size: 10px;
+  font-weight: 500;
+  opacity: 0.75;
+  margin-left: 6px;
+}
+
+.group-mini-click {
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: box-shadow 0.15s;
+}
+
+.group-mini-click:hover {
+  box-shadow: 0 0 0 2px var(--peach-600, #e67e22);
+}
+
+.group-live-bc {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  margin-bottom: 12px;
+  cursor: pointer;
+}
+
+.group-pair-result,
+.group-pair-live {
+  font-size: 12px;
+  color: var(--text-muted);
+}

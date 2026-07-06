@@ -43,7 +43,8 @@ export class Tournament {
                 user: user,
                 socketId: socket.id,
                 score: 0,
-                opponentsPlayedIds: new Set()
+                opponentsPlayedIds: new Set(),
+                team: (user.role === 'teacher' || user.role === 'admin') ? 'teacher' : 'class',
             };
             this.players.set(user.id, playerInfo);
             socket.join(this.id);
@@ -224,18 +225,31 @@ export class Tournament {
     }
 
     getState() {
+        const players = Array.from(this.players.values()).map(p => ({
+            id: p.user.id,
+            username: p.user.username,
+            score: p.score,
+            team: p.team || 'class',
+        })).sort((a, b) => b.score - a.score);
+
+        const teamScores = { class: 0, teacher: 0 };
+        players.forEach((p) => {
+            if (p.team === 'teacher') teamScores.teacher += p.score;
+            else teamScores.class += p.score;
+        });
+
         return {
             id: this.id,
             name: this.name,
             status: this.status,
             currentRound: this.currentRound,
             totalRounds: this.totalRounds,
-            players: Array.from(this.players.values()).map(p => ({
-                id: p.user.id,
-                username: p.user.username,
-                score: p.score
-            })).sort((a, b) => b.score - a.score),
-            rounds: this.rounds
+            players,
+            teamScores,
+            rounds: this.rounds.map((r) => ({
+                ...r,
+                games: r.games.map((g) => ({ ...g, gameId: g.id })),
+            })),
         };
     }
 
