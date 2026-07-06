@@ -594,7 +594,7 @@ export default function StudyPage() {
         <div className="board-section study-board-arena">
           <div id="status-msg" className="study-status-msg">{statusMsg}</div>
           <div className="study-board-fit">
-            <div className={`study-board-column${isTeacher ? ' study-board-column--with-controls' : ''}`}>
+            <div className={`study-board-frame${isTeacher ? ' study-board-frame--controls' : ''}`}>
               <div className="board-container">
                 <StudyDrawOverlay
                   shapes={shapes}
