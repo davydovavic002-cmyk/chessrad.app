@@ -66,20 +66,20 @@
     margin: 0 auto;
     align-items: stretch;
     box-sizing: border-box;
-    overflow: hidden;
 }
 
 .study-studio > .board-section {
     min-height: 0;
     height: 100%;
     width: 100%;
+    overflow: visible;
 }
 
 .study-board-arena {
     min-height: 0;
     min-width: 0;
     width: 100%;
-    overflow: hidden;
+    overflow: visible;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -100,17 +100,34 @@
 }
 
 .study-board-shell {
-    width: 100%;
-    max-width: min(880px, calc(100dvh - 250px), calc(100vw - 480px));
-    flex: 0 1 auto;
+    position: relative;
+    width: auto;
+    max-width: none;
+    flex: 0 0 auto;
     min-height: 0;
     margin: 0 auto;
     padding: 12px;
     box-sizing: border-box;
+    background: #fff8f4;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--glass-shadow-lg);
+    overflow: visible;
 }
 
-.study-board-arena .board-container.study-board-shell {
-    max-width: min(880px, calc(100dvh - 250px), calc(100vw - 480px));
+.study-board-host {
+    position: relative;
+    flex-shrink: 0;
+    overflow: visible;
+    line-height: 0;
+}
+
+.study-draw-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 5;
 }
 
 .study-board-controls {
@@ -127,15 +144,6 @@
 .study-draw-wrap {
     position: relative;
     width: 100%;
-}
-
-.study-board-root {
-    width: 100%;
-}
-
-.study-board-sizing {
-    width: 100%;
-    aspect-ratio: 1 / 1;
 }
 
 .study-side-rail {
@@ -640,4 +648,14 @@
 
     .main-layout { flex-direction: column; height: auto; }
     .info-panel { width: 100%; }
+}
+
+/* dnd-kit ломается от filter/transform на предках доски */
+.study-board-shell,
+.study-board-host,
+.study-board-host #study-board-board {
+    filter: none !important;
+    transform: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
 }

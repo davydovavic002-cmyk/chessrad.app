@@ -16,21 +16,25 @@ function drawArrowhead(ctx, fromX, fromY, toX, toY, radius = 15) {
 }
 
 /**
- * Wraps the board and draws study arrows/circles.
- * Shapes format matches server: { type:'circle'|'arrow', startCol, startRow, endCol?, endRow? }
+ * Draws study arrows/circles over the chessboard.
+ * Canvas is positioned from #boardId-board coordinates; does not wrap the board.
  */
 export default function StudyDrawOverlay({
-  children,
+  boardId = 'study-board',
   shapes = [],
   orientation = 'white',
   enabled = false,
   onShapesChange,
 }) {
   const canvasRef = useRef(null);
-  const wrapRef = useRef(null);
+  const shellRef = useRef(null);
   const drawingRef = useRef({ active: false, start: null });
   const shapesRef = useRef(shapes);
   shapesRef.current = shapes;
+
+  const getBoardEl = useCallback(() => {
+    return document.getElementById(`${boardId}-board`);
+  }, [boardId]);
 
   const getCellCenter = useCallback(
     (pixelX, pixelY, size) => {
@@ -60,15 +64,18 @@ export default function StudyDrawOverlay({
 
   const redraw = useCallback(() => {
     const canvas = canvasRef.current;
-    const wrap = wrapRef.current;
-    if (!canvas || !wrap) return;
-    const boardEl = wrap.querySelector('[data-board-root]');
-    if (!boardEl) return;
+    const shell = shellRef.current;
+    const boardEl = getBoardEl();
+    if (!canvas || !shell || !boardEl) return;
 
-    const w = boardEl.offsetWidth;
-    const h = boardEl.offsetHeight;
+    const shellRect = shell.getBoundingClientRect();
+    const boardRect = boardEl.getBoundingClientRect();
+    const w = Math.round(boardRect.width);
+    const h = Math.round(boardRect.height);
     if (!w || !h) return;
 
+    canvas.style.left = `${boardRect.left - shellRect.left}px`;
+    canvas.style.top = `${boardRect.top - shellRect.top}px`;
     canvas.width = w;
     canvas.height = h;
     canvas.style.width = `${w}px`;
@@ -96,35 +103,37 @@ export default function StudyDrawOverlay({
         drawArrowhead(ctx, start.x, start.y, end.x, end.y, 18);
       }
     });
-  }, [getCanvasCoords]);
+  }, [getBoardEl, getCanvasCoords]);
 
   useEffect(() => {
     redraw();
   }, [shapes, orientation, redraw]);
 
   useEffect(() => {
-    const wrap = wrapRef.current;
-    if (!wrap) return;
-    const boardEl = wrap.querySelector('[data-board-root]');
+    const boardEl = getBoardEl();
+    const shell = shellRef.current;
+    if (!shell) return;
     const ro = new ResizeObserver(() => redraw());
     if (boardEl) ro.observe(boardEl);
-    ro.observe(wrap);
+    ro.observe(shell);
     return () => ro.disconnect();
-  }, [redraw]);
+  }, [getBoardEl, redraw]);
 
   useEffect(() => {
-    const wrap = wrapRef.current;
-    if (!wrap || !enabled) return;
+    const boardEl = getBoardEl();
+    if (!boardEl || !enabled) return;
 
     const onContextMenu = (e) => e.preventDefault();
 
     const onMouseDown = (e) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const rect = canvas.getBoundingClientRect();
-      const size = canvas.width / 8;
+      const boardRect = boardEl.getBoundingClientRect();
+      const size = boardRect.width / 8;
       if (!size) return;
-      const gridPos = getCellCenter(e.clientX - rect.left, e.clientY - rect.top, size);
+      const gridPos = getCellCenter(
+        e.clientX - boardRect.left,
+        e.clientY - boardRect.top,
+        size
+      );
 
       if (e.button === 0) {
         if (shapesRef.current.length) onShapesChange?.([]);
@@ -135,11 +144,13 @@ export default function StudyDrawOverlay({
 
     const onMouseUp = (e) => {
       if (!drawingRef.current.active || e.button !== 2) return;
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const rect = canvas.getBoundingClientRect();
-      const size = canvas.width / 8;
-      const gridPos = getCellCenter(e.clientX - rect.left, e.clientY - rect.top, size);
+      const boardRect = boardEl.getBoundingClientRect();
+      const size = boardRect.width / 8;
+      const gridPos = getCellCenter(
+        e.clientX - boardRect.left,
+        e.clientY - boardRect.top,
+        size
+      );
       const start = drawingRef.current.start;
       drawingRef.current = { active: false, start: null };
       if (!start) return;
@@ -158,33 +169,26 @@ export default function StudyDrawOverlay({
       onShapesChange?.([...shapesRef.current, nextShape]);
     };
 
-    wrap.addEventListener('contextmenu', onContextMenu);
-    wrap.addEventListener('mousedown', onMouseDown);
+    boardEl.addEventListener('contextmenu', onContextMenu);
+    boardEl.addEventListener('mousedown', onMouseDown);
     window.addEventListener('mouseup', onMouseUp);
 
     return () => {
-      wrap.removeEventListener('contextmenu', onContextMenu);
-      wrap.removeEventListener('mousedown', onMouseDown);
+      boardEl.removeEventListener('contextmenu', onContextMenu);
+      boardEl.removeEventListener('mousedown', onMouseDown);
       window.removeEventListener('mouseup', onMouseUp);
     };
-  }, [enabled, getCellCenter, onShapesChange]);
+  }, [enabled, getBoardEl, getCellCenter, onShapesChange]);
 
   return (
-    <div ref={wrapRef} className="study-draw-wrap">
-      <div data-board-root className="study-board-root">
-        {children}
-      </div>
-      <canvas
-        id="drawing-canvas"
-        ref={canvasRef}
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          pointerEvents: 'none',
-          zIndex: 10,
-        }}
-      />
-    </div>
+    <canvas
+      id="drawing-canvas"
+      ref={(node) => {
+        canvasRef.current = node;
+        shellRef.current = node?.parentElement ?? null;
+      }}
+      className="study-draw-canvas"
+      aria-hidden
+    />
   );
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { Chess } from 'chess.js';
@@ -11,6 +11,7 @@ import BackButton from '../components/BackButton';
 import StudyDrawOverlay from '../components/StudyDrawOverlay';
 import { useI18n } from '../i18n/I18nContext';
 import StudyVideoRoom from '../components/StudyVideoRoom';
+import { calcStudyBoardSize, normalizeStudyFen } from '../utils/chessPosition';
 import '../styles/study-video.css';
 import '../styles/study.css';
 
@@ -43,7 +44,7 @@ function toSetupFen(game) {
 }
 
 function normalizeFen(fen) {
-  return fen === 'start' ? START_FEN : fen;
+  return normalizeStudyFen(fen);
 }
 
 export default function StudyPage() {
@@ -59,8 +60,9 @@ export default function StudyPage() {
   const isTeacherRef = useRef(false);
 
   const [tabs, setTabs] = useState(tabsRef.current);
-  const boardShellRef = useRef(null);
-  const [boardWidth, setBoardWidth] = useState(null);
+  const [boardSize, setBoardSize] = useState(() =>
+    typeof window !== 'undefined' ? calcStudyBoardSize() : 480
+  );
   const [activeTabId, setActiveTabId] = useState('play');
   const [isTeacher, setIsTeacher] = useState(false);
   const [fen, setFen] = useState(START_FEN);
@@ -89,17 +91,17 @@ export default function StudyPage() {
     if (!roomCode) navigate('/lobby');
   }, [roomCode, navigate]);
 
-  useLayoutEffect(() => {
-    const el = boardShellRef.current;
-    if (!el) return;
-    const measure = () => {
-      const w = Math.floor(el.clientWidth - 24);
-      if (w > 0) setBoardWidth(w);
+  useEffect(() => {
+    let timer;
+    const onResize = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => setBoardSize(calcStudyBoardSize()), 250);
     };
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
+    window.addEventListener('resize', onResize);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      clearTimeout(timer);
+    };
   }, []);
 
   const syncTabsState = useCallback(() => {
@@ -285,9 +287,6 @@ export default function StudyPage() {
         moveNotation = formatPieceMove(pieceBefore.type, source, target);
         game.remove(source);
         game.put(pieceBefore, target);
-        const fenParts = game.fen().split(' ');
-        fenParts[1] = game.turn() === 'w' ? 'b' : 'w';
-        game.load(fenParts.join(' '));
       } else {
         return false;
       }
@@ -301,10 +300,22 @@ export default function StudyPage() {
       });
       tab.fen = game.fen();
       tab.pgn = game.pgn();
-      emitMove(tab);
+      setFen(game.fen());
+      setHistory([...tab.customHistory]);
+      if (tab.type === 'play') {
+        const side = game.turn() === 'w' ? t('study_white') : t('study_black');
+        setStatusMsg(t('study_turn', { side }));
+      }
+      getSocket().emit('study:move', {
+        roomCode,
+        tabId: activeTabIdRef.current,
+        fen: tab.fen,
+        pgn: tab.pgn,
+        customHistory: tab.customHistory,
+      });
       return true;
     },
-    [emitMove, formatPieceMove]
+    [roomCode, formatPieceMove, t]
   );
 
   const canDragPiece = useCallback(({ piece }) => {
@@ -608,27 +619,28 @@ export default function StudyPage() {
 
         <div className="board-section study-board-arena">
           <div id="status-msg" className="study-status-msg">{statusMsg}</div>
-          <div ref={boardShellRef} className="board-container study-board-shell">
+          <div className="study-board-shell">
+            <div className="study-board-host" style={{ width: boardSize, height: boardSize }}>
+              <Board
+                key={`${activeTabId}-${fen}`}
+                id="study-board"
+                fen={fen}
+                orientation={orientation}
+                onDrop={onDrop}
+                canDragPiece={canDragPiece}
+                boardWidth={boardSize}
+                showAnimations={false}
+                allowDrawingArrows={false}
+                allowDragOffBoard={false}
+              />
+            </div>
             <StudyDrawOverlay
+              boardId="study-board"
               shapes={shapes}
               orientation={orientation}
               enabled={isTeacher}
               onShapesChange={handleShapesChange}
-            >
-              {boardWidth ? (
-                <Board
-                  id="study-board"
-                  fen={fen}
-                  orientation={orientation}
-                  onDrop={onDrop}
-                  canDragPiece={canDragPiece}
-                  boardWidth={boardWidth}
-                  showAnimations={false}
-                />
-              ) : (
-                <div className="study-board-sizing" aria-hidden />
-              )}
-            </StudyDrawOverlay>
+            />
           </div>
           {isTeacher && (
             <div className="board-controls study-board-controls">

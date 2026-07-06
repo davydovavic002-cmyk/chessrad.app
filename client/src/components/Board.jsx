@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import { Chessboard } from 'react-chessboard';
 
+const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+
 /**
  * Thin wrapper around react-chessboard (v5 options API).
  * onDrop(source, target) => true | false | 'snapback'
@@ -8,6 +10,7 @@ import { Chessboard } from 'react-chessboard';
 export default function Board({
   id = 'board',
   fen = 'start',
+  position,
   orientation = 'white',
   onDrop,
   onSquareClick,
@@ -18,24 +21,29 @@ export default function Board({
   allowDragOffBoard = false,
   boardWidth,
   showAnimations = true,
+  allowDrawingArrows = true,
 }) {
+  const resolvedPosition = useMemo(() => {
+    if (position) return position;
+    return fen === 'start' ? START_FEN : fen;
+  }, [position, fen]);
+
   const options = useMemo(
     () => ({
       id,
-      position:
-        fen === 'start'
-          ? 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
-          : fen,
+      position: resolvedPosition,
       boardOrientation: orientation,
       allowDragging,
       allowDragOffBoard,
       showAnimations,
+      animationDurationInMs: showAnimations ? 300 : 0,
+      allowDrawingArrows,
       squareStyles,
       arrows,
       canDragPiece,
+      draggingPieceGhostStyle: { opacity: 0 },
       onPieceDrop: ({ sourceSquare, targetSquare }) => {
         if (!onDrop) return false;
-        // drop off board
         if (!targetSquare && allowDragOffBoard) {
           const result = onDrop(sourceSquare, null);
           return result === true || result === undefined;
@@ -50,11 +58,10 @@ export default function Board({
       boardStyle: boardWidth
         ? { width: boardWidth, height: boardWidth }
         : { width: '100%', aspectRatio: '1 / 1', height: 'auto' },
-      draggingPieceStyle: { transform: 'scale(1.05)' },
     }),
     [
       id,
-      fen,
+      resolvedPosition,
       orientation,
       onDrop,
       onSquareClick,
@@ -65,6 +72,7 @@ export default function Board({
       allowDragOffBoard,
       boardWidth,
       showAnimations,
+      allowDrawingArrows,
     ]
   );
 

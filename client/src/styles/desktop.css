@@ -71,7 +71,7 @@
   }
 
   .study-board-shell {
-    max-width: min(900px, calc(100dvh - 260px), calc(100vw - 460px));
+    max-width: none;
     padding: 14px;
   }
 
@@ -231,7 +231,7 @@
   }
 
   .study-board-shell {
-    max-width: min(920px, calc(100dvh - 240px), calc(100vw - 500px));
+    max-width: none;
   }
 
   .study-board-controls {
