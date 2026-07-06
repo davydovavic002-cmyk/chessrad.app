@@ -624,115 +624,84 @@ export default function StudyPage() {
           )}
         </div>
 
-        <aside className="study-side-rail">
-          <div className="info-panel study-side-panel">
-          <div className="room-info">
-            <h3 style={{ margin: 0, fontSize: 16 }}>
-              {t('study_room')}: <span>{roomCode}</span>
-            </h3>
-          </div>
-
-          {isTeacher && (
-            <div className="study-teacher-tools">
-              {activeTab?.type === 'demo' && (
-                <>
-                  <button type="button" className="btn-primary-sm" onClick={openEditor}>
-                    {t('study_editor')}
-                  </button>
-                  <button type="button" className="btn-secondary" onClick={openLibrary}>
-                    {t('study_library')}
-                  </button>
-                </>
-              )}
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => {
-                  const d = new Date();
-                  d.setDate(d.getDate() + 3);
-                  setHwDue(d.toISOString().slice(0, 10));
-                  setHwOpen(true);
-                }}
-              >
-                {t('study_assign_hw')}
-              </button>
-            </div>
-          )}
-
-          <div className="study-pgn-actions">
-            <button type="button" className="btn-secondary btn-sm" onClick={() => setPgnImportOpen(true)}>
-              {t('pgn_import_btn')}
-            </button>
-            <button type="button" className="btn-secondary btn-sm" onClick={() => exportPgn(true)}>
-              {t('study_copy_pgn')}
-            </button>
-            <button type="button" className="btn-secondary btn-sm" onClick={() => exportPgn(false)}>
-              {t('study_download_pgn')}
-            </button>
-            {isTeacher && (
-              <button type="button" className="btn-secondary btn-sm" onClick={savePgnArchive}>
-                {t('pgn_archive_save')}
-              </button>
-            )}
-          </div>
-
-          <div className="study-notes-block">
-            <label className="study-notes-label">{t('study_notes_label')}</label>
-            <textarea
-              className="study-notes-input"
-              value={tabNotes}
-              onChange={(e) => handleNotesChange(e.target.value)}
-              placeholder={t('study_notes_ph')}
-              readOnly={!isTeacher}
-              rows={3}
-            />
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1, minHeight: 0 }}>
-            <div className="history-toolbar">
-              {isTeacher && (
-                <button
-                  type="button"
-                  className="history-reset-btn"
-                  onClick={resetFullHistory}
-                  title={t('study_reset_history')}
-                  aria-label={t('study_reset_history')}
-                >
-                  ⏮
-                </button>
-              )}
-            </div>
-            <div className="chat-area history-list">
-              {history.length === 0 ? (
-                <em>{t('study_history_empty')}</em>
-              ) : (
-                history.map((h, i) => {
-                  const isLast = i === history.length - 1;
-                  return (
-                    <button
-                      key={`${h.fen}-${i}`}
-                      type="button"
-                      className={`pgn-move history-move${isLast ? ' active' : ''}`}
-                      onClick={() => goToMove(i)}
-                      disabled={!isTeacher}
-                      title={isTeacher ? t('study_goto_move') : undefined}
-                    >
-                      <span className="history-move-num">{i + 1}.</span>
-                      <span className="history-move-label">{moveLabel(h)}</span>
-                    </button>
-                  );
-                })
-              )}
-            </div>
-          </div>
-
-          </div>
-
+        <aside className="study-side-rail info-panel">
           {roomCode && roomTeacherId && (
             <div className="study-video-rail-slot">
               <StudyVideoRoom roomCode={roomCode} teacherId={roomTeacherId} layout="sidebar" />
             </div>
           )}
+
+          <div className="study-side-body">
+            <div className="room-info study-room-code">
+              <span>{t('study_room')}</span>
+              <strong>{roomCode}</strong>
+            </div>
+
+            {isTeacher && (
+              <div className="study-teacher-tools">
+                {activeTab?.type === 'demo' && (
+                  <>
+                    <button type="button" className="btn-primary-sm" onClick={openEditor}>
+                      {t('study_editor')}
+                    </button>
+                    <button type="button" className="btn-secondary" onClick={openLibrary}>
+                      {t('study_library')}
+                    </button>
+                  </>
+                )}
+                <button
+                  type="button"
+                  className="btn-secondary study-hw-btn"
+                  onClick={() => {
+                    const d = new Date();
+                    d.setDate(d.getDate() + 3);
+                    setHwDue(d.toISOString().slice(0, 10));
+                    setHwOpen(true);
+                  }}
+                >
+                  {t('study_assign_hw')}
+                </button>
+              </div>
+            )}
+
+            <div className="study-history-block">
+              <div className="history-toolbar">
+                {isTeacher && (
+                  <button
+                    type="button"
+                    className="history-reset-btn"
+                    onClick={resetFullHistory}
+                    title={t('study_reset_history')}
+                    aria-label={t('study_reset_history')}
+                  >
+                    ⏮
+                  </button>
+                )}
+              </div>
+              <div className="chat-area history-list study-history-list">
+                {history.length === 0 ? (
+                  <em>{t('study_history_empty')}</em>
+                ) : (
+                  history.map((h, i) => {
+                    const isLast = i === history.length - 1;
+                    return (
+                      <button
+                        key={`${h.fen}-${i}`}
+                        type="button"
+                        className={`pgn-move history-move${isLast ? ' active' : ''}`}
+                        onClick={() => goToMove(i)}
+                        disabled={!isTeacher}
+                        title={isTeacher ? t('study_goto_move') : undefined}
+                      >
+                        <span className="history-move-num">{i + 1}.</span>
+                        <span className="history-move-label">{moveLabel(h)}</span>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </div>
         </aside>
       </div>
 

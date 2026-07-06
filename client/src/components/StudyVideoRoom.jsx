@@ -194,15 +194,29 @@ export default function StudyVideoRoom({ roomCode, teacherId, layout = 'inline' 
   const remoteLabel = isTeacher ? t('video_student') : t('video_teacher');
 
   return (
-    <div className={`study-video-room study-video-room--${layout}`}>
-      <div className="study-video-head">
-        <span>{t('video_in_class')}</span>
-        <button type="button" className={`btn btn-sm${enabled ? ' btn-danger' : ' btn-primary'}`} onClick={toggleVideo}>
-          {enabled ? t('video_stop') : t('video_start')}
-        </button>
-      </div>
+    <div className={`study-video-room study-video-room--${layout}${layout === 'sidebar' ? ' study-video-room--bar' : ''}`}>
+      {layout !== 'sidebar' && (
+        <div className="study-video-head">
+          <span>{t('video_in_class')}</span>
+          <button type="button" className={`btn btn-sm${enabled ? ' btn-danger' : ' btn-primary'}`} onClick={toggleVideo}>
+            {enabled ? t('video_stop') : t('video_start')}
+          </button>
+        </div>
+      )}
       {error && <p className="study-video-error">{error}</p>}
-      <div className="study-video-grid">
+      <div className="study-video-bar">
+        {layout === 'sidebar' && (
+          <button
+            type="button"
+            className={`study-video-toggle${enabled ? ' study-video-toggle--on' : ''}`}
+            onClick={toggleVideo}
+            title={enabled ? t('video_stop') : t('video_start')}
+            aria-label={enabled ? t('video_stop') : t('video_start')}
+          >
+            {enabled ? '⏹' : '📷'}
+          </button>
+        )}
+        <div className="study-video-grid">
         <div className={`study-video-tile${enabled ? '' : ' study-video-tile--off'}`}>
           <video ref={localVideoRef} autoPlay muted playsInline />
           <span>{user.username} {t('video_you')}</span>
@@ -232,6 +246,7 @@ export default function StudyVideoRoom({ roomCode, teacherId, layout = 'inline' 
             <span>{remoteLabel}</span>
           </div>
         )}
+        </div>
       </div>
     </div>
   );
