@@ -17,6 +17,7 @@ export default function Board({
   allowDragging = true,
   allowDragOffBoard = false,
   boardWidth,
+  showAnimations = true,
 }) {
   const options = useMemo(
     () => ({
@@ -28,6 +29,7 @@ export default function Board({
       boardOrientation: orientation,
       allowDragging,
       allowDragOffBoard,
+      showAnimations,
       squareStyles,
       arrows,
       canDragPiece,
@@ -48,6 +50,7 @@ export default function Board({
       boardStyle: boardWidth
         ? { width: boardWidth, height: boardWidth }
         : { width: '100%', aspectRatio: '1 / 1', height: 'auto' },
+      draggingPieceStyle: { transform: 'scale(1.05)' },
     }),
     [
       id,
@@ -61,6 +64,7 @@ export default function Board({
       allowDragging,
       allowDragOffBoard,
       boardWidth,
+      showAnimations,
     ]
   );
 

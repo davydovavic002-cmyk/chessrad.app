@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { Chess } from 'chess.js';
@@ -59,6 +59,8 @@ export default function StudyPage() {
   const isTeacherRef = useRef(false);
 
   const [tabs, setTabs] = useState(tabsRef.current);
+  const boardShellRef = useRef(null);
+  const [boardWidth, setBoardWidth] = useState(null);
   const [activeTabId, setActiveTabId] = useState('play');
   const [isTeacher, setIsTeacher] = useState(false);
   const [fen, setFen] = useState(START_FEN);
@@ -86,6 +88,19 @@ export default function StudyPage() {
   useEffect(() => {
     if (!roomCode) navigate('/lobby');
   }, [roomCode, navigate]);
+
+  useLayoutEffect(() => {
+    const el = boardShellRef.current;
+    if (!el) return;
+    const measure = () => {
+      const w = Math.floor(el.clientWidth - 24);
+      if (w > 0) setBoardWidth(w);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const syncTabsState = useCallback(() => {
     setTabs([...tabsRef.current]);
@@ -593,20 +608,26 @@ export default function StudyPage() {
 
         <div className="board-section study-board-arena">
           <div id="status-msg" className="study-status-msg">{statusMsg}</div>
-          <div className="board-container study-board-shell">
+          <div ref={boardShellRef} className="board-container study-board-shell">
             <StudyDrawOverlay
               shapes={shapes}
               orientation={orientation}
               enabled={isTeacher}
               onShapesChange={handleShapesChange}
             >
-              <Board
-                id="study-board"
-                fen={fen}
-                orientation={orientation}
-                onDrop={onDrop}
-                canDragPiece={canDragPiece}
-              />
+              {boardWidth ? (
+                <Board
+                  id="study-board"
+                  fen={fen}
+                  orientation={orientation}
+                  onDrop={onDrop}
+                  canDragPiece={canDragPiece}
+                  boardWidth={boardWidth}
+                  showAnimations={false}
+                />
+              ) : (
+                <div className="study-board-sizing" aria-hidden />
+              )}
             </StudyDrawOverlay>
           </div>
           {isTeacher && (

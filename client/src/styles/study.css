@@ -127,23 +127,15 @@
 .study-draw-wrap {
     position: relative;
     width: 100%;
-    aspect-ratio: 1 / 1;
 }
 
 .study-board-root {
     width: 100%;
-    aspect-ratio: 1 / 1;
 }
 
-/* Only the chessboard grid — never all child divs (breaks drag). */
-.study-board-arena #study-board-board {
-    width: 100% !important;
-    height: auto !important;
-    aspect-ratio: 1 / 1 !important;
-}
-
-.study-board-arena .study-draw-wrap [data-board-root] {
+.study-board-sizing {
     width: 100%;
+    aspect-ratio: 1 / 1;
 }
 
 .study-side-rail {
@@ -340,11 +332,6 @@
 
 #myBoard,
 .study-draw-wrap {
-    width: 100%;
-}
-
-.study-board-arena .study-draw-wrap,
-.study-board-arena .study-draw-wrap [data-board-root] {
     width: 100%;
 }
 
