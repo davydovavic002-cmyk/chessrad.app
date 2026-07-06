@@ -69,7 +69,7 @@
     gap: 24px;
     height: calc(100vh - 110px);
     min-height: 640px;
-    grid-template-columns: 80px minmax(0, 1fr) minmax(340px, 400px);
+    grid-template-columns: 80px minmax(0, 1fr) minmax(300px, 360px);
   }
 
   .main-layout {
@@ -84,11 +84,7 @@
   }
 
   .board-controls {
-    max-width: min(1024px, calc(100vh - 120px), calc(100vw - 480px));
-  }
-
-  .study-side-rail .study-video-room--sidebar .study-video-tile {
-    min-height: 220px;
+    max-width: min(1024px, calc(100vh - 120px), calc(100vw - 460px));
   }
 
   .info-panel {

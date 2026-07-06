@@ -625,9 +625,6 @@ export default function StudyPage() {
         </div>
 
         <aside className="study-side-rail">
-          {roomCode && roomTeacherId && (
-            <StudyVideoRoom roomCode={roomCode} teacherId={roomTeacherId} layout="sidebar" />
-          )}
           <div className="info-panel study-side-panel">
           <div className="room-info">
             <h3 style={{ margin: 0, fontSize: 16 }}>
@@ -635,17 +632,32 @@ export default function StudyPage() {
             </h3>
           </div>
 
-          <div className="study-notes-block">
-            <label className="study-notes-label">{t('study_notes_label')}</label>
-            <textarea
-              className="study-notes-input"
-              value={tabNotes}
-              onChange={(e) => handleNotesChange(e.target.value)}
-              placeholder={t('study_notes_ph')}
-              readOnly={!isTeacher}
-              rows={4}
-            />
-          </div>
+          {isTeacher && (
+            <div className="study-teacher-tools">
+              {activeTab?.type === 'demo' && (
+                <>
+                  <button type="button" className="btn-primary-sm" onClick={openEditor}>
+                    {t('study_editor')}
+                  </button>
+                  <button type="button" className="btn-secondary" onClick={openLibrary}>
+                    {t('study_library')}
+                  </button>
+                </>
+              )}
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => {
+                  const d = new Date();
+                  d.setDate(d.getDate() + 3);
+                  setHwDue(d.toISOString().slice(0, 10));
+                  setHwOpen(true);
+                }}
+              >
+                {t('study_assign_hw')}
+              </button>
+            </div>
+          )}
 
           <div className="study-pgn-actions">
             <button type="button" className="btn-secondary btn-sm" onClick={() => setPgnImportOpen(true)}>
@@ -662,6 +674,18 @@ export default function StudyPage() {
                 {t('pgn_archive_save')}
               </button>
             )}
+          </div>
+
+          <div className="study-notes-block">
+            <label className="study-notes-label">{t('study_notes_label')}</label>
+            <textarea
+              className="study-notes-input"
+              value={tabNotes}
+              onChange={(e) => handleNotesChange(e.target.value)}
+              placeholder={t('study_notes_ph')}
+              readOnly={!isTeacher}
+              rows={3}
+            />
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1, minHeight: 0 }}>
@@ -702,34 +726,13 @@ export default function StudyPage() {
             </div>
           </div>
 
-          {isTeacher && activeTab?.type === 'demo' && (
-            <div id="demo-controls-block" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <button type="button" className="btn-primary-sm" style={{ width: '100%' }} onClick={openEditor}>
-                {t('study_editor')}
-              </button>
-              <button type="button" className="btn-secondary" style={{ width: '100%' }} onClick={openLibrary}>
-                {t('study_library')}
-              </button>
+          </div>
+
+          {roomCode && roomTeacherId && (
+            <div className="study-video-rail-slot">
+              <StudyVideoRoom roomCode={roomCode} teacherId={roomTeacherId} layout="sidebar" />
             </div>
           )}
-
-          {isTeacher && (
-            <button
-              type="button"
-              className="btn-secondary"
-              style={{ width: '100%', marginTop: 10 }}
-              onClick={() => {
-                const d = new Date();
-                d.setDate(d.getDate() + 3);
-                setHwDue(d.toISOString().slice(0, 10));
-                setHwOpen(true);
-              }}
-            >
-              {t('study_assign_hw')}
-            </button>
-          )}
-
-          </div>
         </aside>
       </div>
 
