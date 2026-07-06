@@ -56,7 +56,7 @@
 
   /* ── Study room ── */
   .study-page {
-    padding: 16px 24px 24px;
+    padding: 12px 20px 16px;
   }
 
   .study-page .lobby-header,
@@ -66,25 +66,18 @@
   }
 
   .study-studio {
-    gap: 24px;
-    height: calc(100vh - 110px);
-    min-height: 640px;
+    gap: 20px;
     grid-template-columns: 80px minmax(0, 1fr) minmax(0, 380px);
+  }
+
+  .study-board-arena .board-container {
+    padding: 14px;
   }
 
   .main-layout {
     gap: 24px;
     height: calc(100vh - 110px);
     min-height: 640px;
-  }
-
-  .board-container {
-    max-width: min(1024px, calc(100vh - 120px), calc(100vw - 480px));
-    padding: 18px;
-  }
-
-  .board-controls {
-    max-width: min(1024px, calc(100vh - 120px), calc(100vw - 460px));
   }
 
   .info-panel:not(.study-side-rail) {
@@ -232,8 +225,16 @@
     max-width: min(1024px, calc(100vh - 120px), calc(100vw - 540px));
   }
 
+  .study-board-arena .board-container {
+    max-width: none;
+  }
+
   .board-controls {
     max-width: min(1024px, calc(100vh - 120px), calc(100vw - 540px));
+  }
+
+  .study-board-controls {
+    max-width: none;
   }
 
   .info-panel:not(.study-side-rail) {

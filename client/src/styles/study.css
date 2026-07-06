@@ -3,7 +3,12 @@
 .study-page {
     position: relative;
     z-index: 1;
-    min-height: 100vh;
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
     padding: 10px;
 }
 
@@ -12,7 +17,8 @@
     justify-content: space-between;
     align-items: center;
     padding: 16px 24px;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
+    flex-shrink: 0;
     background: var(--glass-bg);
     backdrop-filter: blur(var(--glass-blur));
     border: 1px solid var(--glass-border);
@@ -50,30 +56,82 @@
     display: grid;
     grid-template-columns: 80px minmax(0, 1fr) minmax(0, 360px);
     gap: 20px;
+    flex: 1;
+    min-height: 0;
     max-width: min(1800px, 100%);
     margin: 0 auto;
     width: 100%;
-    height: calc(100vh - 100px);
-    min-height: 560px;
     align-items: stretch;
     box-sizing: border-box;
+    overflow: hidden;
+}
+
+.study-studio > .board-section {
+    min-height: 0;
+    height: 100%;
 }
 
 .study-board-arena {
-    flex: 1;
+    min-height: 0;
+    min-width: 0;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-start;
-    min-width: 0;
 }
 
 .study-status-msg {
-    margin-bottom: 10px;
+    margin-bottom: 8px;
     font-weight: 800;
     font-size: 14px;
     text-transform: uppercase;
     color: var(--peach-600);
+    flex-shrink: 0;
+    line-height: 1.2;
+}
+
+.study-board-fit {
+    flex: 1 1 0;
+    min-height: 0;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    container-type: size;
+}
+
+.study-board-column {
+    width: min(100cqw, 100cqh, 1024px);
+    max-width: 100%;
+    max-height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+}
+
+.study-board-arena .board-container {
+    width: 100%;
+    max-width: none;
+    aspect-ratio: 1;
+    height: auto;
+    max-height: 100cqh;
+    padding: 12px;
+    box-sizing: border-box;
+    flex-shrink: 1;
+    min-height: 0;
+}
+
+.study-board-column--with-controls .board-container {
+    max-height: calc(100cqh - 52px);
+}
+
+.study-board-controls {
+    flex-shrink: 0;
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    margin-top: 0;
 }
 
 .study-side-rail {
@@ -84,7 +142,7 @@
     max-width: 100%;
     min-width: 0;
     height: 100%;
-    max-height: calc(100vh - 100px);
+    max-height: 100%;
     overflow: hidden;
     padding: 14px;
     box-sizing: border-box;
