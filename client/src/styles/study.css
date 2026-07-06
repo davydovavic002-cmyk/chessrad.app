@@ -83,6 +83,8 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
+    padding-bottom: 8px;
 }
 
 .study-status-msg {
@@ -97,44 +99,18 @@
     text-align: center;
 }
 
-.study-board-fit {
-    flex: 1 1 0;
+.study-board-shell {
+    width: 100%;
+    max-width: min(880px, calc(100dvh - 250px), calc(100vw - 480px));
+    flex: 0 1 auto;
     min-height: 0;
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    padding: 0 8px;
-    box-sizing: border-box;
-}
-
-.study-board-frame {
-    width: 100%;
-    max-width: min(960px, calc(100vw - 440px));
-    max-height: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    min-height: 0;
-    box-sizing: border-box;
-}
-
-.study-board-arena .board-container {
-    width: 100%;
-    max-width: min(960px, calc(100dvh - 200px), calc(100vw - 440px));
-    aspect-ratio: 1;
-    height: auto;
+    margin: 0 auto;
     padding: 12px;
     box-sizing: border-box;
-    flex: 0 0 auto;
-    margin: 0;
 }
 
-.study-board-frame--controls .board-container {
-    max-width: min(960px, calc(100dvh - 248px), calc(100vw - 440px));
+.study-board-arena .board-container.study-board-shell {
+    max-width: min(880px, calc(100dvh - 250px), calc(100vw - 480px));
 }
 
 .study-board-controls {
@@ -142,19 +118,32 @@
     display: flex;
     gap: 10px;
     width: 100%;
-    margin: 0;
-    max-width: 100% !important;
+    max-width: min(880px, calc(100dvh - 250px), calc(100vw - 480px)) !important;
+    margin: 10px auto 0;
+    padding: 0 12px;
     box-sizing: border-box;
 }
 
 .study-draw-wrap {
     position: relative;
     width: 100%;
+    aspect-ratio: 1 / 1;
 }
 
-.study-board-measure {
+.study-board-root {
     width: 100%;
-    line-height: 0;
+    aspect-ratio: 1 / 1;
+}
+
+/* Only the chessboard grid — never all child divs (breaks drag). */
+.study-board-arena #study-board-board {
+    width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 1 / 1 !important;
+}
+
+.study-board-arena .study-draw-wrap [data-board-root] {
+    width: 100%;
 }
 
 .study-side-rail {
@@ -351,6 +340,11 @@
 
 #myBoard,
 .study-draw-wrap {
+    width: 100%;
+}
+
+.study-board-arena .study-draw-wrap,
+.study-board-arena .study-draw-wrap [data-board-root] {
     width: 100%;
 }
 

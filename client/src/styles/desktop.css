@@ -70,8 +70,13 @@
     grid-template-columns: 80px minmax(0, 1fr) minmax(0, 380px);
   }
 
-  .study-board-arena .board-container {
+  .study-board-shell {
+    max-width: min(900px, calc(100dvh - 260px), calc(100vw - 460px));
     padding: 14px;
+  }
+
+  .study-board-controls {
+    max-width: min(900px, calc(100dvh - 260px), calc(100vw - 460px)) !important;
   }
 
   .main-layout {
@@ -225,16 +230,12 @@
     max-width: min(1024px, calc(100vh - 120px), calc(100vw - 540px));
   }
 
-  .study-board-arena .board-container {
-    max-width: none;
-  }
-
-  .board-controls {
-    max-width: min(1024px, calc(100vh - 120px), calc(100vw - 540px));
+  .study-board-shell {
+    max-width: min(920px, calc(100dvh - 240px), calc(100vw - 500px));
   }
 
   .study-board-controls {
-    max-width: none;
+    max-width: min(920px, calc(100dvh - 240px), calc(100vw - 500px)) !important;
   }
 
   .info-panel:not(.study-side-rail) {

@@ -593,39 +593,35 @@ export default function StudyPage() {
 
         <div className="board-section study-board-arena">
           <div id="status-msg" className="study-status-msg">{statusMsg}</div>
-          <div className="study-board-fit">
-            <div className={`study-board-frame${isTeacher ? ' study-board-frame--controls' : ''}`}>
-              <div className="board-container">
-                <StudyDrawOverlay
-                  shapes={shapes}
-                  orientation={orientation}
-                  enabled={isTeacher}
-                  onShapesChange={handleShapesChange}
-                >
-                  <Board
-                    id="study-board"
-                    fen={fen}
-                    orientation={orientation}
-                    onDrop={onDrop}
-                    canDragPiece={canDragPiece}
-                  />
-                </StudyDrawOverlay>
-              </div>
-              {isTeacher && (
-                <div className="board-controls study-board-controls">
-                  <button type="button" className="btn-secondary" onClick={() => setOrientation((o) => (o === 'white' ? 'black' : 'white'))}>
-                    {t('study_flip')}
-                  </button>
-                  <button type="button" className="btn-secondary" onClick={() => applyFen(START_FEN)}>
-                    {t('study_start')}
-                  </button>
-                  <button type="button" className="btn-danger-light" onClick={() => applyFen(EMPTY_FEN)}>
-                    {t('study_clear')}
-                  </button>
-                </div>
-              )}
-            </div>
+          <div className="board-container study-board-shell">
+            <StudyDrawOverlay
+              shapes={shapes}
+              orientation={orientation}
+              enabled={isTeacher}
+              onShapesChange={handleShapesChange}
+            >
+              <Board
+                id="study-board"
+                fen={fen}
+                orientation={orientation}
+                onDrop={onDrop}
+                canDragPiece={canDragPiece}
+              />
+            </StudyDrawOverlay>
           </div>
+          {isTeacher && (
+            <div className="board-controls study-board-controls">
+              <button type="button" className="btn-secondary" onClick={() => setOrientation((o) => (o === 'white' ? 'black' : 'white'))}>
+                {t('study_flip')}
+              </button>
+              <button type="button" className="btn-secondary" onClick={() => applyFen(START_FEN)}>
+                {t('study_start')}
+              </button>
+              <button type="button" className="btn-danger-light" onClick={() => applyFen(EMPTY_FEN)}>
+                {t('study_clear')}
+              </button>
+            </div>
+          )}
         </div>
 
         <aside className="study-side-rail info-panel">
