@@ -12,11 +12,11 @@
 
 .puzzle-container {
     display: grid;
-    grid-template-columns: minmax(280px, 560px) minmax(260px, 340px);
+    grid-template-columns: minmax(320px, 1fr) minmax(280px, 380px);
     gap: 28px;
     padding: 28px;
     border-radius: var(--radius-xl);
-    max-width: 960px;
+    max-width: min(1100px, 100%);
     width: 100%;
 }
 

@@ -1,0 +1,234 @@
+/* Desktop layout — use full screen width on large monitors */
+
+@media (min-width: 1024px) {
+  .page-wrap {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+
+  /* ── Shared page containers ── */
+  .lobby-container,
+  .calendar-page,
+  .homework-page,
+  .journal-page,
+  .admin-page,
+  .profile-container,
+  .tournament-list-page,
+  .library-page,
+  .group-study-page {
+    max-width: min(1680px, 100%);
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .lobby-container {
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+
+  .lobby-content h2 {
+    font-size: 2rem;
+  }
+
+  .menu-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 24px;
+  }
+
+  .menu-card {
+    padding: 28px;
+  }
+
+  .card-icon {
+    width: 64px;
+    height: 64px;
+    font-size: 2.5rem;
+  }
+
+  .game-hud__sub {
+    max-width: 720px;
+    font-size: 1.05rem;
+  }
+
+  .game-hud h1 {
+    font-size: clamp(1.8rem, 2.5vw, 2.6rem);
+  }
+
+  /* ── Study room ── */
+  .study-page {
+    padding: 16px 24px 24px;
+  }
+
+  .study-page .lobby-header,
+  .main-layout {
+    max-width: min(1800px, 100%);
+  }
+
+  .main-layout {
+    gap: 24px;
+    height: calc(100vh - 110px);
+    min-height: 640px;
+  }
+
+  .board-container {
+    max-width: min(960px, calc(100vh - 130px), calc(100vw - 520px));
+    padding: 18px;
+  }
+
+  .board-controls {
+    max-width: min(960px, calc(100vh - 130px), calc(100vw - 520px));
+  }
+
+  .info-panel {
+    width: min(400px, 26vw);
+    min-width: 340px;
+    padding: 22px;
+  }
+
+  .chat-area {
+    min-height: 280px;
+  }
+
+  .study-editor-modal {
+    max-width: 880px;
+    width: min(880px, 92vw);
+  }
+
+  .study-lib-modal {
+    max-width: 800px;
+    width: min(800px, 92vw);
+  }
+
+  /* ── Group class ── */
+  .group-board-row {
+    max-width: min(640px, 42vw);
+    margin-left: 0;
+    margin-right: auto;
+  }
+
+  .group-student-main {
+    max-width: min(720px, 48vw);
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .group-broadcast-panel {
+    max-width: min(720px, 55vw);
+  }
+
+  .group-teacher-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+  }
+
+  .group-panel {
+    padding: 4px 0;
+  }
+
+  /* ── Homework ── */
+  .homework-layout {
+    grid-template-columns: minmax(320px, 360px) 1fr;
+    gap: 28px;
+  }
+
+  .homework-board-wrap {
+    max-width: min(720px, 100%);
+  }
+
+  /* ── Journal ── */
+  .journal-layout {
+    grid-template-columns: minmax(360px, 1fr) minmax(400px, 1.2fr);
+    gap: 28px;
+  }
+
+  /* ── Puzzle ── */
+  .puzzle-page .puzzle-container {
+    max-width: min(1100px, 100%);
+    padding: 32px 40px;
+  }
+
+  .puzzle-board-wrap {
+    max-width: min(640px, 50vw);
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* ── Game / bot ── */
+  .game-layout {
+    max-width: min(1400px, 100%);
+    gap: 36px;
+  }
+
+  .game-page .board-wrap,
+  .game-page .board-wrap [data-board-root],
+  .game-page .board-wrap [data-board-root] > div,
+  .tournament-game-page .board-wrap,
+  .play-bot-page .board-wrap {
+    max-width: min(640px, calc(100vw - 420px)) !important;
+  }
+
+  .game-page .board-wrap,
+  .tournament-game-page .board-wrap {
+    width: 100%;
+    max-width: min(640px, calc(100vw - 420px));
+  }
+
+  .game-sidebar {
+    width: min(360px, 28vw);
+  }
+
+  /* ── Tournament detail ── */
+  .tournament-sidebar {
+    width: min(360px, 26vw);
+    min-width: 300px;
+  }
+
+  .tournament-main {
+    padding: 32px 40px;
+  }
+
+  .tournament-schedule-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px;
+  }
+
+  @media (min-width: 1400px) {
+    .tournament-schedule-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  /* ── Schedule ── */
+  .schedule-page-body {
+    max-width: min(1680px, 98%);
+    margin: 0 auto;
+  }
+
+  /* ── Profile ── */
+  .profile-container {
+    max-width: min(1200px, 100%);
+  }
+
+  .profile-grid {
+    gap: 28px !important;
+  }
+
+  /* ── Modals ── */
+  .modal-content {
+    max-width: min(560px, 90vw);
+  }
+}
+
+@media (min-width: 1440px) {
+  .board-container {
+    max-width: min(1024px, calc(100vh - 120px), calc(100vw - 540px));
+  }
+
+  .board-controls {
+    max-width: min(1024px, calc(100vh - 120px), calc(100vw - 540px));
+  }
+
+  .info-panel {
+    width: 420px;
+  }
+}

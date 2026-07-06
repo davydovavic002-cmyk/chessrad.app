@@ -5,6 +5,7 @@ import './styles/theme.css';
 import './styles/components.css';
 import './styles/features-game.css';
 import './styles/mobile.css';
+import './styles/desktop.css';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

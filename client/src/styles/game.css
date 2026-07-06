@@ -10,7 +10,7 @@
 .game-layout {
     display: flex;
     gap: 28px;
-    max-width: 1200px;
+    max-width: min(1400px, 100%);
     margin: 0 auto;
     align-items: flex-start;
 }
@@ -36,14 +36,14 @@
 .board-wrap [data-board-root],
 .board-wrap [data-board-root] > div {
     width: 100% !important;
-    max-width: 500px;
+    max-width: min(560px, calc(100vw - 400px));
     border-radius: var(--radius-md);
     overflow: hidden;
 }
 
 .board-wrap {
     width: 100%;
-    max-width: 500px;
+    max-width: min(560px, calc(100vw - 400px));
 }
 
 .game-sidebar {

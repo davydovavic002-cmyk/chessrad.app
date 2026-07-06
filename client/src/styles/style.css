@@ -3,7 +3,7 @@
 .lobby-container {
     position: relative;
     z-index: 1;
-    max-width: 1100px;
+    max-width: min(1400px, 100%);
     margin: 0 auto;
     padding: 0 24px 48px;
     visibility: hidden;
