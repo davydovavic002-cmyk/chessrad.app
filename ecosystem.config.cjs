@@ -10,7 +10,8 @@ module.exports = {
       max_memory_restart: '512M',
       env: {
         NODE_ENV: 'production',
-        PORT: 3569,
+        // On server: nginx :3569 → Node 13569 (see deploy/nginx-chessrad-3569.conf)
+        PORT: 13569,
       },
     },
   ],

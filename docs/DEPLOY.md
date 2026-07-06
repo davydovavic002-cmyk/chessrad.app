@@ -13,9 +13,11 @@ Server serves `client/dist` when the folder exists.
 
 ```env
 NODE_ENV=production
-PORT=3569
+PORT=13569
 JWT_SECRET=<strong-random-secret>
-PUBLIC_ORIGIN=https://your-domain.com
+PUBLIC_ORIGIN=https://chessrad.app:3569
+AUTH_BYPASS=false
+```
 
 SMTP_HOST=smtp.example.com
 SMTP_PORT=587

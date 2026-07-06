@@ -93,7 +93,6 @@ import {
     getParentChildren,
     linkParentToStudent,
     findParentByEmail,
-    addUser,
     setGroupPollState,
     getGroupPollState,
 } from './db.js';
