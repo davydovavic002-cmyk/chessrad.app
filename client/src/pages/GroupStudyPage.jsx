@@ -282,7 +282,9 @@ export default function GroupStudyPage() {
         </div>
       </header>
 
-      <StudyVideoRoom roomCode={roomCode} teacherId={room.teacher_id} compact={!isTeacher} />
+      {roomCode && room?.teacher_id && (
+        <StudyVideoRoom roomCode={roomCode} teacherId={room.teacher_id} layout="group" />
+      )}
 
       {poll?.active && (
         <div className="group-poll-panel game-panel">

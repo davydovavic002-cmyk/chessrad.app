@@ -60,8 +60,16 @@
   }
 
   .study-page .lobby-header,
-  .main-layout {
+  .main-layout,
+  .study-studio {
     max-width: min(1800px, 100%);
+  }
+
+  .study-studio {
+    gap: 24px;
+    height: calc(100vh - 110px);
+    min-height: 640px;
+    grid-template-columns: 80px minmax(0, 1fr) minmax(340px, 400px);
   }
 
   .main-layout {
@@ -71,12 +79,16 @@
   }
 
   .board-container {
-    max-width: min(960px, calc(100vh - 130px), calc(100vw - 520px));
+    max-width: min(1024px, calc(100vh - 120px), calc(100vw - 480px));
     padding: 18px;
   }
 
   .board-controls {
-    max-width: min(960px, calc(100vh - 130px), calc(100vw - 520px));
+    max-width: min(1024px, calc(100vh - 120px), calc(100vw - 480px));
+  }
+
+  .study-side-rail .study-video-room--sidebar .study-video-tile {
+    min-height: 220px;
   }
 
   .info-panel {

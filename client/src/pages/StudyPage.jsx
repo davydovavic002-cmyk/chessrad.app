@@ -565,11 +565,7 @@ export default function StudyPage() {
         </div>
       </header>
 
-      {roomCode && roomTeacherId && (
-        <StudyVideoRoom roomCode={roomCode} teacherId={roomTeacherId} />
-      )}
-
-      <div className="main-layout">
+      <div className="study-studio">
         <aside className="tabs-sidebar">
           <div id="tabs-list">
             {tabs.map((tabItem) => (
@@ -595,10 +591,8 @@ export default function StudyPage() {
           )}
         </aside>
 
-        <div className="board-section">
-          <div id="status-msg" style={{ marginBottom: 10, fontWeight: 800, fontSize: 14, color: 'var(--peach-600)' }}>
-            {statusMsg}
-          </div>
+        <div className="board-section study-board-arena">
+          <div id="status-msg" className="study-status-msg">{statusMsg}</div>
           <div className="board-container">
             <StudyDrawOverlay
               shapes={shapes}
@@ -630,7 +624,11 @@ export default function StudyPage() {
           )}
         </div>
 
-        <aside className="info-panel">
+        <aside className="study-side-rail">
+          {roomCode && roomTeacherId && (
+            <StudyVideoRoom roomCode={roomCode} teacherId={roomTeacherId} layout="sidebar" />
+          )}
+          <div className="info-panel study-side-panel">
           <div className="room-info">
             <h3 style={{ margin: 0, fontSize: 16 }}>
               {t('study_room')}: <span>{roomCode}</span>
@@ -731,6 +729,7 @@ export default function StudyPage() {
             </button>
           )}
 
+          </div>
         </aside>
       </div>
 

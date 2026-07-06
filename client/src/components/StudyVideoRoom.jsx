@@ -6,7 +6,7 @@ import '../styles/study-video.css';
 
 const ICE = [{ urls: 'stun:stun.l.google.com:19302' }];
 
-export default function StudyVideoRoom({ roomCode, teacherId, compact = false }) {
+export default function StudyVideoRoom({ roomCode, teacherId, layout = 'inline' }) {
   const { user } = useAuth();
   const { t } = useI18n();
   const localVideoRef = useRef(null);
@@ -86,8 +86,10 @@ export default function StudyVideoRoom({ roomCode, teacherId, compact = false })
     async ({ fromUserId, fromUsername, data }) => {
       if (!enabled || Number(fromUserId) === Number(user.id)) return;
 
-      if (isTeacher || Number(fromUserId) === Number(teacherId)) {
-        /* student accepts teacher or teacher accepts student */
+      if (layout === 'group') {
+        if (!isTeacher && Number(fromUserId) !== Number(teacherId)) return;
+      } else if (isTeacher || Number(fromUserId) === Number(teacherId)) {
+        /* duo: teacher ↔ student */
       } else if (!isTeacher) {
         return;
       }
@@ -119,17 +121,22 @@ export default function StudyVideoRoom({ roomCode, teacherId, compact = false })
         }
       }
     },
-    [enabled, user.id, isTeacher, teacherId, roomCode, createPeer]
+    [enabled, user.id, isTeacher, teacherId, roomCode, createPeer, layout]
   );
 
   const connectToPeer = useCallback(
     (peer) => {
       if (Number(peer.userId) === Number(user.id)) return;
-      if (!isTeacher && Number(peer.userId) !== Number(teacherId)) return;
-      if (isTeacher && Number(peer.userId) === Number(teacherId)) return;
+      if (layout === 'group') {
+        if (!isTeacher && Number(peer.userId) !== Number(teacherId)) return;
+        if (isTeacher && Number(peer.userId) === Number(teacherId)) return;
+      } else {
+        if (!isTeacher && Number(peer.userId) !== Number(teacherId)) return;
+        if (isTeacher && Number(peer.userId) === Number(teacherId)) return;
+      }
       createPeer(peer.userId, peer.username, true);
     },
-    [user.id, isTeacher, teacherId, createPeer]
+    [user.id, isTeacher, teacherId, createPeer, layout]
   );
 
   useEffect(() => {
@@ -183,8 +190,11 @@ export default function StudyVideoRoom({ roomCode, teacherId, compact = false })
     }
   }
 
+  const showDuoPlaceholder = layout === 'sidebar' && enabled && remoteStreams.length === 0;
+  const remoteLabel = isTeacher ? t('video_student') : t('video_teacher');
+
   return (
-    <div className={`study-video-room${compact ? ' study-video-room--compact' : ''}`}>
+    <div className={`study-video-room study-video-room--${layout}`}>
       <div className="study-video-head">
         <span>{t('video_in_class')}</span>
         <button type="button" className={`btn btn-sm${enabled ? ' btn-danger' : ' btn-primary'}`} onClick={toggleVideo}>
@@ -193,10 +203,17 @@ export default function StudyVideoRoom({ roomCode, teacherId, compact = false })
       </div>
       {error && <p className="study-video-error">{error}</p>}
       <div className="study-video-grid">
-        <div className="study-video-tile">
+        <div className={`study-video-tile${enabled ? '' : ' study-video-tile--off'}`}>
           <video ref={localVideoRef} autoPlay muted playsInline />
           <span>{user.username} {t('video_you')}</span>
         </div>
+
+        {layout === 'sidebar' && showDuoPlaceholder && (
+          <div className="study-video-tile study-video-tile--placeholder">
+            <span>{t('video_waiting')}</span>
+          </div>
+        )}
+
         {remoteStreams.map((r) => (
           <div key={r.userId} className="study-video-tile">
             <video
@@ -209,6 +226,12 @@ export default function StudyVideoRoom({ roomCode, teacherId, compact = false })
             <span>{r.username}</span>
           </div>
         ))}
+
+        {layout === 'sidebar' && !enabled && (
+          <div className="study-video-tile study-video-tile--placeholder">
+            <span>{remoteLabel}</span>
+          </div>
+        )}
       </div>
     </div>
   );

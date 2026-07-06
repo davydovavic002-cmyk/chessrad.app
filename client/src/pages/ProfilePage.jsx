@@ -218,34 +218,37 @@ export default function ProfilePage() {
       </Modal>
 
       <div className="profile-container page-wrap">
-        <div className="profile-card glass-strong">
-          <h1>{t('profile_title')}</h1>
-
-          <div className="stats-grid">
-            <div className="stat-card">
-              <span className="stat-value">{Number(user.wins) || 0}</span>
-              <span className="stat-label">{t('profile_wins')}</span>
+        <div className="profile-bento">
+          <section className="profile-bento__cell profile-bento__cell--hero">
+            <h1>{t('profile_title')}</h1>
+            <div className="profile-hero-meta">
+              <p style={{ margin: 0 }}>
+                {t('profile_name')}: <strong>{user.username}</strong>
+              </p>
+              <p style={{ margin: 0 }}>
+                {t('profile_rating')}: <span className="rating-badge">{rating}</span>
+              </p>
             </div>
-            <div className="stat-card">
-              <span className="stat-value">{Number(user.draws) || 0}</span>
-              <span className="stat-label">{t('profile_draws')}</span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-value">{Number(user.losses) || 0}</span>
-              <span className="stat-label">{t('profile_losses')}</span>
-            </div>
-          </div>
+          </section>
 
-          <div className="info-panel">
-            <p>
-              {t('profile_name')}: <strong>{user.username}</strong>
-            </p>
-            <p>
-              {t('profile_rating')}: <span className="rating-badge">{rating}</span>
-            </p>
-          </div>
+          <section className="profile-bento__cell profile-bento__cell--stats">
+            <div className="stats-grid">
+              <div className="stat-card">
+                <span className="stat-value">{Number(user.wins) || 0}</span>
+                <span className="stat-label">{t('profile_wins')}</span>
+              </div>
+              <div className="stat-card">
+                <span className="stat-value">{Number(user.draws) || 0}</span>
+                <span className="stat-label">{t('profile_draws')}</span>
+              </div>
+              <div className="stat-card">
+                <span className="stat-value">{Number(user.losses) || 0}</span>
+                <span className="stat-label">{t('profile_losses')}</span>
+              </div>
+            </div>
+          </section>
 
-          <div className="info-panel">
+          <section className="profile-bento__cell profile-bento__cell--progress">
             <h3>
               {t('profile_progress')}: <span>{t(currentLevel.key)}</span>
             </h3>
@@ -253,9 +256,9 @@ export default function ProfilePage() {
               <div id="progress-fill-bar" style={{ width: `${progressPct}%` }} />
             </div>
             <p className="subtitle">{pointsText}</p>
-          </div>
+          </section>
 
-          <div className="info-panel">
+          <section className="profile-bento__cell profile-bento__cell--trophies">
             <h3>{t('profile_trophies')}</h3>
             <div className="trophy-shelf">
               {trophies.length === 0 ? (
@@ -267,25 +270,13 @@ export default function ProfilePage() {
                   return (
                     <div
                       key={i}
+                      className="trophy-chip"
                       title={t('profile_trophy_tip', {
                         name: tr.tournamentName || t('profile_tournament'),
                         place: tr.place,
                         date: tr.date,
                       })}
-                      style={{
-                        width: 45,
-                        height: 45,
-                        borderRadius: '50%',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        background: bgColor,
-                        cursor: 'help',
-                        fontSize: 24,
-                        border: '2px solid rgba(0,0,0,0.2)',
-                        marginRight: 10,
-                        boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
-                      }}
+                      style={{ background: bgColor }}
                     >
                       {tr.place === 1 ? '🏆' : '🏅'}
                     </div>
@@ -293,9 +284,9 @@ export default function ProfilePage() {
                 })
               )}
             </div>
-          </div>
+          </section>
 
-          <div className="info-panel">
+          <section className="profile-bento__cell profile-bento__cell--history">
             <h3>{t('profile_history')}</h3>
             <div className="table-wrapper">
               <table className="history-table">
@@ -327,10 +318,10 @@ export default function ProfilePage() {
                 </tbody>
               </table>
             </div>
-          </div>
+          </section>
 
           {user.role === 'student' && (
-            <div className="info-panel">
+            <section className="profile-bento__cell profile-bento__cell--wide">
               <h3>{t('profile_homework')}</h3>
               <Link to="/homework" className="btn btn-primary btn-block">
                 {t('homework_title')}
@@ -348,17 +339,15 @@ export default function ProfilePage() {
               >
                 {t('onboarding_replay')}
               </button>
-            </div>
+            </section>
           )}
 
           {isTeacher && (
-            <div className="info-panel" id="teacher-rooms-panel">
-              <div style={{ marginBottom: 12 }}>
+            <section className="profile-bento__cell profile-bento__cell--wide" id="teacher-rooms-panel">
+              <div style={{ display: 'grid', gap: 10, marginBottom: 16 }}>
                 <Link to="/journal" className="btn btn-primary btn-block">
                   {t('profile_journal')}
                 </Link>
-              </div>
-              <div style={{ marginBottom: 20 }}>
                 <Link to="/library-editor" className="btn btn-secondary btn-block">
                   {t('profile_library')}
                 </Link>
@@ -391,10 +380,10 @@ export default function ProfilePage() {
                   ))
                 )}
               </div>
-            </div>
+            </section>
           )}
 
-          <div className="info-panel">
+          <section className="profile-bento__cell profile-bento__cell--third">
             <h3>{t('tz_settings')}</h3>
             <label className="profile-check" style={{ display: 'block', marginBottom: 8 }}>
               {t('tz_primary')}
@@ -421,16 +410,16 @@ export default function ProfilePage() {
               </select>
             </label>
             <p className="subtitle">{t('tz_hint')}</p>
-          </div>
+          </section>
 
-          <div className="info-panel">
+          <section className="profile-bento__cell profile-bento__cell--wide">
             <h3>{t('pgn_archive_title')}</h3>
             {pgnArchive.length === 0 ? (
               <p className="subtitle">{t('pgn_archive_empty')}</p>
             ) : (
               <div className="pgn-archive-list">
                 {pgnArchive.slice(0, 10).map((item) => (
-                  <div key={item.id} className="pgn-archive-item" style={{ marginBottom: 8, padding: 8, borderRadius: 8, background: 'rgba(0,0,0,0.05)' }}>
+                  <div key={item.id} className="pgn-archive-item">
                     <strong>{item.title || item.lesson_date}</strong>
                     <div className="subtitle" style={{ fontSize: 12 }}>{item.lesson_date}</div>
                     <button
@@ -447,9 +436,9 @@ export default function ProfilePage() {
                 ))}
               </div>
             )}
-          </div>
+          </section>
 
-          <div className="info-panel">
+          <section className="profile-bento__cell profile-bento__cell--third">
             <h3>{t('profile_parent_email')}</h3>
             <input
               className="form-input"
@@ -469,9 +458,9 @@ export default function ProfilePage() {
             <button type="button" className="btn btn-secondary btn-sm mt-2" onClick={saveSettings}>
               {t('save')}
             </button>
-          </div>
+          </section>
 
-          <div className="info-panel password-section">
+          <section className="profile-bento__cell profile-bento__cell--wide password-section">
             <h3>{t('profile_security')}</h3>
             <input
               type="password"
@@ -493,13 +482,13 @@ export default function ProfilePage() {
             <div className={`status-msg${profilePassMsg ? (profilePassOk ? ' success' : ' error') : ''}`}>
               {profilePassMsg}
             </div>
-          </div>
+          </section>
 
-          <div className="profile-controls">
+          <section className="profile-bento__cell profile-bento__cell--actions">
             <button type="button" id="logout-btn" className="btn btn-danger" onClick={handleLogout}>
               {t('logout')}
             </button>
-          </div>
+          </section>
         </div>
       </div>
     </>

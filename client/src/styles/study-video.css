@@ -1,20 +1,23 @@
 .study-video-room {
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
-  border-radius: var(--radius-md);
-  padding: 12px;
-  margin-bottom: 16px;
+  border-radius: var(--radius-lg);
+  padding: 14px;
 }
 
-.study-video-room--compact {
-  margin-top: 12px;
+.study-video-room--sidebar {
+  flex-shrink: 0;
+}
+
+.study-video-room--inline {
+  margin-bottom: 16px;
 }
 
 .study-video-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   font-size: 13px;
   font-weight: 700;
 }
@@ -28,21 +31,42 @@
 .study-video-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 8px;
+  gap: 10px;
+}
+
+.study-video-room--sidebar .study-video-grid {
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.study-video-room--sidebar .study-video-tile {
+  aspect-ratio: auto;
+  min-height: 200px;
+}
+
+.study-video-room--group .study-video-grid {
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+}
+
+.study-video-room--group .study-video-tile {
+  min-height: 140px;
+  aspect-ratio: 4/3;
 }
 
 .study-video-tile {
   position: relative;
-  background: #111;
-  border-radius: var(--radius-sm);
+  background: #0d0d0d;
+  border-radius: var(--radius-md);
   overflow: hidden;
   aspect-ratio: 4/3;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .study-video-tile video {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
 }
 
 .study-video-tile span {
@@ -50,8 +74,43 @@
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 4px 6px;
-  font-size: 10px;
-  background: rgba(0, 0, 0, 0.65);
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
   color: #fff;
+}
+
+.study-video-tile--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, #1a1a1a, #2a2220);
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 13px;
+  text-align: center;
+  padding: 16px;
+}
+
+.study-video-tile--placeholder span {
+  position: static;
+  background: none;
+  color: inherit;
+  padding: 0;
+}
+
+.study-video-tile--off video {
+  opacity: 0.15;
+}
+
+.study-video-tile--off::before {
+  content: '📷';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  opacity: 0.35;
+  pointer-events: none;
 }
