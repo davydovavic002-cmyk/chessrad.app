@@ -42,9 +42,17 @@ echo "==> Built assets:"
 ls -la client/dist/index.html
 ls -la client/dist/assets/ 2>/dev/null | head -6
 
+PM2_APP="${PM2_APP:-chessrad-new}"
+
 if command -v pm2 >/dev/null 2>&1; then
-  pm2 restart chessrad || pm2 start ecosystem.config.cjs
-  pm2 status chessrad
+  # Remove legacy duplicate if deploy.sh previously started "chessrad" on the same PORT.
+  if pm2 describe chessrad >/dev/null 2>&1 && [[ "$PM2_APP" != "chessrad" ]]; then
+    echo "==> Stopping legacy PM2 app 'chessrad' (same port as $PM2_APP)"
+    pm2 delete chessrad || true
+  fi
+  pm2 restart "$PM2_APP" || pm2 start ecosystem.config.cjs --only "$PM2_APP"
+  pm2 save
+  pm2 status "$PM2_APP"
 else
   echo "pm2 not found — restart node manually"
 fi

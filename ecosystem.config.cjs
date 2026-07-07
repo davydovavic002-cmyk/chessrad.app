@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: 'chessrad',
+      name: 'chessrad-new',
       script: 'server.js',
       cwd: __dirname,
       instances: 1,

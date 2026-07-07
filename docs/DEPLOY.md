@@ -67,7 +67,7 @@ Email is used for lesson/tournament reminders (1 hour before), journal shares, a
 
 ```bash
 npm install -g pm2
-pm2 start ecosystem.config.cjs
+pm2 start ecosystem.config.cjs --only chessrad-new
 pm2 save
 pm2 startup
 ```
@@ -105,6 +105,15 @@ cd ~/chessrad.app
 bash scripts/deploy.sh
 ```
 
-The script runs `git fetch` + `git reset --hard`, wipes `client/node_modules`, builds, and restarts PM2.
+The script runs `git fetch` + `git reset --hard`, wipes `client/node_modules`, builds, and restarts PM2 app **`chessrad-new`** (override with `PM2_APP=...` if needed).
+
+**If you see `EADDRINUSE 127.0.0.1:13569`:** two PM2 apps fight for the same port (often old `chessrad` + `chessrad-new`). Fix once:
+
+```bash
+pm2 list
+pm2 delete chessrad          # legacy name from old deploy.sh
+pm2 restart chessrad-new
+pm2 save
+```
 
 ## After deploy (smoke)

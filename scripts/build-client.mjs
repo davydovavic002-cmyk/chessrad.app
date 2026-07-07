@@ -89,4 +89,4 @@ console.log(`\nDist ready: ${indexHtml}`);
 console.log(`Built at: ${builtAt}`);
 if (assets.length) console.log(`Assets: ${assets.join(', ')}`);
 
-console.log('\nClient build complete. Run: pm2 restart chessrad');
+console.log('\nClient build complete. Run: pm2 restart chessrad-new');
