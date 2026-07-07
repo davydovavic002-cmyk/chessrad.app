@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { apiJson } from '../api';
 import { getSocket } from '../socket';
@@ -10,9 +11,12 @@ export default function NotificationBell() {
   const { t } = useI18n();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const btnRef = useRef(null);
+  const panelRef = useRef(null);
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
   const [unread, setUnread] = useState(0);
+  const [panelPos, setPanelPos] = useState({ top: 0, right: 0 });
 
   const load = useCallback(async () => {
     const { res, data } = await apiJson('/api/notifications');
@@ -21,6 +25,39 @@ export default function NotificationBell() {
       setUnread(data.unread || 0);
     }
   }, []);
+
+  const updatePanelPos = useCallback(() => {
+    const btn = btnRef.current;
+    if (!btn) return;
+    const rect = btn.getBoundingClientRect();
+    setPanelPos({
+      top: rect.bottom + 8,
+      right: Math.max(12, window.innerWidth - rect.right),
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    updatePanelPos();
+    window.addEventListener('resize', updatePanelPos);
+    window.addEventListener('scroll', updatePanelPos, true);
+    return () => {
+      window.removeEventListener('resize', updatePanelPos);
+      window.removeEventListener('scroll', updatePanelPos, true);
+    };
+  }, [open, updatePanelPos]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    function onDocClick(e) {
+      const panel = panelRef.current;
+      const btn = btnRef.current;
+      if (panel?.contains(e.target) || btn?.contains(e.target)) return;
+      setOpen(false);
+    }
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [open]);
 
   useEffect(() => {
     load();
@@ -67,19 +104,13 @@ export default function NotificationBell() {
     }
   }
 
-  return (
-    <div className="notify-bell">
-      <button
-        type="button"
-        className="notify-bell__btn"
-        onClick={() => setOpen((o) => !o)}
-        aria-label={t('notify_title')}
-      >
-        🔔
-        {unread > 0 && <span className="notify-bell__badge">{unread > 9 ? '9+' : unread}</span>}
-      </button>
-      {open && (
-        <div className="notify-bell__panel glass-strong">
+  const panel = open
+    ? createPortal(
+        <div
+          ref={panelRef}
+          className="notify-bell__panel glass-strong"
+          style={{ top: panelPos.top, right: panelPos.right }}
+        >
           <div className="notify-bell__head">
             <strong>{t('notify_title')}</strong>
             {unread > 0 && (
@@ -105,8 +136,25 @@ export default function NotificationBell() {
               ))
             )}
           </div>
-        </div>
-      )}
+        </div>,
+        document.body
+      )
+    : null;
+
+  return (
+    <div className="notify-bell">
+      <button
+        ref={btnRef}
+        type="button"
+        className="notify-bell__btn"
+        onClick={() => setOpen((o) => !o)}
+        aria-label={t('notify_title')}
+        aria-expanded={open}
+      >
+        🔔
+        {unread > 0 && <span className="notify-bell__badge">{unread > 9 ? '9+' : unread}</span>}
+      </button>
+      {panel}
     </div>
   );
 }

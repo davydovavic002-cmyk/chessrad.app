@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { apiJson } from '../api';
 import BackButton from '../components/BackButton';
@@ -25,6 +25,8 @@ export default function JournalPage() {
   const { t } = useI18n();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const urlStudentId = searchParams.get('studentId');
   const [students, setStudents] = useState([]);
   const [studentId, setStudentId] = useState('');
   const [tab, setTab] = useState('entries');
@@ -57,8 +59,12 @@ export default function JournalPage() {
   const loadStudents = useCallback(async () => {
     const { data } = await apiJson('/api/schedule/students');
     setStudents(data.students || []);
-    if (!studentId && data.students?.[0]) setStudentId(String(data.students[0].id));
-  }, [studentId]);
+    if (urlStudentId) {
+      setStudentId(urlStudentId);
+    } else if (!studentId && data.students?.[0]) {
+      setStudentId(String(data.students[0].id));
+    }
+  }, [studentId, urlStudentId]);
 
   const loadEntries = useCallback(async () => {
     if (!studentId) return;

@@ -95,6 +95,14 @@ import {
     findParentByEmail,
     setGroupPollState,
     getGroupPollState,
+    ensureUserLinkCode,
+    formatLinkCode,
+    findUserByLinkCode,
+    linkStudentToTeacher,
+    unlinkStudentFromTeacher,
+    getTeacherStudents,
+    getStudentTeachers,
+    countStudentTeachers,
 } from './db.js';
 import { Game } from './gamelogic.js';
 import { Tournament } from './server/tournament.js';
@@ -481,25 +489,36 @@ function createAndStartGame(player1Socket, player2Socket) {
 // ---------------------------------
 
 app.post('/api/register', authLimiter, async (req, res) => {
-    let { username, password, role } = req.body;
-    if (username) username = username.replace(/<\/?[^>]+(>|$)/g, "").trim();
+    let { username, password, role, displayName, teacherLinkCode } = req.body;
+    if (username) username = username.replace(/<\/?[^>]+(>|$)/g, '').trim();
+    displayName = (displayName || '').replace(/<\/?[^>]+(>|$)/g, '').trim();
 
-    if (!username || !password || password.length < 4) {
-        return res.status(400).json({ message: 'Ошибка валидации' });
-    }
+    if (!username || !password || password.length < 4) {
+        return res.status(400).json({ message: 'Ошибка валидации' });
+    }
 
-    try {
-        const existingUser = await findUserByUsername(username);
-        if (existingUser) return res.status(409).json({ message: 'Пользователь существует' });
+    try {
+        const existingUser = await findUserByUsername(username);
+        if (existingUser) return res.status(409).json({ message: 'Пользователь существует' });
 
-        const userRole = (role === 'teacher') ? 'teacher' : 'student';
-        await addUser(username, password, userRole);
+        let userRole = 'student';
+        if (role === 'teacher') userRole = 'teacher';
+        else if (role === 'player') userRole = 'player';
 
-        res.status(201).json({ message: 'Успех' });
-    } catch (e) {
-        console.error(e);
-        res.status(500).json({ message: 'Ошибка сервера' });
-    }
+        const userId = await addUser(username, password, userRole, displayName || username);
+
+        if (userRole === 'student' && teacherLinkCode) {
+            const teacher = await findUserByLinkCode(teacherLinkCode);
+            if (teacher && (teacher.role === 'teacher' || teacher.role === 'admin')) {
+                await linkStudentToTeacher(teacher.id, userId);
+            }
+        }
+
+        res.status(201).json({ message: 'Успех' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ message: 'Ошибка сервера' });
+    }
 });
 
 app.post('/api/login', authLimiter, async (req, res) => {
@@ -545,14 +564,36 @@ app.post('/api/login', authLimiter, async (req, res) => {
     }
 });
 app.get('/api/profile', authenticateToken, async (req, res) => {
-    try {
-        const user = await findUserById(req.user.id);
-        if (!user) return res.status(404).json({ message: 'Пользователь не найден' });
-        const { password_hash, ...profileData } = user;
-        res.json(profileData);
-    } catch (e) {
-        res.status(500).json({ message: 'Ошибка сервера при загрузке профиля' });
-    }
+    try {
+        const user = await findUserById(req.user.id);
+        if (!user) return res.status(404).json({ message: 'Пользователь не найден' });
+        await ensureUserLinkCode(req.user.id);
+        const fresh = await findUserById(req.user.id);
+        const { password_hash, ...profileData } = fresh;
+        profileData.display_name = fresh.display_name || fresh.username;
+        profileData.link_code_formatted = formatLinkCode(fresh.link_code);
+        if (fresh.role === 'student') {
+            profileData.teachers = await getStudentTeachers(req.user.id);
+            profileData.needs_teacher_link = profileData.teachers.length === 0;
+        }
+        if (fresh.role === 'teacher' || fresh.role === 'admin') {
+            profileData.students = await getTeacherStudents(req.user.id);
+        }
+        res.json(profileData);
+    } catch (e) {
+        res.status(500).json({ message: 'Ошибка сервера при загрузке профиля' });
+    }
+});
+
+app.get('/api/profile/dashboard', authenticateToken, async (req, res) => {
+    try {
+        const { buildProfileDashboard } = await import('./server/profileDashboard.js');
+        const dashboard = await buildProfileDashboard(req.user.id, req.user.role);
+        res.json({ success: true, dashboard });
+    } catch (e) {
+        console.error('profile/dashboard', e);
+        res.status(500).json({ success: false });
+    }
 });
 
 app.post('/api/profile/change-password', authenticateToken, async (req, res) => {
@@ -665,11 +706,20 @@ app.post('/api/study/create', authenticateToken, async (req, res) => {
 });
 
 app.post('/api/study/join', authenticateToken, async (req, res) => {
-    try {
-        const { roomCode } = req.body;
-        const room = await findStudyRoomByCode(roomCode);
+    try {
+        const { roomCode } = req.body;
+        const room = await findStudyRoomByCode(roomCode);
         if (!room) return res.status(404).json({ success: false });
         if (Number(room.teacher_id) !== Number(req.user.id)) {
+            if (req.user.role === 'student') {
+                const teacherCount = await countStudentTeachers(req.user.id);
+                if (teacherCount === 0) {
+                    return res.status(403).json({
+                        success: false,
+                        message: 'teacher_link_required',
+                    });
+                }
+            }
             if (room.room_type === 'group') {
                 await joinGroupStudent(roomCode, req.user.id);
             } else {
@@ -941,8 +991,7 @@ app.get('/api/schedule/students', authenticateToken, async (req, res) => {
         if (req.user.role !== 'teacher' && req.user.role !== 'admin') {
             return res.status(403).json({ success: false, message: 'Только для учителей' });
         }
-        const { getStudentsList } = await import('./db.js');
-        const students = await getStudentsList();
+        const students = await getStudentsList(req.user.id);
         res.json({ success: true, students });
     } catch (e) {
         res.status(500).json({ success: false });
@@ -1074,6 +1123,47 @@ app.post('/api/schedule/requests/:id/reject', authenticateToken, async (req, res
     }
 });
 
+app.post('/api/link/connect', authenticateToken, async (req, res) => {
+    try {
+        const target = await findUserByLinkCode(req.body?.code || '');
+        if (!target) {
+            return res.status(404).json({ success: false, message: 'link_not_found' });
+        }
+        const me = await findUserById(req.user.id);
+        if (!me) return res.status(401).json({ success: false });
+
+        if (me.role === 'student' && (target.role === 'teacher' || target.role === 'admin')) {
+            const result = await linkStudentToTeacher(target.id, me.id);
+            if (!result.ok) return res.status(400).json({ success: false, message: result.reason });
+            const teachers = await getStudentTeachers(me.id);
+            return res.json({ success: true, linkedAs: 'teacher', teachers });
+        }
+        if ((me.role === 'teacher' || me.role === 'admin') && target.role === 'student') {
+            const result = await linkStudentToTeacher(me.id, target.id);
+            if (!result.ok) return res.status(400).json({ success: false, message: result.reason });
+            const students = await getTeacherStudents(me.id);
+            return res.json({ success: true, linkedAs: 'student', students });
+        }
+        return res.status(400).json({ success: false, message: 'link_invalid_roles' });
+    } catch (e) {
+        console.error('link/connect', e);
+        res.status(500).json({ success: false });
+    }
+});
+
+app.delete('/api/link/student/:studentId', authenticateToken, async (req, res) => {
+    try {
+        if (req.user.role !== 'teacher' && req.user.role !== 'admin') {
+            return res.status(403).json({ success: false });
+        }
+        await unlinkStudentFromTeacher(req.user.id, Number(req.params.studentId));
+        const students = await getTeacherStudents(req.user.id);
+        res.json({ success: true, students });
+    } catch (e) {
+        res.status(500).json({ success: false });
+    }
+});
+
 // --- НАСТРОЙКИ ПРОФИЛЯ ---
 app.patch('/api/profile/settings', authenticateToken, async (req, res) => {
     try {
@@ -1085,6 +1175,7 @@ app.patch('/api/profile/settings', authenticateToken, async (req, res) => {
             notifyPush: req.body.notifyPush,
             tzPrimary: req.body.tzPrimary,
             tzSecondary: req.body.tzSecondary,
+            displayName: req.body.displayName,
         });
         const user = await findUserById(req.user.id);
         const { password_hash, ...profileData } = user;

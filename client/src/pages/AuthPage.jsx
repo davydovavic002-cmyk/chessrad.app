@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { useI18n } from '../i18n/I18nContext';
 import LanguageToggle from '../components/LanguageToggle';
@@ -9,6 +9,7 @@ export default function AuthPage() {
   const { user, loading, login, register } = useAuth();
   const { t } = useI18n();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [tab, setTab] = useState('login');
   const [selectedRole, setSelectedRole] = useState('student');
   const [loginError, setLoginError] = useState('');
@@ -16,7 +17,20 @@ export default function AuthPage() {
   const [registerOk, setRegisterOk] = useState(false);
 
   useEffect(() => {
+    const linkCode = searchParams.get('link');
+    if (linkCode) {
+      sessionStorage.setItem('pendingLinkCode', linkCode);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
     if (!loading && user) {
+      const pending = sessionStorage.getItem('pendingLinkCode');
+      if (pending) {
+        sessionStorage.removeItem('pendingLinkCode');
+        navigate(`/link/${encodeURIComponent(pending)}`, { replace: true });
+        return;
+      }
       const dest = user.role === 'parent' ? '/parent' : '/lobby';
       navigate(dest, { replace: true });
     }
@@ -28,6 +42,12 @@ export default function AuthPage() {
     const form = new FormData(e.target);
     const result = await login(form.get('username'), form.get('password'));
     if (result.ok) {
+      const pending = sessionStorage.getItem('pendingLinkCode');
+      if (pending) {
+        sessionStorage.removeItem('pendingLinkCode');
+        navigate(`/link/${encodeURIComponent(pending)}`);
+        return;
+      }
       const dest = result.user?.role === 'parent'
         ? '/parent'
         : result.user?.mustChangePassword
@@ -44,7 +64,10 @@ export default function AuthPage() {
     setRegisterMsg('');
     setRegisterOk(false);
     const form = new FormData(e.target);
-    const result = await register(form.get('username'), form.get('password'), selectedRole);
+    const result = await register(form.get('username'), form.get('password'), selectedRole, {
+      displayName: form.get('displayName'),
+      teacherLinkCode: selectedRole === 'student' ? form.get('teacherLinkCode') : undefined,
+    });
     if (result.ok) {
       setRegisterOk(true);
       setRegisterMsg(t('auth_created'));
@@ -124,6 +147,17 @@ export default function AuthPage() {
           ) : (
             <form className="auth-form active" onSubmit={handleRegister}>
               <div className="form-group">
+                <label htmlFor="reg-display-name">{t('auth_display_name')}</label>
+                <input
+                  id="reg-display-name"
+                  name="displayName"
+                  className="form-input"
+                  placeholder={t('auth_display_name_ph')}
+                  required
+                  autoComplete="name"
+                />
+              </div>
+              <div className="form-group">
                 <label htmlFor="reg-username">{t('auth_username')}</label>
                 <input
                   id="reg-username"
@@ -148,7 +182,7 @@ export default function AuthPage() {
               </div>
               <div className="form-group">
                 <label>{t('auth_role')}</label>
-                <div className="role-select">
+                <div className="role-select role-select--three">
                   <div
                     className={`role-option${selectedRole === 'student' ? ' selected' : ''}`}
                     onClick={() => setSelectedRole('student')}
@@ -163,8 +197,27 @@ export default function AuthPage() {
                     <span className="role-icon">📚</span>
                     {t('auth_teacher')}
                   </div>
+                  <div
+                    className={`role-option${selectedRole === 'player' ? ' selected' : ''}`}
+                    onClick={() => setSelectedRole('player')}
+                  >
+                    <span className="role-icon">♟️</span>
+                    {t('auth_player')}
+                  </div>
                 </div>
               </div>
+              {selectedRole === 'student' && (
+                <div className="form-group">
+                  <label htmlFor="reg-teacher-code">{t('auth_teacher_code')}</label>
+                  <input
+                    id="reg-teacher-code"
+                    name="teacherLinkCode"
+                    className="form-input"
+                    placeholder={t('auth_teacher_code_ph')}
+                  />
+                  <p className="auth-hint">{t('auth_teacher_code_hint')}</p>
+                </div>
+              )}
               <button type="submit" className="btn btn-primary btn-block">
                 {t('auth_register_btn')}
               </button>

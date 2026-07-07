@@ -14,6 +14,8 @@
     justify-content: space-between;
     align-items: center;
     padding: 28px 0;
+    position: relative;
+    z-index: 200;
 }
 
 .logo-area {
@@ -35,11 +37,14 @@
     align-items: center;
     gap: 12px;
     padding: 10px 20px;
-    background: var(--glass-bg);
+    background: var(--glass-gradient-strong);
     backdrop-filter: blur(var(--glass-blur));
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-full);
     font-size: 0.95rem;
+    position: relative;
+    z-index: 201;
+    overflow: visible;
 }
 
 .user-info strong {
@@ -75,28 +80,36 @@
     margin-bottom: 40px;
 }
 
+.lobby-content {
+    position: relative;
+    z-index: 1;
+}
+
 .menu-card {
     display: flex;
     align-items: center;
     gap: 18px;
     padding: 24px;
     cursor: pointer;
-    background: var(--glass-bg);
+    background: var(--glass-gradient);
     backdrop-filter: blur(var(--glass-blur));
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-lg);
     box-shadow: var(--glass-shadow);
     transition: transform var(--transition-bounce), box-shadow var(--transition);
+    position: relative;
+    z-index: 1;
 }
 
 .menu-card:hover {
     transform: translateY(-6px) scale(1.02);
     box-shadow: var(--glass-shadow-lg);
+    background: var(--glass-gradient-strong);
 }
 
 .menu-card.primary {
-    background: linear-gradient(135deg, rgba(255, 143, 98, 0.3), rgba(255, 112, 67, 0.2));
-    border-color: rgba(255, 143, 98, 0.4);
+    background: linear-gradient(135deg, rgba(255, 200, 170, 0.45), rgba(180, 220, 245, 0.35));
+    border-color: rgba(255, 176, 136, 0.45);
 }
 
 .menu-card.primary:hover {
@@ -131,6 +144,25 @@
 }
 
 .study-card { min-height: 80px; }
+
+.lobby-link-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    border-radius: var(--radius-md);
+    background: rgba(255, 159, 67, 0.12);
+    border: 1px solid rgba(255, 159, 67, 0.35);
+}
+
+.lobby-link-banner p {
+    margin: 0;
+    flex: 1;
+    min-width: 200px;
+}
 
 /* Streak card states */
 .streak-daily-card {

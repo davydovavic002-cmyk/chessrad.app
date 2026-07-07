@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { useAuth } from '../auth/AuthContext';
 import { useI18n } from '../i18n/I18nContext';
@@ -91,15 +91,23 @@ export default function LobbyPage() {
       Swal.fire({ icon: 'info', text: t('lobby_enter_code') });
       return;
     }
-    const { data } = await apiJson('/api/study/join', {
+    const { res, data } = await apiJson('/api/study/join', {
       method: 'POST',
       body: JSON.stringify({ roomCode }),
     });
     if (data.success) {
       const path = data.roomType === 'group' ? '/group-study' : '/study';
       navigate(`${path}?room=${data.roomCode}`);
+    } else if (data.message === 'teacher_link_required') {
+      Swal.fire({
+        icon: 'warning',
+        title: t('link_teacher_required'),
+        text: t('lobby_teacher_link_required'),
+        confirmButtonText: t('back_to_profile'),
+      }).then(() => navigate('/profile'));
+    } else {
+      Swal.fire({ icon: 'error', text: data.message || t('lobby_room_not_found') });
     }
-    else Swal.fire({ icon: 'error', text: data.message || t('lobby_room_not_found') });
   }
 
   const streakHtml =
@@ -158,6 +166,15 @@ export default function LobbyPage() {
           <h2>{t('lobby_welcome')}</h2>
           <p className="subtitle">{t('lobby_subtitle')}</p>
 
+          {role === 'student' && user?.needs_teacher_link && (
+            <div className="lobby-link-banner">
+              <p>{t('lobby_teacher_link_banner')}</p>
+              <Link to="/profile" className="btn btn-primary btn-sm">
+                {t('link_connect_btn')}
+              </Link>
+            </div>
+          )}
+
           {badges.length > 0 && (
             <div className="lobby-badges-strip">
               {badges.slice(0, 6).map((b, i) => (
@@ -215,6 +232,7 @@ export default function LobbyPage() {
               </div>
             </div>
 
+            {role !== 'player' && (
             <div className="menu-card glass-card" onClick={() => navigate('/schedule')}>
               <div className="card-icon">📅</div>
               <div className="card-text">
@@ -222,6 +240,7 @@ export default function LobbyPage() {
                 <p>{t('lobby_schedule_sub')}</p>
               </div>
             </div>
+            )}
 
             {(role === 'teacher' || role === 'admin') && (
               <div
@@ -295,6 +314,7 @@ export default function LobbyPage() {
             )}
           </div>
 
+          {role !== 'player' && (
           <div className="lobby-section study-section">
             <h2>{t('lobby_study')}</h2>
             <div id="study-controls">
@@ -358,6 +378,7 @@ export default function LobbyPage() {
               )}
             </div>
           </div>
+          )}
         </main>
       </div>
 

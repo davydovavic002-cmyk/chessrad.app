@@ -40,10 +40,16 @@ export function AuthProvider({ children }) {
     return { ok: false, message: data.message || 'Неверный логин или пароль' };
   }, [refreshUser]);
 
-  const register = useCallback(async (username, password, role) => {
+  const register = useCallback(async (username, password, role, extras = {}) => {
     const { res, data } = await apiJson('/api/register', {
       method: 'POST',
-      body: JSON.stringify({ username, password, role }),
+      body: JSON.stringify({
+        username,
+        password,
+        role,
+        displayName: extras.displayName,
+        teacherLinkCode: extras.teacherLinkCode,
+      }),
     });
     if (res.ok) return { ok: true };
     return { ok: false, message: data.message || 'Ошибка регистрации' };

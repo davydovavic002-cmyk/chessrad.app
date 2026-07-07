@@ -6,7 +6,16 @@ import { api, apiJson } from '../api';
 import Modal from '../components/Modal';
 import BackButton from '../components/BackButton';
 import { useI18n } from '../i18n/I18nContext';
+import { useTheme } from '../theme/ThemeContext';
 import { triggerOnboardingReplay } from '../components/OnboardingModal';
+import ProfileLinkCard from '../components/ProfileLinkCard';
+import {
+  ProfileStudentDashboard,
+  ProfileTeacherDashboard,
+  ProfilePlayerDashboard,
+  ProfileSettingsPanel,
+} from '../components/profile/ProfileDashboard';
+import ProfileHero, { ProfileSection } from '../components/profile/ProfileHero';
 import { TIMEZONE_OPTIONS } from '../utils/timezone';
 import '../styles/profile.css';
 
@@ -33,9 +42,15 @@ function resultColor(result) {
 
 export default function ProfilePage() {
   const { user, logout, refreshUser } = useAuth();
-  const { t } = useI18n();
+  const { t, lang, setLang } = useI18n();
+  const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const [rooms, setRooms] = useState([]);
+  const [dash, setDash] = useState(null);
+  const [dashLoading, setDashLoading] = useState(true);
+  const [displayName, setDisplayName] = useState('');
+  const [displayMsg, setDisplayMsg] = useState('');
+  const [displayOk, setDisplayOk] = useState(false);
   const [forceOld, setForceOld] = useState('');
   const [forceNew, setForceNew] = useState('');
   const [forceMsg, setForceMsg] = useState('');
@@ -49,15 +64,73 @@ export default function ProfilePage() {
   const [tzPrimary, setTzPrimary] = useState(user?.tz_primary || 'Asia/Yerevan');
   const [tzSecondary, setTzSecondary] = useState(user?.tz_secondary || 'Europe/Berlin');
   const [pgnArchive, setPgnArchive] = useState([]);
+  const [linkMsg, setLinkMsg] = useState('');
+  const [linkOk, setLinkOk] = useState(false);
+  const [myTeachers, setMyTeachers] = useState([]);
+  const [myStudents, setMyStudents] = useState([]);
 
   const mustChange = user?.must_change_password === 1;
   const isTeacher = user?.role === 'teacher' || user?.role === 'admin';
+  const isStudent = user?.role === 'student';
+  const isPlayer = user?.role === 'player';
 
   const loadRooms = useCallback(async () => {
     if (!isTeacher) return;
     const { data } = await apiJson('/api/study/my-rooms');
     setRooms(data.rooms || []);
   }, [isTeacher]);
+
+  const loadDashboard = useCallback(async () => {
+    setDashLoading(true);
+    const { data } = await apiJson('/api/profile/dashboard');
+    if (data.success) setDash(data.dashboard);
+    setDashLoading(false);
+  }, []);
+
+  useEffect(() => {
+    loadDashboard();
+  }, [loadDashboard]);
+
+  useEffect(() => {
+    setMyTeachers(user?.teachers || []);
+    setMyStudents(user?.students || []);
+  }, [user]);
+
+  useEffect(() => {
+    setDisplayName(user?.display_name || user?.username || '');
+  }, [user]);
+
+  async function connectByCode(code) {
+    setLinkMsg('');
+    setLinkOk(false);
+    const { res, data } = await apiJson('/api/link/connect', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    });
+    if (res.ok && data.success) {
+      setLinkOk(true);
+      setLinkMsg(t('link_success'));
+      if (data.teachers) setMyTeachers(data.teachers);
+      if (data.students) setMyStudents(data.students);
+      await refreshUser();
+    } else {
+      const key =
+        data.message === 'link_not_found'
+          ? 'link_not_found'
+          : data.message === 'link_invalid_roles'
+            ? 'link_invalid_roles'
+            : 'error';
+      setLinkMsg(t(key));
+    }
+  }
+
+  async function unlinkStudent(studentId) {
+    const { res, data } = await apiJson(`/api/link/student/${studentId}`, { method: 'DELETE' });
+    if (res.ok) {
+      setMyStudents(data.students || []);
+      await refreshUser();
+    }
+  }
 
   useEffect(() => {
     loadRooms();
@@ -69,12 +142,16 @@ export default function ProfilePage() {
     setNotifyPush(user?.notify_push !== 0);
     setTzPrimary(user?.tz_primary || 'Asia/Yerevan');
     setTzSecondary(user?.tz_secondary || 'Europe/Berlin');
-  }, [user]);
+    if (user?.theme === 'dark' || user?.theme === 'light') {
+      setTheme(user.theme);
+    }
+  }, [user, setTheme]);
 
   const loadPgnArchive = useCallback(async () => {
+    if (!isStudent) return;
     const { data } = await apiJson('/api/pgn-archive');
     if (data.success) setPgnArchive(data.items || []);
-  }, []);
+  }, [isStudent]);
 
   useEffect(() => {
     loadPgnArchive();
@@ -96,23 +173,72 @@ export default function ProfilePage() {
 
   let trophies = [];
   try {
-    trophies = typeof user?.trophies === 'string' ? JSON.parse(user.trophies) : user?.trophies || [];
+    const all = typeof user?.trophies === 'string' ? JSON.parse(user.trophies) : user?.trophies || [];
+    trophies = all.filter((tr) => tr.type !== 'badge' && !tr.badgeId);
   } catch {
     trophies = [];
   }
 
   async function saveSettings() {
-    await apiJson('/api/profile/settings', {
+    const { res } = await apiJson('/api/profile/settings', {
       method: 'PATCH',
       body: JSON.stringify({
+        displayName,
         parentEmail,
         notifyEmail,
         notifyPush,
         tzPrimary,
         tzSecondary,
+        theme,
       }),
     });
-    await refreshUser();
+    if (res.ok) {
+      setDisplayMsg(t('dash_saved'));
+      setDisplayOk(true);
+      await refreshUser();
+      setTheme(theme);
+    } else {
+      setDisplayMsg(t('error'));
+      setDisplayOk(false);
+    }
+  }
+
+  async function approveRequest(id) {
+    await api(`/api/schedule/requests/${id}/approve`, { method: 'POST' });
+    await loadDashboard();
+  }
+
+  async function rejectRequest(id) {
+    await api(`/api/schedule/requests/${id}/reject`, { method: 'POST' });
+    await loadDashboard();
+  }
+
+  async function createStudyRoom() {
+    const { data } = await apiJson('/api/study/create', {
+      method: 'POST',
+      body: JSON.stringify({ roomType: 'duo' }),
+    });
+    if (data.success) {
+      await Swal.fire({
+        icon: 'success',
+        title: t('lobby_room_created'),
+        html: `${t('lobby_student_code')} <b>${data.roomCode}</b>`,
+        confirmButtonText: t('lobby_enter_room'),
+      });
+      loadRooms();
+      navigate(`/study?room=${data.roomCode}`);
+    } else {
+      Swal.fire({ icon: 'error', title: data.message || t('error') });
+    }
+  }
+
+  async function copyRoomCode(code) {
+    try {
+      await navigator.clipboard.writeText(code);
+      Swal.fire({ icon: 'success', title: t('dash_copied'), timer: 1000, showConfirmButton: false });
+    } catch {
+      Swal.fire({ icon: 'error', title: t('error') });
+    }
   }
 
   async function handleLogout() {
@@ -218,249 +344,279 @@ export default function ProfilePage() {
       </Modal>
 
       <div className="profile-container page-wrap">
-        <div className="profile-bento">
-          <section className="profile-bento__cell profile-bento__cell--hero">
-            <h1>{t('profile_title')}</h1>
-            <div className="profile-hero-meta">
-              <p style={{ margin: 0 }}>
-                {t('profile_name')}: <strong>{user.username}</strong>
-              </p>
-              <p style={{ margin: 0 }}>
-                {t('profile_rating')}: <span className="rating-badge">{rating}</span>
-              </p>
-            </div>
-          </section>
+        <ProfileHero user={user} rating={rating} isPlayer={isPlayer} />
 
-          <section className="profile-bento__cell profile-bento__cell--stats">
-            <div className="stats-grid">
-              <div className="stat-card">
-                <span className="stat-value">{Number(user.wins) || 0}</span>
-                <span className="stat-label">{t('profile_wins')}</span>
-              </div>
-              <div className="stat-card">
-                <span className="stat-value">{Number(user.draws) || 0}</span>
-                <span className="stat-label">{t('profile_draws')}</span>
-              </div>
-              <div className="stat-card">
-                <span className="stat-value">{Number(user.losses) || 0}</span>
-                <span className="stat-label">{t('profile_losses')}</span>
-              </div>
-            </div>
-          </section>
-
-          <section className="profile-bento__cell profile-bento__cell--progress">
-            <h3>
-              {t('profile_progress')}: <span>{t(currentLevel.key)}</span>
-            </h3>
-            <div className="progress-container">
-              <div id="progress-fill-bar" style={{ width: `${progressPct}%` }} />
-            </div>
-            <p className="subtitle">{pointsText}</p>
-          </section>
-
-          <section className="profile-bento__cell profile-bento__cell--trophies">
-            <h3>{t('profile_trophies')}</h3>
-            <div className="trophy-shelf">
-              {trophies.length === 0 ? (
-                <p className="subtitle">{t('profile_no_trophies')}</p>
-              ) : (
-                trophies.map((tr, i) => {
-                  const bgColor =
-                    { red: '#ff4757', blue: '#2e86de', green: '#2ed573', yellow: '#ffa502' }[tr.color] || '#ffd700';
-                  return (
-                    <div
-                      key={i}
-                      className="trophy-chip"
-                      title={t('profile_trophy_tip', {
-                        name: tr.tournamentName || t('profile_tournament'),
-                        place: tr.place,
-                        date: tr.date,
-                      })}
-                      style={{ background: bgColor }}
-                    >
-                      {tr.place === 1 ? '🏆' : '🏅'}
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </section>
-
-          <section className="profile-bento__cell profile-bento__cell--history">
-            <h3>{t('profile_history')}</h3>
-            <div className="table-wrapper">
-              <table className="history-table">
-                <thead>
-                  <tr>
-                    <th>{t('profile_opponent')}</th>
-                    <th>{t('profile_result')}</th>
-                    <th>{t('profile_type')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(user.history || []).length === 0 ? (
-                    <tr>
-                      <td colSpan={3} className="subtitle">
-                        {t('profile_history_empty')}
-                      </td>
-                    </tr>
-                  ) : (
-                    (user.history || []).slice(0, 5).map((game, i) => (
-                      <tr key={i}>
-                        <td>{game.opponent || t('profile_anonymous')}</td>
-                        <td style={{ color: resultColor(game.result), fontWeight: 'bold' }}>
-                          {resultLabel(game.result, t)}
-                        </td>
-                        <td>{game.type || t('profile_match')}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          {user.role === 'student' && (
-            <section className="profile-bento__cell profile-bento__cell--wide">
-              <h3>{t('profile_homework')}</h3>
-              <Link to="/homework" className="btn btn-primary btn-block">
-                {t('homework_title')}
-              </Link>
-              <p className="subtitle" style={{ marginTop: 12, marginBottom: 8 }}>
-                {t('onboarding_replay_hint')}
-              </p>
-              <button
-                type="button"
-                className="btn btn-secondary btn-block"
-                onClick={() => {
-                  triggerOnboardingReplay();
-                  navigate('/lobby');
-                }}
-              >
-                {t('onboarding_replay')}
-              </button>
+        <ProfileSection title={t('profile_section_now')}>
+          {dashLoading && (
+            <section className="profile-block profile-block--full">
+              <p className="subtitle">{t('loading')}</p>
             </section>
           )}
+          {!dashLoading && isStudent && (
+            <ProfileStudentDashboard
+              dash={dash}
+              t={t}
+              navigate={navigate}
+              tzPrimary={tzPrimary}
+              tzSecondary={tzSecondary}
+            />
+          )}
+          {!dashLoading && isTeacher && (
+            <ProfileTeacherDashboard
+              dash={dash}
+              t={t}
+              navigate={navigate}
+              onApproveRequest={approveRequest}
+              onRejectRequest={rejectRequest}
+              onCreateRoom={createStudyRoom}
+            />
+          )}
+          {!dashLoading && isPlayer && (
+            <ProfilePlayerDashboard
+              dash={dash}
+              rating={rating}
+              t={t}
+              navigate={navigate}
+              resultLabel={(r) => resultLabel(r, t)}
+              resultColor={resultColor}
+              userHistory={user.history}
+            />
+          )}
+        </ProfileSection>
 
-          {isTeacher && (
-            <section className="profile-bento__cell profile-bento__cell--wide" id="teacher-rooms-panel">
-              <div style={{ display: 'grid', gap: 10, marginBottom: 16 }}>
-                <Link to="/journal" className="btn btn-primary btn-block">
-                  {t('profile_journal')}
-                </Link>
-                <Link to="/library-editor" className="btn btn-secondary btn-block">
-                  {t('profile_library')}
-                </Link>
-              </div>
-              <h3>
-                {t('profile_rooms')} (<span id="rooms-count-label">{rooms.length}</span>/5)
-              </h3>
-              <div id="my-rooms-list" className="rooms-list-container">
-                {rooms.length === 0 ? (
-                  <p className="subtitle">{t('profile_no_rooms')}</p>
-                ) : (
-                  rooms.map((room) => (
-                    <div className="room-item" key={room.room_code}>
-                      <div>
-                        <strong>{room.room_code}</strong>
-                      </div>
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <Link to={`/study?room=${room.room_code}`} className="btn btn-primary btn-sm">
-                          {t('profile_enter_room')}
-                        </Link>
+        {(isStudent || isTeacher) && (
+          <ProfileSection title={t('profile_section_connect')}>
+            <section className="profile-block profile-block--full profile-block--link">
+              <h3 className="profile-block__subtitle">{isStudent ? t('link_my_teachers') : t('link_my_students')}</h3>
+              {isStudent && user.needs_teacher_link && (
+                <p className="profile-link-alert">{t('link_teacher_required')}</p>
+              )}
+              <ProfileLinkCard
+                user={user}
+                onConnectCode={connectByCode}
+                connectMsg={linkMsg}
+                connectOk={linkOk}
+              />
+              {isStudent && (
+                <ul className="profile-link-list">
+                  {myTeachers.length === 0 ? (
+                    <li className="subtitle">{t('link_no_teachers')}</li>
+                  ) : (
+                    myTeachers.map((te) => (
+                      <li key={te.id}>
+                        <strong>{te.display_name || te.username}</strong>
+                        <span className="subtitle"> @{te.username}</span>
+                      </li>
+                    ))
+                  )}
+                </ul>
+              )}
+              {isTeacher && (
+                <ul className="profile-link-list">
+                  {myStudents.length === 0 ? (
+                    <li className="subtitle">{t('link_no_students')}</li>
+                  ) : (
+                    myStudents.map((st) => (
+                      <li key={st.id} className="profile-link-list__item">
+                        <span>
+                          <strong>{st.display_name || st.username}</strong>
+                          <span className="subtitle"> · {st.rating} Elo</span>
+                        </span>
                         <button
                           type="button"
-                          className="btn btn-danger btn-sm"
-                          onClick={() => deleteRoom(room.room_code)}
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => unlinkStudent(st.id)}
                         >
-                          {t('delete')}
+                          {t('unlink')}
                         </button>
+                      </li>
+                    ))
+                  )}
+                </ul>
+              )}
+            </section>
+          </ProfileSection>
+        )}
+
+        {isPlayer && (
+          <ProfileSection title={t('profile_section_game')}>
+            <section className="profile-block profile-block--third">
+              <div className="stats-grid stats-grid--row">
+                <div className="stat-card">
+                  <span className="stat-value">{Number(user.wins) || 0}</span>
+                  <span className="stat-label">{t('profile_wins')}</span>
+                </div>
+                <div className="stat-card">
+                  <span className="stat-value">{Number(user.draws) || 0}</span>
+                  <span className="stat-label">{t('profile_draws')}</span>
+                </div>
+                <div className="stat-card">
+                  <span className="stat-value">{Number(user.losses) || 0}</span>
+                  <span className="stat-label">{t('profile_losses')}</span>
+                </div>
+              </div>
+            </section>
+            <section className="profile-block profile-block--third">
+              <h3>{t('profile_progress')}: <span>{t(currentLevel.key)}</span></h3>
+              <div className="progress-container">
+                <div id="progress-fill-bar" style={{ width: `${progressPct}%` }} />
+              </div>
+              <p className="subtitle">{pointsText}</p>
+            </section>
+            <section className="profile-block profile-block--third">
+              <h3>{t('profile_trophies')}</h3>
+              <div className="trophy-shelf">
+                {trophies.length === 0 ? (
+                  <p className="subtitle">{t('profile_no_trophies')}</p>
+                ) : (
+                  trophies.map((tr, i) => {
+                    const bgColor =
+                      { red: '#ff4757', blue: '#2e86de', green: '#2ed573', yellow: '#ffa502' }[tr.color] || '#ffd700';
+                    return (
+                      <div
+                        key={i}
+                        className="trophy-chip"
+                        title={t('profile_trophy_tip', {
+                          name: tr.tournamentName || t('profile_tournament'),
+                          place: tr.place,
+                          date: tr.date,
+                        })}
+                        style={{ background: bgColor }}
+                      >
+                        {tr.place === 1 ? '🏆' : '🏅'}
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </section>
-          )}
+          </ProfileSection>
+        )}
 
-          <section className="profile-bento__cell profile-bento__cell--third">
-            <h3>{t('tz_settings')}</h3>
-            <label className="profile-check" style={{ display: 'block', marginBottom: 8 }}>
-              {t('tz_primary')}
-              <select
-                className="form-input mt-1"
-                value={tzPrimary}
-                onChange={(e) => setTzPrimary(e.target.value)}
-              >
-                {TIMEZONE_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
-            </label>
-            <label className="profile-check" style={{ display: 'block', marginBottom: 8 }}>
-              {t('tz_secondary')}
-              <select
-                className="form-input mt-1"
-                value={tzSecondary}
-                onChange={(e) => setTzSecondary(e.target.value)}
-              >
-                {TIMEZONE_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
-            </label>
-            <p className="subtitle">{t('tz_hint')}</p>
-          </section>
-
-          <section className="profile-bento__cell profile-bento__cell--wide">
-            <h3>{t('pgn_archive_title')}</h3>
-            {pgnArchive.length === 0 ? (
-              <p className="subtitle">{t('pgn_archive_empty')}</p>
-            ) : (
-              <div className="pgn-archive-list">
-                {pgnArchive.slice(0, 10).map((item) => (
-                  <div key={item.id} className="pgn-archive-item">
-                    <strong>{item.title || item.lesson_date}</strong>
-                    <div className="subtitle" style={{ fontSize: 12 }}>{item.lesson_date}</div>
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-sm mt-1"
-                      onClick={() => {
-                        navigator.clipboard.writeText(item.pgn || '');
-                        Swal.fire({ icon: 'success', title: t('study_pgn_copied'), timer: 1200, showConfirmButton: false });
-                      }}
-                    >
-                      {t('study_copy_pgn')}
-                    </button>
-                  </div>
-                ))}
-              </div>
+        {(isStudent || isTeacher) && (
+          <ProfileSection title={t('profile_section_materials')}>
+            {isStudent && (
+              <>
+                <section className="profile-block profile-block--wide">
+                  <h3>{t('pgn_archive_title')}</h3>
+                  {pgnArchive.length === 0 ? (
+                    <p className="subtitle">{t('pgn_archive_empty')}</p>
+                  ) : (
+                    <div className="pgn-archive-list">
+                      {pgnArchive.slice(0, 10).map((item) => (
+                        <div key={item.id} className="pgn-archive-item">
+                          <strong>{item.title || item.lesson_date}</strong>
+                          <div className="subtitle" style={{ fontSize: 12 }}>{item.lesson_date}</div>
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm mt-1"
+                            onClick={() => {
+                              navigator.clipboard.writeText(item.pgn || '');
+                              Swal.fire({ icon: 'success', title: t('study_pgn_copied'), timer: 1200, showConfirmButton: false });
+                            }}
+                          >
+                            {t('study_copy_pgn')}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
+                <section className="profile-block profile-block--third">
+                  <p className="subtitle">{t('onboarding_replay_hint')}</p>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-block mt-2"
+                    onClick={() => {
+                      triggerOnboardingReplay();
+                      navigate('/lobby');
+                    }}
+                  >
+                    {t('onboarding_replay')}
+                  </button>
+                </section>
+              </>
             )}
-          </section>
+            {isTeacher && (
+              <>
+                <section className="profile-block profile-block--full" id="teacher-rooms-panel">
+                  <div className="profile-block__toolbar">
+                    <h3>{t('profile_rooms')} ({rooms.length}/5)</h3>
+                    <Link to="/library-editor" className="btn btn-secondary btn-sm">
+                      {t('profile_library')}
+                    </Link>
+                  </div>
+                  <div id="my-rooms-list" className="rooms-list-container">
+                    {rooms.length === 0 ? (
+                      <p className="subtitle">{t('profile_no_rooms')}</p>
+                    ) : (
+                      rooms.map((room) => (
+                        <div className="room-item" key={room.room_code}>
+                          <div><strong>{room.room_code}</strong></div>
+                          <div className="room-item__actions">
+                            <button type="button" className="btn btn-ghost btn-sm" onClick={() => copyRoomCode(room.room_code)}>
+                              {t('dash_copy_code')}
+                            </button>
+                            <Link to={`/study?room=${room.room_code}`} className="btn btn-primary btn-sm">
+                              {t('profile_enter_room')}
+                            </Link>
+                            <button type="button" className="btn btn-danger btn-sm" onClick={() => deleteRoom(room.room_code)}>
+                              {t('delete')}
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </section>
+              </>
+            )}
+          </ProfileSection>
+        )}
 
-          <section className="profile-bento__cell profile-bento__cell--third">
-            <h3>{t('profile_parent_email')}</h3>
-            <input
-              className="form-input"
-              type="email"
-              value={parentEmail}
-              onChange={(e) => setParentEmail(e.target.value)}
-              placeholder="parent@email.com"
-            />
-            <label className="profile-check mt-1">
-              <input type="checkbox" checked={notifyEmail} onChange={(e) => setNotifyEmail(e.target.checked)} />
-              {t('profile_notify_email')}
-            </label>
-            <label className="profile-check">
-              <input type="checkbox" checked={notifyPush} onChange={(e) => setNotifyPush(e.target.checked)} />
-              {t('profile_notify_push')}
-            </label>
-            <button type="button" className="btn btn-secondary btn-sm mt-2" onClick={saveSettings}>
-              {t('save')}
-            </button>
-          </section>
-
-          <section className="profile-bento__cell profile-bento__cell--wide password-section">
+        <ProfileSection title={t('profile_section_account')}>
+          <ProfileSettingsPanel
+            t={t}
+            displayName={displayName}
+            setDisplayName={setDisplayName}
+            onSaveDisplayName={saveSettings}
+            displayMsg={displayMsg}
+            displayOk={displayOk}
+            lang={lang}
+            setLang={setLang}
+            theme={theme}
+            setTheme={setTheme}
+            showTz={isTeacher || isStudent}
+            tzPrimary={tzPrimary}
+            setTzPrimary={setTzPrimary}
+            tzSecondary={tzSecondary}
+            setTzSecondary={setTzSecondary}
+            TIMEZONE_OPTIONS={TIMEZONE_OPTIONS}
+          />
+          {isTeacher && (
+            <section className="profile-block profile-block--half">
+              <h3>{t('profile_parent_email')}</h3>
+              <input
+                className="form-input"
+                type="email"
+                value={parentEmail}
+                onChange={(e) => setParentEmail(e.target.value)}
+                placeholder="parent@email.com"
+              />
+              <label className="profile-check mt-1">
+                <input type="checkbox" checked={notifyEmail} onChange={(e) => setNotifyEmail(e.target.checked)} />
+                {t('profile_notify_email')}
+              </label>
+              <label className="profile-check">
+                <input type="checkbox" checked={notifyPush} onChange={(e) => setNotifyPush(e.target.checked)} />
+                {t('profile_notify_push')}
+              </label>
+              <button type="button" className="btn btn-secondary btn-sm mt-2" onClick={saveSettings}>
+                {t('save')}
+              </button>
+            </section>
+          )}
+          <section className="profile-block profile-block--half password-section">
             <h3>{t('profile_security')}</h3>
             <input
               type="password"
@@ -483,13 +639,12 @@ export default function ProfilePage() {
               {profilePassMsg}
             </div>
           </section>
-
-          <section className="profile-bento__cell profile-bento__cell--actions">
+          <div className="profile-block profile-block--full profile-block--actions">
             <button type="button" id="logout-btn" className="btn btn-danger" onClick={handleLogout}>
               {t('logout')}
             </button>
-          </section>
-        </div>
+          </div>
+        </ProfileSection>
       </div>
     </>
   );

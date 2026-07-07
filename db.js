@@ -284,6 +284,25 @@ await db.exec(`
     if (!userCols2.includes('notify_push')) await db.exec('ALTER TABLE users ADD COLUMN notify_push INTEGER DEFAULT 1');
     if (!userCols2.includes('tz_primary')) await db.exec("ALTER TABLE users ADD COLUMN tz_primary TEXT DEFAULT 'Asia/Yerevan'");
     if (!userCols2.includes('tz_secondary')) await db.exec("ALTER TABLE users ADD COLUMN tz_secondary TEXT DEFAULT 'Europe/Berlin'");
+    if (!userCols2.includes('display_name')) await db.exec('ALTER TABLE users ADD COLUMN display_name TEXT DEFAULT ""');
+    if (!userCols2.includes('link_code')) await db.exec('ALTER TABLE users ADD COLUMN link_code TEXT DEFAULT ""');
+
+    await db.exec(`
+        CREATE TABLE IF NOT EXISTS teacher_student_links (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            teacher_id INTEGER NOT NULL,
+            student_id INTEGER NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(teacher_id, student_id),
+            FOREIGN KEY(teacher_id) REFERENCES users(id),
+            FOREIGN KEY(student_id) REFERENCES users(id)
+        );
+    `);
+
+    const allUsers = await db.all('SELECT id FROM users WHERE link_code IS NULL OR link_code = ""');
+    for (const row of allUsers) {
+        await ensureUserLinkCode(row.id);
+    }
 
     const schedCols = (await db.all('PRAGMA table_info(schedule_lessons)')).map((c) => c.name);
     if (!schedCols.includes('video_url')) await db.exec("ALTER TABLE schedule_lessons ADD COLUMN video_url TEXT DEFAULT ''");
@@ -539,15 +558,125 @@ async function seedDemoTournaments(db) {
     }
 }
 
+// --- LINK CODES & TEACHER↔STUDENT ---
+
+const LINK_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+export function normalizeLinkCode(raw) {
+    if (!raw) return '';
+    return String(raw).toUpperCase().replace(/^CR-?/i, '').replace(/\s/g, '').trim();
+}
+
+export function formatLinkCode(code) {
+    const norm = normalizeLinkCode(code);
+    return norm ? `CR-${norm}` : '';
+}
+
+function randomLinkCode() {
+    let s = '';
+    for (let i = 0; i < 8; i += 1) {
+        s += LINK_CODE_CHARS[Math.floor(Math.random() * LINK_CODE_CHARS.length)];
+    }
+    return s;
+}
+
+export const ensureUserLinkCode = async (userId) => {
+    const db = await getDbConnection();
+    const user = await db.get('SELECT link_code FROM users WHERE id = ?', [userId]);
+    if (user?.link_code) return user.link_code;
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+        const code = randomLinkCode();
+        const existing = await db.get('SELECT id FROM users WHERE link_code = ?', [code]);
+        if (existing) continue;
+        await db.run('UPDATE users SET link_code = ? WHERE id = ?', [code, userId]);
+        return code;
+    }
+    throw new Error('Failed to generate link code');
+};
+
+export const findUserByLinkCode = async (rawCode) => {
+    const code = normalizeLinkCode(rawCode);
+    if (!code) return null;
+    const db = await getDbConnection();
+    return db.get(
+        'SELECT id, username, role, display_name, link_code FROM users WHERE link_code = ?',
+        [code]
+    );
+};
+
+export const linkStudentToTeacher = async (teacherId, studentId) => {
+    if (Number(teacherId) === Number(studentId)) {
+        return { ok: false, reason: 'self' };
+    }
+    const db = await getDbConnection();
+    const teacher = await db.get('SELECT id, role FROM users WHERE id = ?', [teacherId]);
+    const student = await db.get('SELECT id, role FROM users WHERE id = ?', [studentId]);
+    if (!teacher || (teacher.role !== 'teacher' && teacher.role !== 'admin')) {
+        return { ok: false, reason: 'not_teacher' };
+    }
+    if (!student || student.role !== 'student') {
+        return { ok: false, reason: 'not_student' };
+    }
+    await db.run(
+        'INSERT OR IGNORE INTO teacher_student_links (teacher_id, student_id) VALUES (?, ?)',
+        [teacherId, studentId]
+    );
+    return { ok: true };
+};
+
+export const unlinkStudentFromTeacher = async (teacherId, studentId) => {
+    const db = await getDbConnection();
+    const r = await db.run(
+        'DELETE FROM teacher_student_links WHERE teacher_id = ? AND student_id = ?',
+        [teacherId, studentId]
+    );
+    return r.changes > 0;
+};
+
+export const getTeacherStudents = async (teacherId) => {
+    const db = await getDbConnection();
+    return db.all(
+        `SELECT u.id, u.username, u.display_name, u.rating, u.level, l.created_at AS linked_at
+         FROM teacher_student_links l
+         JOIN users u ON u.id = l.student_id
+         WHERE l.teacher_id = ?
+         ORDER BY u.username COLLATE NOCASE ASC`,
+        [teacherId]
+    );
+};
+
+export const getStudentTeachers = async (studentId) => {
+    const db = await getDbConnection();
+    return db.all(
+        `SELECT u.id, u.username, u.display_name, u.link_code, l.created_at AS linked_at
+         FROM teacher_student_links l
+         JOIN users u ON u.id = l.teacher_id
+         WHERE l.student_id = ?
+         ORDER BY u.username COLLATE NOCASE ASC`,
+        [studentId]
+    );
+};
+
+export const countStudentTeachers = async (studentId) => {
+    const db = await getDbConnection();
+    const row = await db.get(
+        'SELECT COUNT(*) AS c FROM teacher_student_links WHERE student_id = ?',
+        [studentId]
+    );
+    return row?.c || 0;
+};
+
 // --- УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЯМИ ---
 
-export const addUser = async (username, password, role = 'student') => {
+export const addUser = async (username, password, role = 'student', displayName = '') => {
     const db = await getDbConnection();
     const password_hash = await bcrypt.hash(password, 10);
+    const safeDisplay = (displayName || '').trim() || username;
     const result = await db.run(
-        'INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)',
-        [username, password_hash, role]
+        'INSERT INTO users (username, password_hash, role, display_name) VALUES (?, ?, ?, ?)',
+        [username, password_hash, role, safeDisplay]
     );
+    await ensureUserLinkCode(result.lastID);
     return result.lastID;
 };
 
@@ -563,7 +692,7 @@ export const findUserById = async (id) => {
                win_streak, daily_streak, previous_streak, last_puzzle_date, puzzle_level,
                trophies, must_change_password, avatar_url,
                parent_email, onboarding_done, theme, notify_email, notify_push,
-               tz_primary, tz_secondary
+               tz_primary, tz_secondary, display_name, link_code
         FROM users WHERE id = ?
     `, id);
 
@@ -736,7 +865,11 @@ export const getTeacherRooms = async (teacherId) => {
 
 export const joinStudentToRoom = async (roomCode, studentId) => {
     const db = await getDbConnection();
+    const room = await db.get('SELECT teacher_id FROM study_rooms WHERE room_code = ?', [roomCode]);
     await db.run('UPDATE study_rooms SET student_id = ? WHERE room_code = ?', [studentId, roomCode]);
+    if (room?.teacher_id) {
+        await linkStudentToTeacher(room.teacher_id, studentId);
+    }
 };
 
 export const deleteStudyRoom = async (roomCode, teacherId) => {
@@ -1097,10 +1230,21 @@ export const updateLessonContent = async (lessonId, content) => {
 
 // --- РАСПИСАНИЕ ---
 
-export const getStudentsList = async () => {
+export const getStudentsList = async (teacherId = null) => {
     const db = await getDbConnection();
+    if (teacherId) {
+        return db.all(
+            `SELECT u.id, u.username, COALESCE(NULLIF(u.display_name, ''), u.username) AS display_name
+             FROM teacher_student_links l
+             JOIN users u ON u.id = l.student_id
+             WHERE l.teacher_id = ?
+             ORDER BY u.username COLLATE NOCASE ASC`,
+            [teacherId]
+        );
+    }
     return db.all(
-        `SELECT id, username FROM users WHERE role = 'student' OR role = '0' ORDER BY username COLLATE NOCASE ASC`
+        `SELECT id, username, COALESCE(NULLIF(display_name, ''), username) AS display_name
+         FROM users WHERE role = 'student' ORDER BY username COLLATE NOCASE ASC`
     );
 };
 
@@ -1660,6 +1804,10 @@ export const updateUserSettings = async (userId, settings) => {
         fields.push('tz_secondary = ?');
         values.push(settings.tzSecondary);
     }
+    if (settings.displayName !== undefined) {
+        fields.push('display_name = ?');
+        values.push(String(settings.displayName).replace(/<\/?[^>]+(>|$)/g, '').trim().slice(0, 64));
+    }
     if (!fields.length) return;
     values.push(userId);
     await db.run(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`, values);
@@ -1910,6 +2058,9 @@ export const joinGroupStudent = async (roomCode, studentId) => {
         JSON.stringify(boards),
         roomCode,
     ]);
+    if (room.teacher_id) {
+        await linkStudentToTeacher(room.teacher_id, studentId);
+    }
     return true;
 };
 
@@ -2145,4 +2296,119 @@ export const getTournamentsInMinutesWindow = async (minFrom, minTo) => {
         const diffMin = (new Date(t.starts_at).getTime() - now) / 60000;
         return diffMin >= minFrom && diffMin <= minTo;
     });
+};
+
+// --- ПРОФИЛЬ / ДАШБОРД ---
+
+export const getStudentHomeworkSummary = async (studentId) => {
+    const db = await getDbConnection();
+    const today = new Date().toISOString().slice(0, 10);
+    const pending = await db.get(
+        `SELECT COUNT(*) as c FROM homework_assignments WHERE student_id = ? AND status = 'pending'`,
+        [studentId]
+    );
+    const overdue = await db.get(
+        `SELECT COUNT(*) as c FROM homework_assignments WHERE student_id = ? AND status = 'pending' AND due_date < ?`,
+        [studentId, today]
+    );
+    const latest = await db.get(
+        `SELECT h.*, u.username as teacher_name
+         FROM homework_assignments h
+         JOIN users u ON u.id = h.teacher_id
+         WHERE h.student_id = ? AND h.status = 'pending'
+         ORDER BY h.due_date ASC LIMIT 1`,
+        [studentId]
+    );
+    return { pending: pending?.c || 0, overdue: overdue?.c || 0, latest: latest || null };
+};
+
+export const getNextLessonForStudent = async (studentId) => {
+    const db = await getDbConnection();
+    const today = new Date().toISOString().slice(0, 10);
+    const lessons = await db.all(
+        `SELECT l.*, u.username as teacher_name,
+                COALESCE(NULLIF(u.display_name, ''), u.username) as teacher_display
+         FROM schedule_lessons l
+         JOIN users u ON u.id = l.teacher_id
+         WHERE l.lesson_date >= ?
+         ORDER BY l.lesson_date, l.time_slot
+         LIMIT 80`,
+        [today]
+    );
+    for (const lesson of lessons) {
+        try {
+            const ids = JSON.parse(lesson.student_ids || '[]').map(Number);
+            if (ids.includes(Number(studentId))) return lesson;
+        } catch {
+            /* ignore */
+        }
+    }
+    return null;
+};
+
+export const getTodayLessonsForTeacher = async (teacherId) => {
+    const db = await getDbConnection();
+    const today = new Date().toISOString().slice(0, 10);
+    const rows = await db.all(
+        `SELECT * FROM schedule_lessons WHERE teacher_id = ? AND lesson_date = ? ORDER BY time_slot`,
+        [teacherId, today]
+    );
+    return rows.map((row) => {
+        let studentIds = [];
+        try {
+            studentIds = JSON.parse(row.student_ids || '[]');
+        } catch {
+            studentIds = [];
+        }
+        return { ...row, studentIds };
+    });
+};
+
+export const getTeacherStudentSnapshots = async (teacherId) => {
+    const db = await getDbConnection();
+    const students = await getTeacherStudents(teacherId);
+    const snapshots = [];
+    for (const st of students) {
+        const pendingHw = await db.get(
+            `SELECT COUNT(*) as c FROM homework_assignments
+             WHERE student_id = ? AND teacher_id = ? AND status = 'pending'`,
+            [st.id, teacherId]
+        );
+        const lastJournal = await db.get(
+            `SELECT lesson_date FROM lesson_journals
+             WHERE student_id = ? AND teacher_id = ?
+             ORDER BY lesson_date DESC LIMIT 1`,
+            [st.id, teacherId]
+        );
+        const progress = await getStudentTopicProgress(st.id);
+        snapshots.push({
+            ...st,
+            pendingHomework: pendingHw?.c || 0,
+            lastLessonDate: lastJournal?.lesson_date || null,
+            weakTopicsCount: progress.topicsPlanned?.length || 0,
+        });
+    }
+    return snapshots;
+};
+
+export const getTeacherHomeworkPendingTotal = async (teacherId) => {
+    const db = await getDbConnection();
+    const row = await db.get(
+        `SELECT COUNT(*) as c FROM homework_assignments WHERE teacher_id = ? AND status = 'pending'`,
+        [teacherId]
+    );
+    return row?.c || 0;
+};
+
+export const getPuzzleStatusForUser = async (userId) => {
+    await checkAndResetStreak(userId);
+    const user = await findUserById(userId);
+    const solvedToday = await getSolvedCountToday(userId);
+    return {
+        solvedToday: solvedToday || 0,
+        streak: user?.daily_streak || 0,
+        completedToday: solvedToday >= 10,
+        canRestore: user?.daily_streak === 0 && (user?.previous_streak || 0) > 0,
+        previousStreak: user?.previous_streak || 0,
+    };
 };

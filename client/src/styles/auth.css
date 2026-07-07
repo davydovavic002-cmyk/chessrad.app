@@ -22,7 +22,7 @@
 
 .auth-brand h1 {
     font-size: 2.8rem;
-    background: linear-gradient(135deg, var(--peach-500) 0%, var(--coral) 50%, var(--rose) 100%);
+    background: linear-gradient(135deg, var(--peach-500) 0%, var(--sky-400) 55%, var(--coral) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -43,9 +43,10 @@
     display: flex;
     gap: 8px;
     margin-bottom: 28px;
-    background: rgba(255, 255, 255, 0.2);
+    background: linear-gradient(135deg, rgba(255, 240, 230, 0.35), rgba(220, 238, 252, 0.3));
     border-radius: var(--radius-md);
     padding: 4px;
+    border: 1px solid var(--glass-border-soft);
 }
 
 .auth-tab {
@@ -101,7 +102,7 @@
     padding: 14px;
     border: 1px solid var(--glass-border-soft);
     border-radius: var(--radius-md);
-    background: rgba(255, 255, 255, 0.2);
+    background: var(--glass-gradient);
     text-align: center;
     cursor: pointer;
     transition: all var(--transition);
@@ -110,13 +111,13 @@
 }
 
 .role-option:hover {
-    border-color: var(--peach-300);
-    background: rgba(255, 255, 255, 0.35);
+    border-color: rgba(168, 212, 240, 0.55);
+    background: var(--glass-gradient-strong);
 }
 
 .role-option.selected {
-    border-color: var(--peach-400);
-    background: rgba(255, 143, 98, 0.2);
+    border-color: rgba(255, 176, 136, 0.55);
+    background: linear-gradient(135deg, rgba(255, 200, 170, 0.35), rgba(180, 220, 245, 0.3));
     font-weight: 600;
 }
 
@@ -124,4 +125,20 @@
     font-size: 1.5rem;
     display: block;
     margin-bottom: 4px;
+}
+
+.role-select--three {
+    flex-wrap: wrap;
+}
+
+.role-select--three .role-option {
+    flex: 1 1 calc(33.333% - 8px);
+    min-width: 90px;
+}
+
+.auth-hint {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin: 6px 0 0;
+    line-height: 1.35;
 }

@@ -22,6 +22,7 @@ import ParentReportPage from './pages/ParentReportPage';
 import StudentCalendarPage from './pages/StudentCalendarPage';
 import ParentPortalPage from './pages/ParentPortalPage';
 import GroupStudyPage from './pages/GroupStudyPage';
+import LinkPage from './pages/LinkPage';
 import OnboardingModal from './components/OnboardingModal';
 import ThemeSync from './components/ThemeSync';
 
@@ -39,6 +40,7 @@ export default function App() {
             <OnboardingModal />
             <Routes>
               <Route path="/" element={<AuthPage />} />
+              <Route path="/link/:code" element={<Protected><LinkPage /></Protected>} />
               <Route path="/parent-report/:token" element={<ParentReportPage />} />
               <Route path="/lobby" element={<Protected><LobbyPage /></Protected>} />
             <Route path="/profile" element={<Protected><ProfilePage /></Protected>} />
