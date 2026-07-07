@@ -12,7 +12,6 @@
   "dependencies": {
     "@vitejs/plugin-react": "^4.3.4",
     "chess.js": "^0.13.4",
-    "qrcode": "^1.5.4",
     "react": "^19.2.7",
     "react-chessboard": "^5.10.0",
     "react-dom": "^19.2.7",

@@ -34,6 +34,7 @@ fi
 echo "==> Clean client install (avoids mixed Vite 8/6 node_modules)"
 rm -rf client/node_modules client/dist
 
+echo "==> Build may take 2–8 minutes on a small VPS — wait for 'built in'."
 npm run build
 
 test -f client/dist/index.html || { echo "ERROR: client/dist/index.html missing"; exit 1; }

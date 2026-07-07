@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import QRCode from 'qrcode';
 import { useI18n } from '../i18n/I18nContext';
 import { formatLinkCode, linkUrl } from '../utils/linkCode';
+import { loadQrImage } from '../utils/qrImage';
 
 const ROLE_LABELS = {
   student: 'link_card_role_student',
@@ -57,9 +57,8 @@ export default function ProfileLinkCard({ user, onConnectCode, connectMsg, conne
     ctx.font = 'bold 13px Outfit, sans-serif';
     ctx.fillText(t(roleKey).toUpperCase(), w / 2, 148);
 
-    const qrCanvas = document.createElement('canvas');
-    await QRCode.toCanvas(qrCanvas, url, { width: 200, margin: 1, color: { dark: '#2d1f1a', light: '#ffffff' } });
-    ctx.drawImage(qrCanvas, (w - 200) / 2, 168, 200, 200);
+    const qrImg = await loadQrImage(url, 200);
+    ctx.drawImage(qrImg, (w - 200) / 2, 168, 200, 200);
 
     ctx.fillStyle = '#2d1f1a';
     ctx.font = 'bold 20px monospace';
