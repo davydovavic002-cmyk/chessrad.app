@@ -55,7 +55,7 @@ function sideToMoveFromFen(fenStr) {
 }
 
 function activeMoveColor(settings = {}) {
-  return settings.activeMoveColor || 'w';
+  return settings.activeMoveColor || 'b';
 }
 
 /** Who moves first in a demo puzzle — set by teacher, not changed during solving. */
@@ -80,16 +80,22 @@ function turnSideLabel(color, t) {
   return color === 'w' ? t('study_white') : t('study_black');
 }
 
+function studentColorForTab(tab, settings) {
+  if (tab.type === 'demo') {
+    return demoStartColor(settings);
+  }
+  return settings.studentMoveColor ?? 'b';
+}
+
 function rolePieceColor(isTeacher, studentColor) {
   if (isTeacher) return studentColor === 'w' ? 'b' : 'w';
   return studentColor;
 }
 
 function canPlayPiece(tab, pieceColor, isTeacher, settings) {
-  const studentColor = settings.studentMoveColor ?? 'b';
+  const studentColor = studentColorForTab(tab, settings);
   const roleColor = rolePieceColor(isTeacher, studentColor);
   if (pieceColor !== roleColor) return false;
-  if (tab.type === 'demo' && isTeacher) return true;
   if (tab.type === 'play' || tab.type === 'demo') {
     return pieceColor === effectiveTurn(tab);
   }
@@ -131,7 +137,7 @@ export default function StudyPage() {
   const orientationRef = useRef('white');
   const roomSettingsRef = useRef({
     studentMoveColor: 'b',
-    activeMoveColor: 'w',
+    activeMoveColor: 'b',
     boardFlipped: false,
   });
 
@@ -146,7 +152,7 @@ export default function StudyPage() {
   const [statusMsg, setStatusMsg] = useState('');
   const [roomSettings, setRoomSettings] = useState({
     studentMoveColor: 'b',
-    activeMoveColor: 'w',
+    activeMoveColor: 'b',
     boardFlipped: false,
   });
   const [drawTool, setDrawTool] = useState('off');
@@ -328,7 +334,7 @@ export default function StudyPage() {
       if (d.studySettings) {
         roomSettingsRef.current = {
           studentMoveColor: 'b',
-          activeMoveColor: 'w',
+          activeMoveColor: 'b',
           boardFlipped: false,
           ...d.studySettings,
         };
@@ -386,7 +392,7 @@ export default function StudyPage() {
       if (!d.settings) return;
       roomSettingsRef.current = {
         studentMoveColor: 'b',
-        activeMoveColor: 'w',
+        activeMoveColor: 'b',
         boardFlipped: false,
         ...d.settings,
       };
@@ -483,6 +489,8 @@ export default function StudyPage() {
 
   function flipBoard() {
     if (!isTeacherRef.current) return;
+    const tab = tabsRef.current.find((t) => t.id === activeTabIdRef.current);
+    if (tab?.type !== 'play') return;
     const cur = roomSettingsRef.current.studentMoveColor ?? 'b';
     updateRoomSettings({ studentMoveColor: cur === 'w' ? 'b' : 'w' });
   }
@@ -502,12 +510,8 @@ export default function StudyPage() {
       const pieceBefore = game.get(source);
       if (!pieceBefore) return false;
 
-      const freeDemo = tab.type === 'demo' && isTeacherRef.current;
-
-      if (!freeDemo) {
-        if (!canPlayPiece(tab, pieceBefore.color, isTeacherRef.current, roomSettingsRef.current)) {
-          return false;
-        }
+      if (!canPlayPiece(tab, pieceBefore.color, isTeacherRef.current, roomSettingsRef.current)) {
+        return false;
       }
 
       const move = game.move({ from: source, to: target, promotion: 'q' });
@@ -515,10 +519,6 @@ export default function StudyPage() {
 
       if (move) {
         moveNotation = formatPieceMove(move.piece, move.from, move.to);
-      } else if (freeDemo) {
-        moveNotation = formatPieceMove(pieceBefore.type, source, target);
-        game.remove(source);
-        game.put(pieceBefore, target);
       } else {
         return false;
       }
@@ -917,9 +917,11 @@ export default function StudyPage() {
           </div>
           {isTeacher && (
             <div className="board-controls study-board-controls">
-              <button type="button" className="btn-secondary" onClick={flipBoard}>
-                {t('study_flip')}
-              </button>
+              {activeTab?.type === 'play' && (
+                <button type="button" className="btn-secondary" onClick={flipBoard}>
+                  {t('study_flip')}
+                </button>
+              )}
               <div className="study-draw-tools" role="group" aria-label={t('study_draw_arrows')}>
                 <button
                   type="button"

@@ -217,7 +217,7 @@ const onlineUsers = new Map();
 const matchmakingQueue = [];
 const videoRooms = new Map();
 const studyRoomSettings = new Map();
-const DEFAULT_STUDY_SETTINGS = { studentMoveColor: 'b', activeMoveColor: 'w', boardFlipped: false };
+const DEFAULT_STUDY_SETTINGS = { studentMoveColor: 'b', activeMoveColor: 'b', boardFlipped: false };
 
 function getStudySettings(roomCode) {
   if (!studyRoomSettings.has(roomCode)) {
