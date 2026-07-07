@@ -98,11 +98,13 @@ server {
 
 ### One-command deploy on the server
 
+**Do not run `git pull`** — it fails when `package-lock.json` was touched by `npm install`. Use only:
+
 ```bash
 cd ~/chessrad.app
 bash scripts/deploy.sh
 ```
 
-This resets git to `origin/main`, builds, and restarts PM2.
+The script runs `git fetch` + `git reset --hard`, wipes `client/node_modules`, builds, and restarts PM2.
 
 ## After deploy (smoke)

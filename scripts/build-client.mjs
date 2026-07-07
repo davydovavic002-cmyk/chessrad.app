@@ -68,7 +68,7 @@ run('install client', 'npm', ['install', '--no-audit', '--no-fund'], clientDir);
 const viteBin = path.join(clientDir, 'node_modules', '.bin', 'vite');
 if (!fs.existsSync(viteBin)) {
   console.error('\nVite not found after install. Common causes:');
-  console.error('  - Node too old (need 20.19+)');
+  console.error('  - Node too old (need 18+)');
   console.error('  - Disk full (run: df -h)');
   console.error('  - npm registry/network error');
   process.exit(1);
