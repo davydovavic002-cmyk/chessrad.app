@@ -10,7 +10,14 @@ import LanguageToggle from '../components/LanguageToggle';
 import ThemeToggle from '../components/ThemeToggle';
 import NotificationBell from '../components/NotificationBell';
 import Board from '../components/Board';
+import {
+  LobbyFloatingPieces,
+  LobbyHeroBanner,
+  LobbyLeaderMedal,
+  LobbyMenuWatermark,
+} from '../components/lobby/LobbyChessDecor';
 import '../styles/style.css';
+import '../styles/lobby.css';
 import '../styles/lobby-spotlight.css';
 
 export default function LobbyPage() {
@@ -143,9 +150,11 @@ export default function LobbyPage() {
 
   return (
     <>
+      <LobbyFloatingPieces />
       <div className="lobby-container page-wrap" style={{ visibility: 'visible' }}>
         <header className="lobby-header">
           <div className="logo-area">
+            <span className="logo-area__piece" aria-hidden>♔</span>
             <h1>{t('app_name')}</h1>
             <span className="badge badge-online">Online</span>
           </div>
@@ -168,11 +177,7 @@ export default function LobbyPage() {
         </header>
 
         <main className="lobby-content">
-          <div className="lobby-intro">
-            <span className="lobby-welcome-pill">{t('lobby_welcome')}</span>
-            <p className="lobby-intro__name">{user.display_name || user.username}</p>
-            <p className="subtitle lobby-intro__sub">{t('lobby_subtitle')}</p>
-          </div>
+          <LobbyHeroBanner user={user} puzzleStatus={puzzleStatus} t={t} />
 
           {role === 'student' && user?.needs_teacher_link && (
             <div className="lobby-link-banner">
@@ -201,7 +206,9 @@ export default function LobbyPage() {
                   <div className="lobby-leaders">
                     {spotlight.leaders.map((l) => (
                       <div key={l.rank} className="lobby-leader-row">
-                        <span className="lobby-leader-rank">{l.rank}</span>
+                        <span className="lobby-leader-rank">
+                          {[1, 2, 3].includes(l.rank) ? <LobbyLeaderMedal rank={l.rank} /> : l.rank}
+                        </span>
                         <span>{l.username}</span>
                         <strong>{l.score} {t('tournament_points').toLowerCase()}</strong>
                       </div>
@@ -224,7 +231,8 @@ export default function LobbyPage() {
           )}
 
           <div className="menu-grid">
-            <div className="menu-card glass-card menu-card--profile" onClick={() => navigate('/profile')}>
+            <div className="menu-card glass-card menu-card--profile menu-card--chess" onClick={() => navigate('/profile')}>
+              <LobbyMenuWatermark pieceKey="profile" />
               <div className="card-icon">👤</div>
               <div className="card-text">
                 <h3>{t('lobby_profile')}</h3>
@@ -233,7 +241,8 @@ export default function LobbyPage() {
             </div>
 
             {role !== 'teacher' && role !== 'admin' && (
-            <div className="menu-card primary glass-card" onClick={() => navigate('/game')}>
+            <div className="menu-card primary glass-card menu-card--chess" onClick={() => navigate('/game')}>
+              <LobbyMenuWatermark pieceKey="game" />
               <div className="card-icon">⚔️</div>
               <div className="card-text">
                 <h3>{t('lobby_find_game')}</h3>
@@ -245,16 +254,18 @@ export default function LobbyPage() {
             {(role === 'teacher' || role === 'admin') && (
               <>
               <div
-                className="menu-card primary glass-card game-feature-card game-feature-card--journal"
+                className="menu-card primary glass-card game-feature-card game-feature-card--journal menu-card--chess"
                 onClick={() => navigate('/journal')}
               >
+                <LobbyMenuWatermark pieceKey="journal" />
                 <div className="card-icon">📓</div>
                 <div className="card-text">
                   <h3>{t('lobby_journal')}</h3>
                   <p>{t('lobby_journal_sub')}</p>
                 </div>
               </div>
-              <div className="menu-card glass-card" onClick={() => navigate('/schedule')}>
+              <div className="menu-card glass-card menu-card--chess" onClick={() => navigate('/schedule')}>
+                <LobbyMenuWatermark pieceKey="schedule" />
                 <div className="card-icon">📅</div>
                 <div className="card-text">
                   <h3>{t('lobby_schedule')}</h3>
@@ -265,7 +276,8 @@ export default function LobbyPage() {
             )}
 
             {role === 'student' && (
-            <div className="menu-card glass-card" onClick={() => navigate('/schedule')}>
+            <div className="menu-card glass-card menu-card--chess" onClick={() => navigate('/schedule')}>
+              <LobbyMenuWatermark pieceKey="schedule" />
               <div className="card-icon">📅</div>
               <div className="card-text">
                 <h3>{t('lobby_schedule')}</h3>
@@ -277,9 +289,10 @@ export default function LobbyPage() {
             {role === 'student' && (
               <>
               <div
-                className="menu-card glass-card game-feature-card"
+                className="menu-card glass-card game-feature-card menu-card--chess"
                 onClick={() => navigate('/homework')}
               >
+                <LobbyMenuWatermark pieceKey="homework" />
                 <div className="card-icon">📝</div>
                 <div className="card-text">
                   <h3>{t('lobby_homework')}</h3>
@@ -287,9 +300,10 @@ export default function LobbyPage() {
                 </div>
               </div>
               <div
-                className="menu-card glass-card game-feature-card"
+                className="menu-card glass-card game-feature-card menu-card--chess"
                 onClick={() => navigate('/calendar')}
               >
+                <LobbyMenuWatermark pieceKey="calendar" />
                 <div className="card-icon">🗓️</div>
                 <div className="card-text">
                   <h3>{t('lobby_calendar')}</h3>
@@ -299,7 +313,8 @@ export default function LobbyPage() {
               </>
             )}
 
-            <div className="menu-card glass-card" onClick={() => navigate('/tournaments')}>
+            <div className="menu-card glass-card menu-card--chess" onClick={() => navigate('/tournaments')}>
+              <LobbyMenuWatermark pieceKey="tournaments" />
               <div className="card-icon">🏆</div>
               <div className="card-text">
                 <h3>{t('lobby_tournaments')}</h3>
@@ -308,7 +323,8 @@ export default function LobbyPage() {
             </div>
 
             {role !== 'teacher' && role !== 'admin' && (
-            <div className={puzzleCardClass} onClick={onPuzzleClick}>
+            <div className={puzzleCardClass + ' menu-card--chess'} onClick={onPuzzleClick}>
+              <LobbyMenuWatermark pieceKey="puzzle" />
               <div className="card-icon">{puzzleIcon}</div>
               <div className="card-text">
                 <h3>{puzzleTitle}</h3>
@@ -322,10 +338,11 @@ export default function LobbyPage() {
 
             {role === 'admin' && (
               <div
-                className="menu-card glass-card"
+                className="menu-card glass-card menu-card--chess"
                 style={{ borderColor: 'rgba(255,107,107,0.4)', background: 'rgba(255,107,107,0.1)' }}
                 onClick={() => navigate('/admin')}
               >
+                <LobbyMenuWatermark pieceKey="admin" />
                 <div className="card-icon">⚙️</div>
                 <div className="card-text">
                   <h3>{t('lobby_admin')}</h3>
@@ -342,10 +359,11 @@ export default function LobbyPage() {
               {role === 'teacher' || role === 'admin' ? (
                 <>
                 <div
-                  className="menu-card primary study-card"
+                  className="menu-card primary study-card menu-card--chess"
                   style={{ cursor: 'pointer', padding: 15 }}
                   onClick={() => createStudy('duo')}
                 >
+                  <LobbyMenuWatermark pieceKey="study" />
                   <div className="card-icon">👨‍🏫</div>
                   <div className="card-text">
                     <h3>{t('lobby_create_study')}</h3>
@@ -353,10 +371,11 @@ export default function LobbyPage() {
                   </div>
                 </div>
                 <div
-                  className="menu-card study-card"
+                  className="menu-card study-card menu-card--chess"
                   style={{ cursor: 'pointer', padding: 15, marginTop: 12 }}
                   onClick={createGroupStudy}
                 >
+                  <LobbyMenuWatermark pieceKey="group" />
                   <div className="card-icon">👥</div>
                   <div className="card-text">
                     <h3>{t('lobby_create_group')}</h3>
@@ -365,7 +384,8 @@ export default function LobbyPage() {
                 </div>
                 </>
               ) : (
-                <div className="menu-card study-card" style={{ cursor: 'default', padding: 15, minHeight: 'auto' }}>
+                <div className="menu-card study-card menu-card--chess" style={{ cursor: 'default', padding: 15, minHeight: 'auto' }}>
+                  <LobbyMenuWatermark pieceKey="study" />
                   <div className="card-icon">🎓</div>
                   <div className="card-text" style={{ width: '100%' }}>
                     <h3>{t('lobby_join_study')}</h3>
