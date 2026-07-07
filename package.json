@@ -8,7 +8,7 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "dev:client": "npm run dev --prefix client",
-    "build": "npm ci --prefix client --include=dev && npm run build --prefix client",
+    "build": "node scripts/build-client.mjs",
     "build:start": "npm run build && node server.js",
     "test:e2e": "playwright test"
   },

@@ -3,15 +3,18 @@
 ## Build
 
 ```bash
-# From repo root (recommended — works even when NODE_ENV=production on the server)
+# From repo root (works even when NODE_ENV=production on the server)
 npm run build
 
-# Or manually:
-cd client && npm ci --include=dev && npm run build
-cd .. && npm ci
+# Manual equivalent:
+cd client
+NODE_ENV=development NPM_CONFIG_PRODUCTION=false npm ci --no-audit --no-fund
+npm run build
+cd ..
+npm ci
 ```
 
-`--include=dev` is required on production servers: otherwise `npm ci` skips Vite and the client build fails.
+The build script forces `NODE_ENV=development` only for the client install step so Vite and other dev tools are installed on production servers.
 
 Server serves `client/dist` when the folder exists.
 
