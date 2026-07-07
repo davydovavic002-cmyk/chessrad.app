@@ -16,6 +16,24 @@ npm ci
 
 The build script forces `NODE_ENV=development` only for the client install step so Vite and other dev tools are installed on production servers.
 
+**Requirements:** Node **20.19+** (or 22.12+). Check with `node -v`. Vite 8 will not run on Node 18.
+
+**If build fails on the server:**
+
+```bash
+node -v          # must be v20.19+
+df -h            # need free disk (npm needs ~500MB+)
+cd ~/chessrad.app/client && npm install && npm run build
+```
+
+Upgrade Node 20 on Ubuntu:
+
+```bash
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs
+node -v
+```
+
 Server serves `client/dist` when the folder exists.
 
 ## Environment (`.env`)
