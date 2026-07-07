@@ -158,12 +158,19 @@
 .study-board-controls {
     flex: 0 0 auto;
     display: flex;
-    gap: 10px;
+    flex-wrap: wrap;
+    gap: 8px;
     width: 100%;
     max-width: min(880px, calc(100dvh - 250px), calc(100vw - 480px)) !important;
     margin: 8px auto 0;
     padding: 0 12px 4px;
     box-sizing: border-box;
+}
+
+.study-board-controls .study-btn-active {
+    background: var(--accent, #3498db);
+    color: #fff;
+    border-color: transparent;
 }
 
 .study-draw-wrap {

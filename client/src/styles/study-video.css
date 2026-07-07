@@ -94,7 +94,7 @@
 .study-video-room--sidebar .study-video-tile {
   aspect-ratio: 4 / 3;
   min-height: 0;
-  max-height: 72px;
+  max-height: 120px;
 }
 
 .study-video-room--group .study-video-grid {

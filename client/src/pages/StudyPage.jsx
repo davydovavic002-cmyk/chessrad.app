@@ -58,6 +58,8 @@ export default function StudyPage() {
   const tabsRef = useRef([{ id: 'play', type: 'play', fen: 'start', shapes: [], pgn: '', customHistory: [], notes: '' }]);
   const activeTabIdRef = useRef('play');
   const isTeacherRef = useRef(false);
+  const orientationRef = useRef('white');
+  const roomSettingsRef = useRef({ studentMoveColor: 'w', demoStrict: false });
 
   const [tabs, setTabs] = useState(tabsRef.current);
   const [boardSize, setBoardSize] = useState(320);
@@ -68,6 +70,8 @@ export default function StudyPage() {
   const [history, setHistory] = useState([]);
   const [shapes, setShapes] = useState([]);
   const [statusMsg, setStatusMsg] = useState('');
+  const [roomSettings, setRoomSettings] = useState({ studentMoveColor: 'w', demoStrict: false });
+  const [arrowDrawMode, setArrowDrawMode] = useState(false);
   const [libOpen, setLibOpen] = useState(false);
   const [libPositions, setLibPositions] = useState([]);
   const [libView, setLibView] = useState({ level: 'folders', big: null, cat: null });
@@ -102,26 +106,36 @@ export default function StudyPage() {
     return () => ro.disconnect();
   }, []);
 
-  const syncTabsState = useCallback(() => {
-    setTabs([...tabsRef.current]);
-    setActiveTabId(activeTabIdRef.current);
-    const tab = tabsRef.current.find((t) => t.id === activeTabIdRef.current);
-    if (!tab) return;
-    const currentFen = normalizeFen(tab.fen);
-    gameRef.current.load(currentFen);
-    setFen(currentFen);
-    setHistory(tab.customHistory || []);
-    setShapes(tab.shapes || []);
-    setTabNotes(tab.notes || '');
-    if (tab.type === 'play') {
-      setOrientation(isTeacherRef.current ? 'white' : 'black');
-      const side = gameRef.current.turn() === 'w' ? t('study_white') : t('study_black');
-      setStatusMsg(t('study_turn', { side }));
-    } else {
-      setOrientation('white');
-      setStatusMsg(t('study_demo_pos'));
-    }
-  }, [t]);
+  const syncTabsState = useCallback(
+    (opts = {}) => {
+      const { resetOrientation = false } = opts;
+      setTabs([...tabsRef.current]);
+      setActiveTabId(activeTabIdRef.current);
+      const tab = tabsRef.current.find((t) => t.id === activeTabIdRef.current);
+      if (!tab) return;
+      const currentFen = normalizeFen(tab.fen);
+      gameRef.current.load(currentFen);
+      setFen(currentFen);
+      setHistory(tab.customHistory || []);
+      setShapes(tab.shapes || []);
+      setTabNotes(tab.notes || '');
+      if (resetOrientation) {
+        if (tab.type === 'play') {
+          orientationRef.current = isTeacherRef.current ? 'white' : 'black';
+        } else {
+          orientationRef.current = 'white';
+        }
+        setOrientation(orientationRef.current);
+      }
+      if (tab.type === 'play') {
+        const side = gameRef.current.turn() === 'w' ? t('study_white') : t('study_black');
+        setStatusMsg(t('study_turn', { side }));
+      } else {
+        setStatusMsg(t('study_demo_pos'));
+      }
+    },
+    [t]
+  );
 
   const switchTab = useCallback(
     (id, emit = true) => {
@@ -131,7 +145,7 @@ export default function StudyPage() {
       if (emit && isTeacherRef.current) {
         getSocket().emit('study:switchTab', { roomCode, tabId: id });
       }
-      syncTabsState();
+      syncTabsState({ resetOrientation: true });
     },
     [roomCode, syncTabsState]
   );
@@ -197,16 +211,28 @@ export default function StudyPage() {
       setRoomStudentId(d.student_id || null);
       if (d.tabs?.length) tabsRef.current = d.tabs;
       activeTabIdRef.current = d.activeTabId || activeTabIdRef.current;
-      syncTabsState();
+      if (d.studySettings) {
+        roomSettingsRef.current = d.studySettings;
+        setRoomSettings(d.studySettings);
+      }
+      syncTabsState({ resetOrientation: true });
     };
 
     const onSyncMove = (d) => {
-      const t = tabsRef.current.find((x) => x.id === d.tabId);
-      if (!t) return;
-      t.fen = d.fen;
-      t.pgn = d.pgn || '';
-      t.customHistory = d.customHistory || [];
-      if (d.tabId === activeTabIdRef.current) syncTabsState();
+      const tab = tabsRef.current.find((x) => x.id === d.tabId);
+      if (!tab) return;
+      tab.fen = d.fen;
+      tab.pgn = d.pgn || '';
+      tab.customHistory = d.customHistory || [];
+      if (d.tabId !== activeTabIdRef.current) return;
+      const currentFen = normalizeFen(tab.fen);
+      gameRef.current.load(currentFen);
+      setFen(currentFen);
+      setHistory(tab.customHistory || []);
+      if (tab.type === 'play') {
+        const side = gameRef.current.turn() === 'w' ? t('study_white') : t('study_black');
+        setStatusMsg(t('study_turn', { side }));
+      }
     };
 
     const onSyncTabs = (d) => {
@@ -214,7 +240,7 @@ export default function StudyPage() {
       if (!tabsRef.current.find((t) => t.id === activeTabIdRef.current)) {
         activeTabIdRef.current = 'play';
       }
-      syncTabsState();
+      syncTabsState({ resetOrientation: true });
     };
 
     const onSyncSwitch = (d) => {
@@ -233,12 +259,19 @@ export default function StudyPage() {
       if (d.tabId === activeTabIdRef.current) setTabNotes(d.notes || '');
     };
 
+    const onSyncSettings = (d) => {
+      if (!d.settings) return;
+      roomSettingsRef.current = d.settings;
+      setRoomSettings(d.settings);
+    };
+
     socket.on('study:roomData', onRoomData);
     socket.on('study:syncMove', onSyncMove);
     socket.on('study:syncTabs', onSyncTabs);
     socket.on('study:syncSwitchTab', onSyncSwitch);
     socket.on('study:syncDraw', onSyncDraw);
     socket.on('study:syncNotes', onSyncNotes);
+    socket.on('study:syncSettings', onSyncSettings);
 
     return () => {
       socket.off('study:roomData', onRoomData);
@@ -247,8 +280,9 @@ export default function StudyPage() {
       socket.off('study:syncSwitchTab', onSyncSwitch);
       socket.off('study:syncDraw', onSyncDraw);
       socket.off('study:syncNotes', onSyncNotes);
+      socket.off('study:syncSettings', onSyncSettings);
     };
-  }, [roomCode, user.id, user.role, syncTabsState, switchTab]);
+  }, [roomCode, user.id, user.role, t, syncTabsState, switchTab]);
 
   const emitMove = useCallback(
     (tab) => {
@@ -259,13 +293,41 @@ export default function StudyPage() {
         pgn: tab.pgn,
         customHistory: tab.customHistory,
       });
-      syncTabsState();
+      const currentFen = normalizeFen(tab.fen);
+      gameRef.current.load(currentFen);
+      setFen(currentFen);
+      setHistory(tab.customHistory || []);
+      if (tab.type === 'play') {
+        const side = gameRef.current.turn() === 'w' ? t('study_white') : t('study_black');
+        setStatusMsg(t('study_turn', { side }));
+      }
     },
-    [roomCode, syncTabsState]
+    [roomCode, t]
   );
+
+  const updateRoomSettings = useCallback(
+    (partial) => {
+      if (!isTeacherRef.current) return;
+      roomSettingsRef.current = { ...roomSettingsRef.current, ...partial };
+      setRoomSettings({ ...roomSettingsRef.current });
+      getSocket().emit('study:updateSettings', {
+        roomCode,
+        settings: roomSettingsRef.current,
+      });
+    },
+    [roomCode]
+  );
+
+  function flipBoard() {
+    const next = orientationRef.current === 'white' ? 'black' : 'white';
+    orientationRef.current = next;
+    setOrientation(next);
+  }
 
   const onDrop = useCallback(
     (source, target) => {
+      if (!target || source === target) return false;
+
       const tab = tabsRef.current.find((t) => t.id === activeTabIdRef.current);
       if (!tab) return false;
       if (!tab.customHistory) tab.customHistory = [];
@@ -276,12 +338,15 @@ export default function StudyPage() {
       const pieceBefore = game.get(source);
       if (!pieceBefore) return false;
 
+      const freeDemo =
+        tab.type !== 'play' && (isTeacherRef.current || !roomSettingsRef.current.demoStrict);
+
       const move = game.move({ from: source, to: target, promotion: 'q' });
       let moveNotation = '';
 
       if (move) {
         moveNotation = formatPieceMove(move.piece, move.from, move.to);
-      } else if (tab.type !== 'play') {
+      } else if (freeDemo) {
         moveNotation = formatPieceMove(pieceBefore.type, source, target);
         game.remove(source);
         game.put(pieceBefore, target);
@@ -319,11 +384,16 @@ export default function StudyPage() {
   const canDragPiece = useCallback(({ piece }) => {
     const tab = tabsRef.current.find((t) => t.id === activeTabIdRef.current);
     if (!tab) return false;
-    if (tab.type === 'play') {
-      if (!isTeacherRef.current && piece.pieceType?.charAt(0) === 'w') return false;
-      if (isTeacherRef.current && piece.pieceType?.charAt(0) === 'b') return false;
+    const color = piece.pieceType?.charAt(0);
+    const studentColor = roomSettingsRef.current.studentMoveColor || 'w';
+    if (isTeacherRef.current) {
+      if (tab.type === 'play') {
+        const teacherColor = studentColor === 'w' ? 'b' : 'w';
+        return color === teacherColor;
+      }
+      return true;
     }
-    return true;
+    return color === studentColor;
   }, []);
 
   function addTab() {
@@ -637,16 +707,46 @@ export default function StudyPage() {
                 boardId="study-board"
                 shapes={shapes}
                 orientation={orientation}
-                enabled={isTeacher}
+                drawEnabled={isTeacher && arrowDrawMode}
                 onShapesChange={handleShapesChange}
               />
             </div>
           </div>
           {isTeacher && (
             <div className="board-controls study-board-controls">
-              <button type="button" className="btn-secondary" onClick={() => setOrientation((o) => (o === 'white' ? 'black' : 'white'))}>
+              <button type="button" className="btn-secondary" onClick={flipBoard}>
                 {t('study_flip')}
               </button>
+              <button
+                type="button"
+                className={`btn-secondary${arrowDrawMode ? ' study-btn-active' : ''}`}
+                onClick={() => setArrowDrawMode((v) => !v)}
+              >
+                {t('study_draw_arrows')}
+              </button>
+              <button
+                type="button"
+                className={`btn-secondary${roomSettings.studentMoveColor === 'w' ? ' study-btn-active' : ''}`}
+                onClick={() => updateRoomSettings({ studentMoveColor: 'w' })}
+              >
+                {t('study_white_move')}
+              </button>
+              <button
+                type="button"
+                className={`btn-secondary${roomSettings.studentMoveColor === 'b' ? ' study-btn-active' : ''}`}
+                onClick={() => updateRoomSettings({ studentMoveColor: 'b' })}
+              >
+                {t('study_black_move')}
+              </button>
+              {activeTab?.type === 'demo' && (
+                <button
+                  type="button"
+                  className={`btn-secondary${roomSettings.demoStrict ? ' study-btn-active' : ''}`}
+                  onClick={() => updateRoomSettings({ demoStrict: !roomSettings.demoStrict })}
+                >
+                  {t('study_demo_strict')}
+                </button>
+              )}
               <button type="button" className="btn-secondary" onClick={() => applyFen(START_FEN)}>
                 {t('study_start')}
               </button>
@@ -660,7 +760,7 @@ export default function StudyPage() {
         <aside className="study-side-rail info-panel">
           {roomCode && roomTeacherId && (
             <div className="study-video-rail-slot">
-              <StudyVideoRoom roomCode={roomCode} teacherId={roomTeacherId} layout="sidebar" />
+              <StudyVideoRoom roomCode={roomCode} teacherId={roomTeacherId} layout="sidebar" autoStart />
             </div>
           )}
 

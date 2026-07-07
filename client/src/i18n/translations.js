@@ -211,6 +211,10 @@ export const translations = {
     study_reset_history: 'Откатить историю к началу',
     study_goto_move: 'Перейти к этой позиции (ходы после будут стёрты)',
     study_flip: 'Разворот',
+    study_draw_arrows: 'Стрелки',
+    study_white_move: 'Ход белых',
+    study_black_move: 'Ход чёрных',
+    study_demo_strict: 'Правила шахмат',
     study_start: 'Начальная',
     study_clear: 'Очистить',
     study_editor: '🧩 Редактор позиции',
@@ -744,6 +748,10 @@ export const translations = {
     study_reset_history: 'Reset history to start',
     study_goto_move: 'Go to this position (later moves will be removed)',
     study_flip: 'Flip',
+    study_draw_arrows: 'Arrows',
+    study_white_move: 'White to move',
+    study_black_move: 'Black to move',
+    study_demo_strict: 'Chess rules',
     study_start: 'Starting position',
     study_clear: 'Clear',
     study_editor: '🧩 Position editor',
@@ -1074,6 +1082,6 @@ export const translations = {
 export function formatMoveLabel(pieceType, from, to, lang = 'ru') {
   const key = String(pieceType || 'p').toLowerCase();
   const names = PIECE_NAMES[lang] || PIECE_NAMES.ru;
-  const name = names[key] || names.p;
-  return `${name}(${from})-${to}`;
+  const letter = (names[key] || names.p).charAt(0);
+  return `${letter} ${from}-${to}`;
 }

@@ -6,12 +6,13 @@ import '../styles/study-video.css';
 
 const ICE = [{ urls: 'stun:stun.l.google.com:19302' }];
 
-export default function StudyVideoRoom({ roomCode, teacherId, layout = 'inline' }) {
+export default function StudyVideoRoom({ roomCode, teacherId, layout = 'inline', autoStart = false }) {
   const { user } = useAuth();
   const { t } = useI18n();
   const localVideoRef = useRef(null);
   const peersRef = useRef(new Map());
   const localStreamRef = useRef(null);
+  const enabledRef = useRef(false);
   const [enabled, setEnabled] = useState(false);
   const [remoteStreams, setRemoteStreams] = useState([]);
   const [error, setError] = useState('');
@@ -39,7 +40,19 @@ export default function StudyVideoRoom({ roomCode, teacherId, layout = 'inline' 
 
   const createPeer = useCallback(
     async (targetUserId, targetUsername, initiator) => {
-      if (peersRef.current.has(targetUserId)) return peersRef.current.get(targetUserId).pc;
+      if (peersRef.current.has(targetUserId)) {
+        const existing = peersRef.current.get(targetUserId);
+        if (initiator && existing.pc?.signalingState === 'stable') {
+          const offer = await existing.pc.createOffer();
+          await existing.pc.setLocalDescription(offer);
+          getSocket().emit('video:signal', {
+            roomCode,
+            targetUserId,
+            data: { type: 'offer', sdp: offer },
+          });
+        }
+        return existing.pc;
+      }
       const pc = new RTCPeerConnection({ iceServers: ICE });
       peersRef.current.set(targetUserId, { pc, username: targetUsername, stream: null });
 
@@ -84,13 +97,13 @@ export default function StudyVideoRoom({ roomCode, teacherId, layout = 'inline' 
 
   const handleSignal = useCallback(
     async ({ fromUserId, fromUsername, data }) => {
-      if (!enabled || Number(fromUserId) === Number(user.id)) return;
+      if (!enabledRef.current || Number(fromUserId) === Number(user.id)) return;
 
       if (layout === 'group') {
         if (!isTeacher && Number(fromUserId) !== Number(teacherId)) return;
-      } else if (isTeacher || Number(fromUserId) === Number(teacherId)) {
-        /* duo: teacher ↔ student */
-      } else if (!isTeacher) {
+      } else if (!isTeacher && Number(fromUserId) !== Number(teacherId)) {
+        return;
+      } else if (isTeacher && Number(fromUserId) === Number(teacherId)) {
         return;
       }
 
@@ -121,7 +134,7 @@ export default function StudyVideoRoom({ roomCode, teacherId, layout = 'inline' 
         }
       }
     },
-    [enabled, user.id, isTeacher, teacherId, roomCode, createPeer, layout]
+    [user.id, isTeacher, teacherId, roomCode, createPeer, layout]
   );
 
   const connectToPeer = useCallback(
@@ -134,10 +147,26 @@ export default function StudyVideoRoom({ roomCode, teacherId, layout = 'inline' 
         if (!isTeacher && Number(peer.userId) !== Number(teacherId)) return;
         if (isTeacher && Number(peer.userId) === Number(teacherId)) return;
       }
-      createPeer(peer.userId, peer.username, true);
+      const shouldInitiate = Number(user.id) < Number(peer.userId);
+      createPeer(peer.userId, peer.username, shouldInitiate);
     },
     [user.id, isTeacher, teacherId, createPeer, layout]
   );
+
+  const startVideo = useCallback(async () => {
+    if (enabledRef.current) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      localStreamRef.current = stream;
+      if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+      enabledRef.current = true;
+      setEnabled(true);
+      setError('');
+      getSocket().emit('video:join', { roomCode, teacherId: Number(teacherId) });
+    } catch {
+      setError(t('video_permission_denied'));
+    }
+  }, [roomCode, teacherId, t]);
 
   useEffect(() => {
     if (!roomCode || !enabled) return;
@@ -168,26 +197,22 @@ export default function StudyVideoRoom({ roomCode, teacherId, layout = 'inline' 
     };
   }, [roomCode, enabled, teacherId, connectToPeer, closePeer, handleSignal]);
 
+  useEffect(() => {
+    if (autoStart && roomCode) startVideo();
+  }, [autoStart, roomCode, startVideo]);
+
   async function toggleVideo() {
-    if (enabled) {
+    if (enabledRef.current) {
       localStreamRef.current?.getTracks().forEach((tr) => tr.stop());
       localStreamRef.current = null;
       if (localVideoRef.current) localVideoRef.current.srcObject = null;
       peersRef.current.forEach((_, uid) => closePeer(uid));
+      enabledRef.current = false;
       setEnabled(false);
       getSocket().emit('video:leave', { roomCode });
       return;
     }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      localStreamRef.current = stream;
-      if (localVideoRef.current) localVideoRef.current.srcObject = stream;
-      setEnabled(true);
-      setError('');
-      getSocket().emit('video:join', { roomCode, teacherId: Number(teacherId) });
-    } catch {
-      setError(t('video_permission_denied'));
-    }
+    await startVideo();
   }
 
   const showDuoPlaceholder = layout === 'sidebar' && enabled && remoteStreams.length === 0;
@@ -217,35 +242,35 @@ export default function StudyVideoRoom({ roomCode, teacherId, layout = 'inline' 
           </button>
         )}
         <div className="study-video-grid">
-        <div className={`study-video-tile${enabled ? '' : ' study-video-tile--off'}`}>
-          <video ref={localVideoRef} autoPlay muted playsInline />
-          <span>{user.username} {t('video_you')}</span>
-        </div>
-
-        {layout === 'sidebar' && showDuoPlaceholder && (
-          <div className="study-video-tile study-video-tile--placeholder">
-            <span>{t('video_waiting')}</span>
+          <div className={`study-video-tile${enabled ? '' : ' study-video-tile--off'}`}>
+            <video ref={localVideoRef} autoPlay muted playsInline />
+            <span>{user.username} {t('video_you')}</span>
           </div>
-        )}
 
-        {remoteStreams.map((r) => (
-          <div key={r.userId} className="study-video-tile">
-            <video
-              autoPlay
-              playsInline
-              ref={(el) => {
-                if (el && r.stream) el.srcObject = r.stream;
-              }}
-            />
-            <span>{r.username}</span>
-          </div>
-        ))}
+          {layout === 'sidebar' && showDuoPlaceholder && (
+            <div className="study-video-tile study-video-tile--placeholder">
+              <span>{t('video_waiting')}</span>
+            </div>
+          )}
 
-        {layout === 'sidebar' && !enabled && (
-          <div className="study-video-tile study-video-tile--placeholder">
-            <span>{remoteLabel}</span>
-          </div>
-        )}
+          {remoteStreams.map((r) => (
+            <div key={r.userId} className="study-video-tile">
+              <video
+                autoPlay
+                playsInline
+                ref={(el) => {
+                  if (el && r.stream) el.srcObject = r.stream;
+                }}
+              />
+              <span>{r.username}</span>
+            </div>
+          ))}
+
+          {layout === 'sidebar' && !enabled && (
+            <div className="study-video-tile study-video-tile--placeholder">
+              <span>{remoteLabel}</span>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -216,6 +216,15 @@ const activeGames = new Map();
 const onlineUsers = new Map();
 const matchmakingQueue = [];
 const videoRooms = new Map();
+const studyRoomSettings = new Map();
+const DEFAULT_STUDY_SETTINGS = { studentMoveColor: 'w', demoStrict: false };
+
+function getStudySettings(roomCode) {
+  if (!studyRoomSettings.has(roomCode)) {
+    studyRoomSettings.set(roomCode, { ...DEFAULT_STUDY_SETTINGS });
+  }
+  return studyRoomSettings.get(roomCode);
+}
 const sentReminderKeys = new Set();
 
 let mainTournament;
@@ -1670,12 +1679,13 @@ socket.on('study:join', async ({ roomCode }) => {
             // Если в БД есть вкладки (в виде JSON), парсим их, иначе отправляем стандарт
             const tabsData = room.tabs ? (typeof room.tabs === 'string' ? JSON.parse(room.tabs) : room.tabs) : null;
 
-            socket.emit('study:roomData', {
-                ...room,
-                tabs: tabsData,
-                activeTabId: room.active_tab_id || 'play',
-                pgn: room.pgn || '' // Добавили передачу PGN при входе
-            });
+            socket.emit('study:roomData', {
+                ...room,
+                tabs: tabsData,
+                activeTabId: room.active_tab_id || 'play',
+                pgn: room.pgn || '',
+                studySettings: getStudySettings(roomCode),
+            });
         }
     } catch (error) {
         console.error('Ошибка в study:join:', error);
@@ -1859,6 +1869,24 @@ socket.on('study:notes', async ({ roomCode, tabId, notes }) => {
         io.to(roomCode).emit('study:syncNotes', { tabId, notes: notes || '' });
     } catch (error) {
         console.error('Ошибка в study:notes:', error);
+    }
+});
+
+socket.on('study:updateSettings', async ({ roomCode, settings }) => {
+    try {
+        const userId = socket.user.id;
+        const room = await findStudyRoomByCode(roomCode);
+        if (!room) return;
+        const isTeacher =
+            Number(room.teacher_id) === Number(userId) ||
+            socket.user.role === 'admin' ||
+            socket.user.role === 'teacher';
+        if (!isTeacher || !settings) return;
+        const merged = { ...getStudySettings(roomCode), ...settings };
+        studyRoomSettings.set(roomCode, merged);
+        io.to(roomCode).emit('study:syncSettings', { settings: merged });
+    } catch (error) {
+        console.error('Ошибка в study:updateSettings:', error);
     }
 });
 

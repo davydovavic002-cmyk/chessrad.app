@@ -1,29 +1,46 @@
 import { useCallback, useEffect, useRef } from 'react';
 
-function drawArrowhead(ctx, fromX, fromY, toX, toY, radius = 15) {
+const GREEN = 'rgba(46, 204, 113, 0.95)';
+const RED = 'rgba(231, 76, 60, 0.95)';
+
+function drawArrow(ctx, fromX, fromY, toX, toY, color) {
   const angle = Math.atan2(toY - fromY, toX - fromX);
-  ctx.save();
-  ctx.fillStyle = ctx.strokeStyle;
+  const headLen = Math.max(14, Math.min(22, ctx.lineWidth * 3));
+  const lineEndX = toX - headLen * 0.55 * Math.cos(angle);
+  const lineEndY = toY - headLen * 0.55 * Math.sin(angle);
+
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = 10;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
   ctx.beginPath();
-  ctx.translate(toX, toY);
-  ctx.rotate(angle);
-  ctx.moveTo(0, 0);
-  ctx.lineTo(-radius, -radius / 1.5);
-  ctx.lineTo(-radius, radius / 1.5);
+  ctx.moveTo(fromX, fromY);
+  ctx.lineTo(lineEndX, lineEndY);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(toX, toY);
+  ctx.lineTo(
+    toX - headLen * Math.cos(angle - Math.PI / 7),
+    toY - headLen * Math.sin(angle - Math.PI / 7)
+  );
+  ctx.lineTo(
+    toX - headLen * Math.cos(angle + Math.PI / 7),
+    toY - headLen * Math.sin(angle + Math.PI / 7)
+  );
   ctx.closePath();
   ctx.fill();
-  ctx.restore();
 }
 
 /**
  * Draws study arrows/circles over the chessboard.
- * Canvas is positioned from #boardId-board coordinates; does not wrap the board.
  */
 export default function StudyDrawOverlay({
   boardId = 'study-board',
   shapes = [],
   orientation = 'white',
-  enabled = false,
+  drawEnabled = false,
   onShapesChange,
 }) {
   const canvasRef = useRef(null);
@@ -86,21 +103,16 @@ export default function StudyDrawOverlay({
     const size = w / 8;
 
     shapesRef.current.forEach((s) => {
-      ctx.lineWidth = 4;
       const start = getCanvasCoords(s.startCol, s.startRow, size);
       if (s.type === 'circle') {
-        ctx.strokeStyle = 'rgba(46, 204, 113, 0.8)';
+        ctx.strokeStyle = GREEN;
+        ctx.lineWidth = 7;
         ctx.beginPath();
-        ctx.arc(start.x, start.y, size * 0.35, 0, Math.PI * 2);
+        ctx.arc(start.x, start.y, size * 0.38, 0, Math.PI * 2);
         ctx.stroke();
       } else {
         const end = getCanvasCoords(s.endCol, s.endRow, size);
-        ctx.strokeStyle = 'rgba(255, 0, 0, 0.8)';
-        ctx.beginPath();
-        ctx.moveTo(start.x, start.y);
-        ctx.lineTo(end.x, end.y);
-        ctx.stroke();
-        drawArrowhead(ctx, start.x, start.y, end.x, end.y, 18);
+        drawArrow(ctx, start.x, start.y, end.x, end.y, RED);
       }
     });
   }, [getBoardEl, getCanvasCoords]);
@@ -121,7 +133,7 @@ export default function StudyDrawOverlay({
 
   useEffect(() => {
     const boardEl = getBoardEl();
-    if (!boardEl || !enabled) return;
+    if (!boardEl || !drawEnabled) return;
 
     const onContextMenu = (e) => e.preventDefault();
 
@@ -178,7 +190,7 @@ export default function StudyDrawOverlay({
       boardEl.removeEventListener('mousedown', onMouseDown);
       window.removeEventListener('mouseup', onMouseUp);
     };
-  }, [enabled, getBoardEl, getCellCenter, onShapesChange]);
+  }, [drawEnabled, getBoardEl, getCellCenter, onShapesChange]);
 
   return (
     <canvas
