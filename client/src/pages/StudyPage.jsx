@@ -49,8 +49,20 @@ function setFenSideToMove(fenStr, color) {
   return parts.join(' ');
 }
 
+function sideToMoveFromFen(fenStr) {
+  const parts = (fenStr || START_FEN).split(' ');
+  return parts[1] === 'b' ? 'b' : 'w';
+}
+
 function activeMoveColor(settings = {}) {
   return settings.activeMoveColor || 'w';
+}
+
+function effectiveTurn(tab, settings) {
+  if (tab.type === 'play') {
+    return sideToMoveFromFen(normalizeFen(tab.fen));
+  }
+  return activeMoveColor(settings);
 }
 
 function turnSideLabel(color, t) {
@@ -68,7 +80,7 @@ function canPlayPiece(tab, pieceColor, isTeacher, settings) {
   if (pieceColor !== roleColor) return false;
   if (tab.type === 'demo' && isTeacher) return true;
   if (tab.type === 'play' || tab.type === 'demo') {
-    return pieceColor === activeMoveColor(settings);
+    return pieceColor === effectiveTurn(tab, settings);
   }
   return pieceColor === roleColor;
 }
@@ -84,9 +96,7 @@ function baseOrientationForRole(isTeacher, settings = {}) {
 }
 
 function resolveOrientation(isTeacher, settings = {}) {
-  const base = baseOrientationForRole(isTeacher, settings);
-  if (!settings.boardFlipped) return base;
-  return base === 'white' ? 'black' : 'white';
+  return baseOrientationForRole(isTeacher, settings);
 }
 
 function moveEntryColor(entry, index) {
@@ -189,7 +199,7 @@ export default function StudyPage() {
       if (!tab) return;
       const currentFen = normalizeFen(tab.fen);
       const alignedFen =
-        tab.type === 'play' || tab.type === 'demo'
+        tab.type === 'demo'
           ? setFenSideToMove(currentFen, activeMoveColor(roomSettingsRef.current))
           : currentFen;
       tab.fen = alignedFen;
@@ -210,8 +220,8 @@ export default function StudyPage() {
         setOrientation(orientationRef.current);
       }
       if (tab.type === 'play' || tab.type === 'demo') {
-        const side = turnSideLabel(activeMoveColor(roomSettingsRef.current), t);
-        setStatusMsg(t('study_turn', { side }));
+        const turn = effectiveTurn(tab, roomSettingsRef.current);
+        setStatusMsg(t('study_turn', { side: turnSideLabel(turn, t) }));
       } else {
         setStatusMsg(t('study_demo_pos'));
       }
@@ -237,10 +247,10 @@ export default function StudyPage() {
       if (!isTeacherRef.current) return;
       const tab = tabsRef.current.find((t) => t.id === activeTabIdRef.current);
       if (!tab) return;
-      const fenValue = setFenSideToMove(
-        normalizeFen(newFen),
-        activeMoveColor(roomSettingsRef.current)
-      );
+      const fenValue =
+        tab.type === 'play'
+          ? normalizeFen(newFen)
+          : setFenSideToMove(normalizeFen(newFen), activeMoveColor(roomSettingsRef.current));
       tab.fen = fenValue;
       tab.initialFen = fenValue;
       tab.pgn = '';
@@ -365,8 +375,8 @@ export default function StudyPage() {
       applyOrientationFromSettings(isTeacherRef.current, roomSettingsRef.current);
       const tab = tabsRef.current.find((x) => x.id === activeTabIdRef.current);
       if (tab && (tab.type === 'play' || tab.type === 'demo')) {
-        const side = turnSideLabel(activeMoveColor(roomSettingsRef.current), t);
-        setStatusMsg(t('study_turn', { side }));
+        const turn = effectiveTurn(tab, roomSettingsRef.current);
+        setStatusMsg(t('study_turn', { side: turnSideLabel(turn, t) }));
       }
     };
 
@@ -416,15 +426,12 @@ export default function StudyPage() {
     (partial) => {
       if (!isTeacherRef.current) return;
       const next = { ...roomSettingsRef.current, ...partial };
-      if (partial.studentMoveColor) {
-        next.boardFlipped = false;
-      }
       roomSettingsRef.current = next;
       setRoomSettings({ ...next });
       applyOrientationFromSettings(isTeacherRef.current, next);
 
       const tab = tabsRef.current.find((t) => t.id === activeTabIdRef.current);
-      if (tab && (tab.type === 'play' || tab.type === 'demo') && partial.activeMoveColor) {
+      if (tab?.type === 'demo' && partial.activeMoveColor) {
         const turn = activeMoveColor(next);
         const patched = setFenSideToMove(normalizeFen(tab.fen), turn);
         tab.fen = patched;
@@ -450,7 +457,8 @@ export default function StudyPage() {
 
   function flipBoard() {
     if (!isTeacherRef.current) return;
-    updateRoomSettings({ boardFlipped: !roomSettingsRef.current.boardFlipped });
+    const cur = roomSettingsRef.current.studentMoveColor ?? 'b';
+    updateRoomSettings({ studentMoveColor: cur === 'w' ? 'b' : 'w' });
   }
 
   const onDrop = useCallback(
@@ -462,8 +470,10 @@ export default function StudyPage() {
       if (!tab.customHistory) tab.customHistory = [];
 
       const game = gameRef.current;
-      const turn = activeMoveColor(roomSettingsRef.current);
-      const fenForMove = setFenSideToMove(normalizeFen(tab.fen), turn);
+      const fenForMove =
+        tab.type === 'play'
+          ? normalizeFen(tab.fen)
+          : setFenSideToMove(normalizeFen(tab.fen), activeMoveColor(roomSettingsRef.current));
       if (game.fen() !== fenForMove) game.load(fenForMove);
 
       const pieceBefore = game.get(source);
@@ -912,22 +922,24 @@ export default function StudyPage() {
                   <span className="study-draw-icon study-draw-icon--arrow-red" />
                 </button>
               </div>
-              <div className="study-color-tools" role="group" aria-label={t('study_student_color')}>
-                <button
-                  type="button"
-                  className={`study-color-tool study-color-tool--w${activeMoveColor(roomSettings) === 'w' ? ' active' : ''}`}
-                  onClick={() => updateRoomSettings({ activeMoveColor: 'w' })}
-                >
-                  {t('study_white_move')}
-                </button>
-                <button
-                  type="button"
-                  className={`study-color-tool study-color-tool--b${activeMoveColor(roomSettings) === 'b' ? ' active' : ''}`}
-                  onClick={() => updateRoomSettings({ activeMoveColor: 'b' })}
-                >
-                  {t('study_black_move')}
-                </button>
-              </div>
+              {activeTab?.type === 'demo' && (
+                <div className="study-color-tools" role="group" aria-label={t('study_side_to_move')}>
+                  <button
+                    type="button"
+                    className={`study-color-tool study-color-tool--w${activeMoveColor(roomSettings) === 'w' ? ' active' : ''}`}
+                    onClick={() => updateRoomSettings({ activeMoveColor: 'w' })}
+                  >
+                    {t('study_white_move')}
+                  </button>
+                  <button
+                    type="button"
+                    className={`study-color-tool study-color-tool--b${activeMoveColor(roomSettings) === 'b' ? ' active' : ''}`}
+                    onClick={() => updateRoomSettings({ activeMoveColor: 'b' })}
+                  >
+                    {t('study_black_move')}
+                  </button>
+                </div>
+              )}
               <button type="button" className="btn-secondary" onClick={() => applyFen(START_FEN)}>
                 {t('study_start')}
               </button>
