@@ -217,7 +217,7 @@ const onlineUsers = new Map();
 const matchmakingQueue = [];
 const videoRooms = new Map();
 const studyRoomSettings = new Map();
-const DEFAULT_STUDY_SETTINGS = { studentMoveColor: 'w', boardFlipped: false };
+const DEFAULT_STUDY_SETTINGS = { studentMoveColor: 'w', activeMoveColor: 'w', boardFlipped: false };
 
 function getStudySettings(roomCode) {
   if (!studyRoomSettings.has(roomCode)) {
@@ -1709,9 +1709,16 @@ socket.on('study:move', async ({ roomCode, tabId, fen, pgn, customHistory }) => 
 
         // ВАЖНО: Обновляем данные в базе данных.
         // Убедитесь, что ваша функция updateStudyRoomFen умеет принимать и сохранять customHistory в объект вкладки
-        await updateStudyRoomFen(roomCode, fen, tabId, pgn, customHistory);
+        await updateStudyRoomFen(roomCode, fen, tabId, pgn, customHistory);
 
-        // Рассылаем обновленное состояние ВСЕМ участникам комнаты, ВКЛЮЧАЯ customHistory
+        if (fen) {
+            const turn = fen.split(' ')[1] === 'b' ? 'b' : 'w';
+            const merged = { ...getStudySettings(roomCode), activeMoveColor: turn };
+            studyRoomSettings.set(roomCode, merged);
+            io.to(roomCode).emit('study:syncSettings', { settings: merged });
+        }
+
+        // Рассылаем обновленное состояние ВСЕМ участникам комнаты, ВКЛЮЧАЯ customHistory
         io.to(roomCode).emit('study:syncMove', {
             tabId,
             fen,
