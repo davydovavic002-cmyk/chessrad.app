@@ -224,6 +224,14 @@ export default function LobbyPage() {
           )}
 
           <div className="menu-grid">
+            <div className="menu-card glass-card menu-card--profile" onClick={() => navigate('/profile')}>
+              <div className="card-icon">👤</div>
+              <div className="card-text">
+                <h3>{t('lobby_profile')}</h3>
+                <p>{t('lobby_profile_sub')}</p>
+              </div>
+            </div>
+
             {role !== 'teacher' && role !== 'admin' && (
             <div className="menu-card primary glass-card" onClick={() => navigate('/game')}>
               <div className="card-icon">⚔️</div>
@@ -255,14 +263,6 @@ export default function LobbyPage() {
               </div>
               </>
             )}
-
-            <div className="menu-card glass-card" onClick={() => navigate('/profile')}>
-              <div className="card-icon">👤</div>
-              <div className="card-text">
-                <h3>{t('lobby_profile')}</h3>
-                <p>{t('lobby_profile_sub')}</p>
-              </div>
-            </div>
 
             {role === 'student' && (
             <div className="menu-card glass-card" onClick={() => navigate('/schedule')}>

@@ -4,16 +4,33 @@
   .lobby-header {
     flex-direction: column;
     gap: 12px;
-    align-items: flex-start;
+    align-items: stretch;
+  }
+
+  .lobby-header .logo-area {
+    justify-content: center;
   }
 
   .lobby-header .user-info {
     flex-wrap: wrap;
     gap: 8px;
+    justify-content: center;
+    width: 100%;
+    border-radius: var(--radius-lg);
+  }
+
+  .user-info__greeting {
+    flex: 1 1 100%;
+    justify-content: center;
+    text-align: center;
   }
 
   .menu-grid {
     grid-template-columns: 1fr !important;
+  }
+
+  .menu-card--profile {
+    order: -1;
   }
 
   .study-page .main-layout {

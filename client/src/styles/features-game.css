@@ -317,16 +317,19 @@
 .menu-card.game-feature-card::after {
   content: 'NEW';
   position: absolute;
-  top: 10px;
-  right: -28px;
+  top: 12px;
+  right: 12px;
   background: linear-gradient(135deg, var(--coral), var(--peach-600));
   color: #fff;
-  font-size: 9px;
+  font-size: 0.58rem;
   font-weight: 800;
   letter-spacing: 0.08em;
-  padding: 4px 32px;
-  transform: rotate(45deg);
-  box-shadow: 0 2px 8px rgba(255, 107, 107, 0.4);
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  transform: none;
+  box-shadow: 0 2px 8px rgba(255, 107, 107, 0.35);
+  pointer-events: none;
+  z-index: 2;
 }
 
 .menu-card.game-feature-card--journal::after {

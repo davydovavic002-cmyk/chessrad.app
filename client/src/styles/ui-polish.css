@@ -97,8 +97,8 @@ a:focus:not(:focus-visible) {
     position: relative;
 }
 
-.glass-card::after,
-.menu-card::after {
+.glass-card:not(.game-feature-card)::after,
+.menu-card:not(.game-feature-card)::after {
     content: '';
     position: absolute;
     inset: 0;
@@ -115,8 +115,8 @@ a:focus:not(:focus-visible) {
     );
 }
 
-.glass-card:hover::after,
-.menu-card:hover::after {
+.glass-card:not(.game-feature-card):hover::after,
+.menu-card:not(.game-feature-card):hover::after {
     opacity: 1;
 }
 
@@ -260,7 +260,7 @@ a:focus:not(:focus-visible) {
     border-color: rgba(255, 255, 255, 0.55);
 }
 
-.menu-card::before {
+.menu-card:not(.game-feature-card)::before {
     content: '';
     position: absolute;
     top: 0;
@@ -273,8 +273,21 @@ a:focus:not(:focus-visible) {
     transition: opacity var(--transition);
 }
 
-.menu-card:hover::before {
+.menu-card:not(.game-feature-card):hover::before {
     opacity: 1;
+}
+
+.menu-card--profile {
+    background: linear-gradient(
+        145deg,
+        rgba(255, 248, 242, 0.62) 0%,
+        rgba(232, 244, 252, 0.48) 100%
+    );
+    border-color: rgba(168, 212, 240, 0.45);
+}
+
+.menu-card--profile .card-icon {
+    background: linear-gradient(145deg, rgba(168, 212, 240, 0.35), rgba(255, 200, 170, 0.35));
 }
 
 .menu-card.primary {
@@ -324,6 +337,70 @@ a:focus:not(:focus-visible) {
 .study-join-btn {
     flex: 0 0 auto;
     align-self: stretch;
+}
+
+/* ── Tablet lobby layout ── */
+
+@media (min-width: 601px) and (max-width: 1023px) {
+    .lobby-container {
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+
+    .lobby-header {
+        margin: 0 -20px;
+        padding: 16px 20px;
+        gap: 12px;
+    }
+
+    .logo-area h1 {
+        font-size: 1.65rem;
+    }
+
+    .user-info {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        max-width: min(100%, 520px);
+        padding: 10px 16px;
+        font-size: 0.88rem;
+    }
+
+    .user-info__greeting span:last-child {
+        display: inline;
+    }
+
+    .menu-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+    }
+
+    .menu-card {
+        padding: 20px 18px;
+        gap: 14px;
+    }
+
+    .menu-card--profile {
+        grid-column: 1;
+    }
+
+    .card-icon {
+        width: 50px;
+        height: 50px;
+        font-size: 1.9rem;
+    }
+
+    .lobby-intro {
+        padding: 18px 20px;
+        margin-bottom: 22px;
+    }
+
+    .lobby-intro__name {
+        font-size: 1.35rem;
+    }
+
+    .lobby-section .study-card {
+        width: 100%;
+    }
 }
 
 /* ── Profile ── */
