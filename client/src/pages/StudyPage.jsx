@@ -9,6 +9,7 @@ import Board from '../components/Board';
 import Modal from '../components/Modal';
 import BackButton from '../components/BackButton';
 import StudyDrawOverlay from '../components/StudyDrawOverlay';
+import StudyBoardFrame from '../components/StudyBoardFrame';
 import { useI18n } from '../i18n/I18nContext';
 import StudyVideoRoom from '../components/StudyVideoRoom';
 import { measureStudyBoardSize, normalizeStudyFen } from '../utils/chessPosition';
@@ -889,10 +890,7 @@ export default function StudyPage() {
           <div id="status-msg" className="study-status-msg">{statusMsg}</div>
           <div ref={boardSlotRef} className="study-board-slot">
             <div className="study-board-shell">
-              <div
-                className="study-board-host"
-                style={{ width: boardSize, height: boardSize }}
-              >
+              <StudyBoardFrame boardSize={boardSize} orientation={orientation}>
                 <Board
                   key={`${activeTabId}-${orientation}`}
                   id="study-board"
@@ -901,11 +899,12 @@ export default function StudyPage() {
                   onDrop={onDrop}
                   canDragPiece={canDragPiece}
                   boardWidth={boardSize}
+                  showNotation={false}
                   showAnimations={false}
                   allowDrawingArrows={false}
                   allowDragOffBoard={false}
                 />
-              </div>
+              </StudyBoardFrame>
               <StudyDrawOverlay
                 boardId="study-board"
                 shapes={shapes}

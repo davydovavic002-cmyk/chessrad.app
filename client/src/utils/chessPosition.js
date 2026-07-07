@@ -5,9 +5,12 @@ export function normalizeStudyFen(fen) {
   return fen;
 }
 
-/** Fit the 8×8 board into the study board slot (a–h / 1–8 labels render on corner squares). */
+/** Lichess-style coord strip width/height (px). */
+export const STUDY_COORD_GUTTER = 17;
+
+/** Maximize the 8×8 board inside the study slot (coords sit outside the grid). */
 export function measureStudyBoardSize(containerWidth, containerHeight) {
-  const w = Math.max(0, containerWidth - 16);
-  const h = Math.max(0, containerHeight - 16);
-  return Math.max(200, Math.floor(Math.min(w, h, 600)));
+  const w = Math.max(0, containerWidth - STUDY_COORD_GUTTER);
+  const h = Math.max(0, containerHeight - STUDY_COORD_GUTTER);
+  return Math.max(200, Math.floor(Math.min(w, h)));
 }

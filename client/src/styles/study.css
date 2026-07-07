@@ -101,11 +101,12 @@
     min-height: 0;
     min-width: 0;
     width: 100%;
+    height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    padding: 8px;
+    padding: 0;
     box-sizing: border-box;
 }
 
@@ -127,7 +128,6 @@
 .study-board-shell {
     position: relative;
     width: auto;
-    max-width: 100%;
     flex: 0 0 auto;
     min-height: 0;
     margin: 0 auto;
@@ -140,38 +140,70 @@
     overflow: visible;
 }
 
-.study-board-host {
-    position: relative;
+/* Lichess-style coords outside the 8×8 grid */
+.study-board-frame {
+    --study-coord-size: 17px;
+    --study-board-size: 320px;
+    display: grid;
+    grid-template-columns: var(--study-coord-size) var(--study-board-size);
+    grid-template-rows: var(--study-board-size) var(--study-coord-size);
+    grid-template-areas:
+        "ranks board"
+        "corner files";
+    width: calc(var(--study-coord-size) + var(--study-board-size));
+    height: calc(var(--study-coord-size) + var(--study-board-size));
     flex-shrink: 0;
-    overflow: hidden;
-    line-height: 1;
-    border-radius: 0;
-    margin: 0 auto;
+}
+
+.study-board-coords-ranks {
+    grid-area: ranks;
+    display: grid;
+    grid-template-rows: repeat(8, 1fr);
+}
+
+.study-board-cell {
+    grid-area: board;
+    width: var(--study-board-size);
+    height: var(--study-board-size);
+    line-height: 0;
+}
+
+.study-board-coords-corner {
+    grid-area: corner;
+}
+
+.study-board-coords-files {
+    grid-area: files;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+}
+
+.study-board-coord {
     display: flex;
     align-items: center;
     justify-content: center;
-}
-
-.study-board-host #study-board-board {
-    border-radius: 0;
-    overflow: visible;
-}
-
-/* Notation overlay: full-square layer above pieces (avoid position:relative on the wrapper — it breaks absolute coords). */
-.study-board-host #study-board-board [data-square] {
-    isolation: isolate;
-}
-
-.study-board-host #study-board-board [data-square] > span {
-    position: absolute;
-    inset: 0;
-    z-index: 5;
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 400;
+    line-height: 1;
+    color: #9b856b;
+    user-select: none;
     pointer-events: none;
 }
 
-.study-board-host #study-board-board [data-square] > div {
-    position: relative;
-    z-index: 1;
+.study-board-coord--rank {
+    justify-content: flex-end;
+    padding-right: 4px;
+}
+
+.study-board-coord--file {
+    align-items: flex-start;
+    padding-top: 3px;
+}
+
+.study-board-cell #study-board-board {
+    border-radius: 0;
+    overflow: hidden;
 }
 
 .study-draw-canvas {
@@ -1033,8 +1065,9 @@
 
 /* dnd-kit ломается от filter/transform на предках доски */
 .study-board-shell,
-.study-board-host,
-.study-board-host #study-board-board {
+.study-board-frame,
+.study-board-cell,
+.study-board-cell #study-board-board {
     filter: none !important;
     transform: none !important;
     backdrop-filter: none !important;
