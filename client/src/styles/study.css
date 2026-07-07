@@ -106,12 +106,12 @@
     flex: 0 0 auto;
     min-height: 0;
     margin: 0 auto;
-    padding: 12px;
+    padding: 0;
     box-sizing: border-box;
-    background: #fff8f4;
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-xl);
-    box-shadow: var(--glass-shadow-lg);
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
     overflow: visible;
 }
 
@@ -120,6 +120,12 @@
     flex-shrink: 0;
     overflow: visible;
     line-height: 0;
+    border-radius: 8px;
+}
+
+.study-board-host #study-board-board {
+    border-radius: 8px;
+    overflow: hidden;
 }
 
 .study-draw-canvas {
