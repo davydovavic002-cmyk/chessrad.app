@@ -16,7 +16,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px 24px;
+    padding: 16px 24px 16px 58px;
     margin-bottom: 12px;
     flex-shrink: 0;
     width: 100%;
@@ -57,8 +57,8 @@
 
 .study-studio {
     display: grid;
-    grid-template-columns: 80px minmax(0, 1fr) minmax(0, 360px);
-    gap: 20px;
+    grid-template-columns: 80px minmax(0, 1fr) minmax(0, 320px);
+    gap: 16px;
     flex: 1;
     min-height: 0;
     width: 100%;
@@ -66,25 +66,29 @@
     margin: 0 auto;
     align-items: stretch;
     box-sizing: border-box;
+    overflow: hidden;
 }
 
 .study-studio > .board-section {
     min-height: 0;
     height: 100%;
     width: 100%;
-    overflow: visible;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .study-board-arena {
     min-height: 0;
     min-width: 0;
     width: 100%;
-    overflow: visible;
+    height: 100%;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding-bottom: 8px;
+    padding: 4px 0 8px;
+    box-sizing: border-box;
 }
 
 .study-status-msg {
@@ -121,6 +125,8 @@
     overflow: visible;
     line-height: 0;
     border-radius: 8px;
+    max-width: 100%;
+    margin: 0 auto;
 }
 
 .study-board-host #study-board-board {
@@ -285,18 +291,32 @@
 .tab-item {
     width: 60px;
     height: 60px;
+    flex-shrink: 0;
     background: var(--glass-bg);
     backdrop-filter: blur(12px);
     border: 1px solid var(--glass-border-soft);
-    border-radius: 15px;
+    border-radius: 12px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 2px;
     cursor: pointer;
     font-size: 10px;
     transition: var(--transition);
     color: var(--text-secondary);
+}
+
+.tab-icon-wrapper {
+    font-size: 18px;
+    line-height: 1;
+}
+
+.tab-label {
+    font-size: 9px;
+    line-height: 1;
+    font-weight: 600;
+    text-align: center;
 }
 
 .tab-item i { font-size: 20px; margin-bottom: 3px; }
@@ -630,27 +650,35 @@
 @media (max-width: 1100px) {
     .study-studio {
         grid-template-columns: 1fr;
+        grid-template-rows: auto minmax(280px, 1fr) auto;
         height: auto;
         min-height: 0;
+        overflow: hidden;
     }
 
     .study-side-rail {
-        max-height: none;
+        max-height: 42vh;
         order: 3;
     }
 
     .study-board-arena {
         order: 2;
+        min-height: min(72vw, 58vh);
     }
 
     .tabs-sidebar {
         order: 1;
         flex-direction: row;
         width: 100%;
+        padding-top: 0;
         overflow-x: auto;
     }
 
     #tabs-list { flex-direction: row; }
+
+    .study-page .lobby-header {
+        padding-left: 52px;
+    }
 
     .main-layout { flex-direction: column; height: auto; }
     .info-panel { width: 100%; }

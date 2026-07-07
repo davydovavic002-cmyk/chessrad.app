@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { Chess } from 'chess.js';
@@ -11,7 +11,7 @@ import BackButton from '../components/BackButton';
 import StudyDrawOverlay from '../components/StudyDrawOverlay';
 import { useI18n } from '../i18n/I18nContext';
 import StudyVideoRoom from '../components/StudyVideoRoom';
-import { calcStudyBoardSize, normalizeStudyFen } from '../utils/chessPosition';
+import { measureStudyBoardSize, normalizeStudyFen } from '../utils/chessPosition';
 import '../styles/study-video.css';
 import '../styles/study.css';
 
@@ -60,9 +60,7 @@ export default function StudyPage() {
   const isTeacherRef = useRef(false);
 
   const [tabs, setTabs] = useState(tabsRef.current);
-  const [boardSize, setBoardSize] = useState(() =>
-    typeof window !== 'undefined' ? calcStudyBoardSize() : 480
-  );
+  const [boardSize, setBoardSize] = useState(320);
   const [activeTabId, setActiveTabId] = useState('play');
   const [isTeacher, setIsTeacher] = useState(false);
   const [fen, setFen] = useState(START_FEN);
@@ -86,22 +84,22 @@ export default function StudyPage() {
   const [pgnImportOpen, setPgnImportOpen] = useState(false);
   const [pgnImportText, setPgnImportText] = useState('');
   const editorGameRef = useRef(new Chess(EMPTY_FEN));
+  const boardArenaRef = useRef(null);
 
   useEffect(() => {
     if (!roomCode) navigate('/lobby');
   }, [roomCode, navigate]);
 
-  useEffect(() => {
-    let timer;
-    const onResize = () => {
-      clearTimeout(timer);
-      timer = setTimeout(() => setBoardSize(calcStudyBoardSize()), 250);
+  useLayoutEffect(() => {
+    const el = boardArenaRef.current;
+    if (!el) return;
+    const measure = () => {
+      setBoardSize(measureStudyBoardSize(el.clientWidth, el.clientHeight));
     };
-    window.addEventListener('resize', onResize);
-    return () => {
-      window.removeEventListener('resize', onResize);
-      clearTimeout(timer);
-    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
   }, []);
 
   const syncTabsState = useCallback(() => {
@@ -617,7 +615,7 @@ export default function StudyPage() {
           )}
         </aside>
 
-        <div className="board-section study-board-arena">
+        <div ref={boardArenaRef} className="board-section study-board-arena">
           <div id="status-msg" className="study-status-msg">{statusMsg}</div>
           <div className="study-board-shell">
             <div className="study-board-host" style={{ width: boardSize, height: boardSize }}>

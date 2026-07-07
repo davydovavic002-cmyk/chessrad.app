@@ -5,8 +5,10 @@ export function normalizeStudyFen(fen) {
   return fen;
 }
 
-export function calcStudyBoardSize() {
-  return Math.floor(
-    Math.min(560, Math.max(280, window.innerWidth - 500), Math.max(280, window.innerHeight - 280))
-  );
+/** Fit board into the study center column (not the whole window). */
+export function measureStudyBoardSize(containerWidth, containerHeight) {
+  const w = Math.max(0, containerWidth - 8);
+  const h = Math.max(0, containerHeight - 56);
+  const size = Math.floor(Math.min(w, h, 560));
+  return Math.max(220, Math.min(size, w || 220));
 }
