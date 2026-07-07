@@ -16,7 +16,14 @@ npm ci
 
 The build script forces `NODE_ENV=development` only for the client install step so Vite and other dev tools are installed on production servers.
 
-**Requirements:** Node **20.19+** (or 22.12+). Check with `node -v`. Vite 8 will not run on Node 18.
+**Requirements:** Node **18+**. Vite 6 is used (not Vite 8) so builds work on small VPS without Bus error / OOM.
+
+**If `Bus error (core dumped)` during vite build:** add swap, then rebuild:
+
+```bash
+sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile
+bash scripts/deploy.sh
+```
 
 **If build fails on the server:**
 

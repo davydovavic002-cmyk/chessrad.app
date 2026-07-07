@@ -12,7 +12,7 @@ function parseNodeVersion(version) {
 }
 
 const node = parseNodeVersion(process.versions.node);
-const MIN_NODE = { major: 20, minor: 19, patch: 0 };
+const MIN_NODE = { major: 18, minor: 0, patch: 0 };
 
 const nodeOk =
   node.major > MIN_NODE.major ||
@@ -22,11 +22,7 @@ const nodeOk =
 
 if (!nodeOk) {
   console.error(
-    `\nNode ${process.versions.node} is too old for Vite 8 (needs 20.19+ or 22.12+).\n` +
-      'Upgrade on the server:\n' +
-      '  curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -\n' +
-      '  sudo apt-get install -y nodejs\n' +
-      '  node -v\n',
+    `\nNode ${process.versions.node} is too old (need Node 18+).\n`,
   );
   process.exit(1);
 }
@@ -44,6 +40,7 @@ const env = {
   ...process.env,
   NODE_ENV: 'development',
   NPM_CONFIG_PRODUCTION: 'false',
+  NODE_OPTIONS: [process.env.NODE_OPTIONS, '--max-old-space-size=768'].filter(Boolean).join(' '),
 };
 
 function run(label, command, args, cwd) {
