@@ -716,6 +716,8 @@ export default function StudyPage() {
   }
 
   const activeTab = tabs.find((t) => t.id === activeTabId);
+  const sideToMove = fen.split(' ')[1] === 'b' ? 'b' : 'w';
+  const turnSideLabel = sideToMove === 'w' ? t('study_white') : t('study_black');
   const noSection = t('library_no_section');
   const general = t('library_general');
   const bigFolders = [...new Set(libPositions.map((p) => p.big_folder || noSection))].sort();
@@ -909,33 +911,44 @@ export default function StudyPage() {
               </div>
               <div className="chat-area history-list study-history-list study-history-inline">
                 {history.length === 0 ? (
-                  <em className="study-history-empty">{t('study_history_empty')}</em>
+                  activeTab?.type === 'play' ? (
+                    <span className="study-history-turn">{t('study_turn', { side: turnSideLabel })}</span>
+                  ) : (
+                    <em className="study-history-empty">{t('study_history_empty')}</em>
+                  )
                 ) : (
-                  historyPairs().map((pair) => (
-                    <span key={pair.num} className="study-history-pair">
-                      <span className="study-hist-num">{pair.num}.</span>
-                      <button
-                        type="button"
-                        className={`study-hist-move${pair.whiteIdx === history.length - 1 ? ' active' : ''}`}
-                        onClick={() => goToMove(pair.whiteIdx)}
-                        disabled={!isTeacher}
-                        title={isTeacher ? t('study_goto_move') : undefined}
-                      >
-                        {moveLabel(pair.white)}
-                      </button>
-                      {pair.black && (
+                  <>
+                    {historyPairs().map((pair) => (
+                      <span key={pair.num} className="study-history-pair">
+                        <span className="study-hist-num">{pair.num}.</span>
                         <button
                           type="button"
-                          className={`study-hist-move${pair.blackIdx === history.length - 1 ? ' active' : ''}`}
-                          onClick={() => goToMove(pair.blackIdx)}
+                          className={`study-hist-move${pair.whiteIdx === history.length - 1 ? ' active' : ''}`}
+                          onClick={() => goToMove(pair.whiteIdx)}
                           disabled={!isTeacher}
                           title={isTeacher ? t('study_goto_move') : undefined}
                         >
-                          {moveLabel(pair.black)}
+                          {moveLabel(pair.white)}
                         </button>
-                      )}
-                    </span>
-                  ))
+                        {pair.black ? (
+                          <button
+                            type="button"
+                            className={`study-hist-move${pair.blackIdx === history.length - 1 ? ' active' : ''}`}
+                            onClick={() => goToMove(pair.blackIdx)}
+                            disabled={!isTeacher}
+                            title={isTeacher ? t('study_goto_move') : undefined}
+                          >
+                            {moveLabel(pair.black)}
+                          </button>
+                        ) : (
+                          <span className="study-hist-ellipsis" aria-hidden>
+                            ...
+                          </span>
+                        )}
+                      </span>
+                    ))}
+                    <span className="study-history-turn">{t('study_turn', { side: turnSideLabel })}</span>
+                  </>
                 )}
               </div>
             </div>
