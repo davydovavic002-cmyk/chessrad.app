@@ -11,7 +11,7 @@ import BackButton from '../components/BackButton';
 import StudyDrawOverlay from '../components/StudyDrawOverlay';
 import { useI18n } from '../i18n/I18nContext';
 import StudyVideoRoom from '../components/StudyVideoRoom';
-import { measureStudyBoardSize, normalizeStudyFen, STUDY_BOARD_NOTATION_PAD } from '../utils/chessPosition';
+import { measureStudyBoardSize, normalizeStudyFen } from '../utils/chessPosition';
 import '../styles/study-video.css';
 import '../styles/study.css';
 
@@ -198,7 +198,7 @@ export default function StudyPage() {
       cancelAnimationFrame(raf);
       ro.disconnect();
     };
-  }, []);
+  }, [activeTabId, isTeacher]);
 
   const applyOrientationFromSettings = useCallback((asTeacher, settings) => {
     const tab = tabsRef.current.find((t) => t.id === activeTabIdRef.current);
@@ -888,10 +888,7 @@ export default function StudyPage() {
             <div className="study-board-shell">
               <div
                 className="study-board-host"
-                style={{
-                  width: boardSize + STUDY_BOARD_NOTATION_PAD * 2,
-                  height: boardSize + STUDY_BOARD_NOTATION_PAD * 2,
-                }}
+                style={{ width: boardSize, height: boardSize }}
               >
                 <Board
                   key={`${activeTabId}-${orientation}`}

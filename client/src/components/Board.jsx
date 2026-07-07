@@ -3,6 +3,38 @@ import { Chessboard } from 'react-chessboard';
 
 const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
+const alphaNotationStyle = {
+  fontSize: '13px',
+  fontWeight: 700,
+  position: 'absolute',
+  bottom: 2,
+  right: 4,
+  userSelect: 'none',
+  zIndex: 5,
+  pointerEvents: 'none',
+  lineHeight: 1,
+};
+
+const numericNotationStyle = {
+  fontSize: '13px',
+  fontWeight: 700,
+  position: 'absolute',
+  top: 2,
+  left: 3,
+  userSelect: 'none',
+  zIndex: 5,
+  pointerEvents: 'none',
+  lineHeight: 1,
+};
+
+const lightSquareNotationStyle = {
+  color: '#6d4c35',
+};
+
+const darkSquareNotationStyle = {
+  color: '#f2e3c6',
+};
+
 /**
  * Thin wrapper around react-chessboard (v5 options API).
  * onDrop(source, target) => true | false | 'snapback'
@@ -40,6 +72,10 @@ export default function Board({
       animationDurationInMs: showAnimations ? 300 : 0,
       allowDrawingArrows,
       showNotation,
+      alphaNotationStyle,
+      numericNotationStyle,
+      lightSquareNotationStyle,
+      darkSquareNotationStyle,
       squareStyles,
       arrows,
       canDragPiece,
@@ -76,6 +112,10 @@ export default function Board({
       showAnimations,
       allowDrawingArrows,
       showNotation,
+      alphaNotationStyle,
+      numericNotationStyle,
+      lightSquareNotationStyle,
+      darkSquareNotationStyle,
     ]
   );
 
