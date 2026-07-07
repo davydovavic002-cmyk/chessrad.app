@@ -11,7 +11,7 @@ import BackButton from '../components/BackButton';
 import StudyDrawOverlay from '../components/StudyDrawOverlay';
 import { useI18n } from '../i18n/I18nContext';
 import StudyVideoRoom from '../components/StudyVideoRoom';
-import { measureStudyBoardSize, normalizeStudyFen } from '../utils/chessPosition';
+import { measureStudyBoardSize, normalizeStudyFen, STUDY_BOARD_NOTATION_PAD } from '../utils/chessPosition';
 import '../styles/study-video.css';
 import '../styles/study.css';
 
@@ -58,11 +58,22 @@ function activeMoveColor(settings = {}) {
   return settings.activeMoveColor || 'w';
 }
 
-function effectiveTurn(tab, settings) {
-  if (tab.type === 'play') {
+/** Who moves first in a demo puzzle — set by teacher, not changed during solving. */
+function demoStartColor(settings = {}) {
+  return activeMoveColor(settings);
+}
+
+function effectiveTurn(tab) {
+  if (tab.type === 'play' || tab.type === 'demo') {
     return sideToMoveFromFen(normalizeFen(tab.fen));
   }
-  return activeMoveColor(settings);
+  return 'w';
+}
+
+function alignDemoFenForStart(tab, settings) {
+  const fen = normalizeFen(tab.fen);
+  if (tab.type !== 'demo' || tab.customHistory?.length) return fen;
+  return setFenSideToMove(fen, demoStartColor(settings));
 }
 
 function turnSideLabel(color, t) {
@@ -80,7 +91,7 @@ function canPlayPiece(tab, pieceColor, isTeacher, settings) {
   if (pieceColor !== roleColor) return false;
   if (tab.type === 'demo' && isTeacher) return true;
   if (tab.type === 'play' || tab.type === 'demo') {
-    return pieceColor === effectiveTurn(tab, settings);
+    return pieceColor === effectiveTurn(tab);
   }
   return pieceColor === roleColor;
 }
@@ -95,7 +106,10 @@ function baseOrientationForRole(isTeacher, settings = {}) {
   return myColor === 'w' ? 'white' : 'black';
 }
 
-function resolveOrientation(isTeacher, settings = {}) {
+function resolveOrientation(isTeacher, settings = {}, tabType = 'play') {
+  if (tabType === 'demo') {
+    return baseOrientationForRole(true, settings);
+  }
   return baseOrientationForRole(isTeacher, settings);
 }
 
@@ -182,9 +196,10 @@ export default function StudyPage() {
 
   const applyOrientationFromSettings = useCallback((asTeacher, settings) => {
     const tab = tabsRef.current.find((t) => t.id === activeTabIdRef.current);
+    const tabType = tab?.type || 'play';
     const ori =
-      tab?.type === 'play' || tab?.type === 'demo'
-        ? resolveOrientation(asTeacher, settings)
+      tabType === 'play' || tabType === 'demo'
+        ? resolveOrientation(asTeacher, settings, tabType)
         : 'white';
     orientationRef.current = ori;
     setOrientation(ori);
@@ -200,7 +215,7 @@ export default function StudyPage() {
       const currentFen = normalizeFen(tab.fen);
       const alignedFen =
         tab.type === 'demo'
-          ? setFenSideToMove(currentFen, activeMoveColor(roomSettingsRef.current))
+          ? alignDemoFenForStart(tab, roomSettingsRef.current)
           : currentFen;
       tab.fen = alignedFen;
       gameRef.current.load(alignedFen);
@@ -212,7 +227,8 @@ export default function StudyPage() {
         if (tab.type === 'play' || tab.type === 'demo') {
           orientationRef.current = resolveOrientation(
             isTeacherRef.current,
-            roomSettingsRef.current
+            roomSettingsRef.current,
+            tab.type
           );
         } else {
           orientationRef.current = 'white';
@@ -220,7 +236,7 @@ export default function StudyPage() {
         setOrientation(orientationRef.current);
       }
       if (tab.type === 'play' || tab.type === 'demo') {
-        const turn = effectiveTurn(tab, roomSettingsRef.current);
+        const turn = effectiveTurn(tab);
         setStatusMsg(t('study_turn', { side: turnSideLabel(turn, t) }));
       } else {
         setStatusMsg(t('study_demo_pos'));
@@ -247,12 +263,13 @@ export default function StudyPage() {
       if (!isTeacherRef.current) return;
       const tab = tabsRef.current.find((t) => t.id === activeTabIdRef.current);
       if (!tab) return;
+      const base = normalizeFen(newFen);
+      tab.initialFen = base;
       const fenValue =
         tab.type === 'play'
-          ? normalizeFen(newFen)
-          : setFenSideToMove(normalizeFen(newFen), activeMoveColor(roomSettingsRef.current));
+          ? base
+          : setFenSideToMove(base, demoStartColor(roomSettingsRef.current));
       tab.fen = fenValue;
-      tab.initialFen = fenValue;
       tab.pgn = '';
       tab.customHistory = [];
       tab.shapes = [];
@@ -333,8 +350,10 @@ export default function StudyPage() {
       setHistory(tab.customHistory || []);
       if (tab.type === 'play' || tab.type === 'demo') {
         const nextTurn = gameRef.current.turn();
-        roomSettingsRef.current = { ...roomSettingsRef.current, activeMoveColor: nextTurn };
-        setRoomSettings({ ...roomSettingsRef.current });
+        if (tab.type === 'play') {
+          roomSettingsRef.current = { ...roomSettingsRef.current, activeMoveColor: nextTurn };
+          setRoomSettings({ ...roomSettingsRef.current });
+        }
         setStatusMsg(t('study_turn', { side: turnSideLabel(nextTurn, t) }));
       }
     };
@@ -375,7 +394,7 @@ export default function StudyPage() {
       applyOrientationFromSettings(isTeacherRef.current, roomSettingsRef.current);
       const tab = tabsRef.current.find((x) => x.id === activeTabIdRef.current);
       if (tab && (tab.type === 'play' || tab.type === 'demo')) {
-        const turn = effectiveTurn(tab, roomSettingsRef.current);
+        const turn = effectiveTurn(tab);
         setStatusMsg(t('study_turn', { side: turnSideLabel(turn, t) }));
       }
     };
@@ -414,8 +433,10 @@ export default function StudyPage() {
       setHistory(tab.customHistory || []);
       if (tab.type === 'play' || tab.type === 'demo') {
         const nextTurn = gameRef.current.turn();
-        roomSettingsRef.current = { ...roomSettingsRef.current, activeMoveColor: nextTurn };
-        setRoomSettings({ ...roomSettingsRef.current });
+        if (tab.type === 'play') {
+          roomSettingsRef.current = { ...roomSettingsRef.current, activeMoveColor: nextTurn };
+          setRoomSettings({ ...roomSettingsRef.current });
+        }
         setStatusMsg(t('study_turn', { side: turnSideLabel(nextTurn, t) }));
       }
     },
@@ -432,17 +453,22 @@ export default function StudyPage() {
 
       const tab = tabsRef.current.find((t) => t.id === activeTabIdRef.current);
       if (tab?.type === 'demo' && partial.activeMoveColor) {
-        const turn = activeMoveColor(next);
-        const patched = setFenSideToMove(normalizeFen(tab.fen), turn);
+        const turn = partial.activeMoveColor;
+        tab.customHistory = [];
+        tab.pgn = '';
+        const baseFen = normalizeFen(tab.initialFen || tab.fen);
+        tab.initialFen = baseFen;
+        const patched = setFenSideToMove(baseFen, turn);
         tab.fen = patched;
         gameRef.current.load(patched);
         setFen(patched);
+        setHistory([]);
         getSocket().emit('study:move', {
           roomCode,
           tabId: activeTabIdRef.current,
           fen: patched,
-          pgn: tab.pgn || '',
-          customHistory: tab.customHistory || [],
+          pgn: '',
+          customHistory: [],
         });
         setStatusMsg(t('study_turn', { side: turnSideLabel(turn, t) }));
       }
@@ -470,10 +496,7 @@ export default function StudyPage() {
       if (!tab.customHistory) tab.customHistory = [];
 
       const game = gameRef.current;
-      const fenForMove =
-        tab.type === 'play'
-          ? normalizeFen(tab.fen)
-          : setFenSideToMove(normalizeFen(tab.fen), activeMoveColor(roomSettingsRef.current));
+      const fenForMove = normalizeFen(tab.fen);
       if (game.fen() !== fenForMove) game.load(fenForMove);
 
       const pieceBefore = game.get(source);
@@ -514,8 +537,6 @@ export default function StudyPage() {
       setHistory([...tab.customHistory]);
       if (tab.type === 'play' || tab.type === 'demo') {
         const nextTurn = game.turn();
-        roomSettingsRef.current = { ...roomSettingsRef.current, activeMoveColor: nextTurn };
-        setRoomSettings({ ...roomSettingsRef.current });
         setStatusMsg(t('study_turn', { side: turnSideLabel(nextTurn, t) }));
       }
       getSocket().emit('study:move', {
@@ -865,7 +886,13 @@ export default function StudyPage() {
           <div id="status-msg" className="study-status-msg">{statusMsg}</div>
           <div ref={boardSlotRef} className="study-board-slot">
             <div className="study-board-shell">
-              <div className="study-board-host" style={{ width: boardSize, height: boardSize }}>
+              <div
+                className="study-board-host"
+                style={{
+                  width: boardSize + STUDY_BOARD_NOTATION_PAD * 2,
+                  height: boardSize + STUDY_BOARD_NOTATION_PAD * 2,
+                }}
+              >
                 <Board
                   key={`${activeTabId}-${orientation}`}
                   id="study-board"
@@ -926,14 +953,14 @@ export default function StudyPage() {
                 <div className="study-color-tools" role="group" aria-label={t('study_side_to_move')}>
                   <button
                     type="button"
-                    className={`study-color-tool study-color-tool--w${activeMoveColor(roomSettings) === 'w' ? ' active' : ''}`}
+                    className={`study-color-tool study-color-tool--w${demoStartColor(roomSettings) === 'w' ? ' active' : ''}`}
                     onClick={() => updateRoomSettings({ activeMoveColor: 'w' })}
                   >
                     {t('study_white_move')}
                   </button>
                   <button
                     type="button"
-                    className={`study-color-tool study-color-tool--b${activeMoveColor(roomSettings) === 'b' ? ' active' : ''}`}
+                    className={`study-color-tool study-color-tool--b${demoStartColor(roomSettings) === 'b' ? ' active' : ''}`}
                     onClick={() => updateRoomSettings({ activeMoveColor: 'b' })}
                   >
                     {t('study_black_move')}

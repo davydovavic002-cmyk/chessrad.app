@@ -99,8 +99,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    overflow: hidden;
-    padding: 6px 8px;
+    overflow: visible;
+    padding: 8px 10px;
     box-sizing: border-box;
 }
 
@@ -140,6 +140,9 @@
     border-radius: 0;
     max-width: 100%;
     margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .study-board-host #study-board-board {
@@ -195,6 +198,7 @@
     display: inline-flex;
     align-items: stretch;
     gap: 0;
+    flex-shrink: 0;
     border-radius: var(--radius-sm);
     border: 1px solid var(--glass-border-soft);
     overflow: hidden;
@@ -203,6 +207,8 @@
 
 .study-color-tool {
     padding: 7px 12px;
+    min-width: 92px;
+    text-align: center;
     border: none;
     background: transparent;
     color: var(--text-secondary);

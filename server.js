@@ -1711,7 +1711,7 @@ socket.on('study:move', async ({ roomCode, tabId, fen, pgn, customHistory }) => 
         // Убедитесь, что ваша функция updateStudyRoomFen умеет принимать и сохранять customHistory в объект вкладки
         await updateStudyRoomFen(roomCode, fen, tabId, pgn, customHistory);
 
-        if (fen) {
+        if (fen && tabId === 'play') {
             const turn = fen.split(' ')[1] === 'b' ? 'b' : 'w';
             const merged = { ...getStudySettings(roomCode), activeMoveColor: turn };
             studyRoomSettings.set(roomCode, merged);
