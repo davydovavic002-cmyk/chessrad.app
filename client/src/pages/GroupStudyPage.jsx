@@ -6,10 +6,13 @@ import { Chess } from 'chess.js';
 import { useAuth } from '../auth/AuthContext';
 import { getSocket } from '../socket';
 import Board from '../components/Board';
+import GroupBoardArena from '../components/GroupBoardArena';
 import BackButton from '../components/BackButton';
 import { useI18n } from '../i18n/I18nContext';
 import StudyVideoRoom from '../components/StudyVideoRoom';
 import LibraryPickerModal from '../components/LibraryPickerModal';
+import '../styles/study.css';
+import '../styles/group-study.css';
 import '../styles/study-video.css';
 import '../styles/calendar.css';
 import '../styles/features-game.css';
@@ -44,6 +47,7 @@ export default function GroupStudyPage() {
   const [liveBroadcast, setLiveBroadcast] = useState(false);
   const [libOpen, setLibOpen] = useState(false);
   const [poll, setPoll] = useState(null);
+  const [focusedStudentId, setFocusedStudentId] = useState(null);
 
   const isTeacher = room && Number(room.teacher_id) === Number(user.id);
   isTeacherRef.current = !!isTeacher;
@@ -248,6 +252,26 @@ export default function GroupStudyPage() {
 
   const nameOf = (id) => studentNames[id] || studentNames[Number(id)] || `#${id}`;
 
+  const studentIds = useMemo(() => room?.group_student_ids || [], [room?.group_student_ids]);
+
+  useEffect(() => {
+    if (!studentIds.length) return;
+    setFocusedStudentId((prev) => {
+      if (prev != null && studentIds.some((id) => Number(id) === Number(prev))) return prev;
+      return studentIds[0];
+    });
+  }, [studentIds, teacherPhase]);
+
+  const boardFen = (raw) => {
+    if (!raw || raw === 'start') return START_FEN;
+    return raw;
+  };
+
+  const studentBoardFen = (sid) => {
+    const b = studentBoards[sid] || studentBoards[String(sid)] || {};
+    return boardFen(b.fen || room?.exercise_fen);
+  };
+
   const standingsRows = useMemo(() => {
     const st = pairings.standings || {};
     return Object.entries(st)
@@ -337,61 +361,141 @@ export default function GroupStudyPage() {
             <div className="group-panel game-panel">
               <h3>{t('group_tab_exercise')}</h3>
               <p className="subtitle">{t('group_exercise_hint')}</p>
-              <div className="group-board-row">
-                <Board
-                  id="group-exercise-set"
-                  fen={exerciseFen}
-                  onDrop={(s, tgt) => {
-                    const g = new Chess(exerciseFen === 'start' ? START_FEN : exerciseFen);
-                    const p = g.get(s);
-                    if (!p) return false;
-                    g.remove(s);
-                    g.put(p, tgt);
-                    setExerciseFen(g.fen());
-                    return true;
-                  }}
-                  allowDragging
-                />
+              <div className="group-student-stage">
+                <GroupBoardArena
+                  toolbar={
+                    <>
+                      <button type="button" className="btn btn-secondary btn-sm" onClick={() => setLibOpen(true)}>
+                        📚 {t('study_library')}
+                      </button>
+                      <button type="button" className="btn-game group-action-btn" onClick={sendExercise}>
+                        {t('group_send_exercise')}
+                      </button>
+                    </>
+                  }
+                >
+                  {(boardSize) => (
+                    <Board
+                      id="group-exercise-set"
+                      fen={exerciseFen}
+                      boardWidth={boardSize}
+                      showNotation={false}
+                      onDrop={(s, tgt) => {
+                        const g = new Chess(exerciseFen === 'start' ? START_FEN : exerciseFen);
+                        const p = g.get(s);
+                        if (!p) return false;
+                        g.remove(s);
+                        g.put(p, tgt);
+                        setExerciseFen(g.fen());
+                        return true;
+                      }}
+                      allowDragging
+                    />
+                  )}
+                </GroupBoardArena>
               </div>
-              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setLibOpen(true)}>
-                📚 {t('study_library')}
-              </button>
-              <button type="button" className="btn-game group-action-btn" onClick={sendExercise}>
-                {t('group_send_exercise')}
-              </button>
             </div>
           )}
 
           {teacherPhase === 'students' && (
             <div className="group-panel">
               <h3>{t('group_student_boards')}</h3>
-              <p className="subtitle">{t('group_mosaic_hint')}</p>
-              <div className="group-teacher-grid">
-                {(room.group_student_ids || []).map((sid) => {
+              <p className="subtitle">{t('group_students_hint')}</p>
+
+              <div className="group-student-picker" role="tablist" aria-label={t('group_student_boards')}>
+                {studentIds.map((sid) => {
                   const b = studentBoards[sid] || studentBoards[String(sid)] || {};
                   const mc = moveCount(b);
+                  const active = Number(focusedStudentId) === Number(sid);
                   return (
-                    <div key={sid} className="group-mini-board">
-                      <h4>
-                        {nameOf(sid)}
-                        <span className="group-move-badge">{mc} {t('group_moves')}</span>
-                      </h4>
-                      <div
-                        className="group-mini-click"
-                        onClick={() => broadcastStudentBoard(sid)}
-                        title={t('group_show_student')}
-                      >
-                        <Board
-                          id={`group-mini-${sid}`}
-                          fen={b.fen || room.exercise_fen || START_FEN}
-                          allowDragging={false}
-                          canDragPiece={() => false}
-                        />
-                      </div>
-                    </div>
+                    <button
+                      key={sid}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      className={`group-student-chip${active ? ' active' : ''}`}
+                      onClick={() => setFocusedStudentId(sid)}
+                    >
+                      <span className="group-student-chip__name">{nameOf(sid)}</span>
+                      <span className="group-student-chip__moves">
+                        {mc} {t('group_moves')}
+                      </span>
+                    </button>
                   );
                 })}
               </div>
+
+              {focusedStudentId != null && (
+                <div className="group-spotlight group-student-stage">
+                  <h4 className="group-spotlight__title">
+                    {t('group_focus_student')}: {nameOf(focusedStudentId)}
+                  </h4>
+                  <GroupBoardArena
+                    toolbar={
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-sm"
+                        onClick={() => broadcastStudentBoard(focusedStudentId)}
+                      >
+                        {t('group_show_student')}
+                      </button>
+                    }
+                  >
+                    {(boardSize) => (
+                      <Board
+                        id={`group-focus-${focusedStudentId}`}
+                        fen={studentBoardFen(focusedStudentId)}
+                        boardWidth={boardSize}
+                        showNotation={false}
+                        allowDragging={false}
+                        canDragPiece={() => false}
+                      />
+                    )}
+                  </GroupBoardArena>
+                </div>
+              )}
+
+              <div className="group-mosaic-section">
+                <h4>{t('group_mosaic_overview')}</h4>
+                <div className="group-teacher-grid">
+                  {studentIds.map((sid) => {
+                    const b = studentBoards[sid] || studentBoards[String(sid)] || {};
+                    const mc = moveCount(b);
+                    const active = Number(focusedStudentId) === Number(sid);
+                    return (
+                      <div
+                        key={sid}
+                        className={`group-mini-board${active ? ' group-mini-board--active' : ''}`}
+                      >
+                        <h4>
+                          {nameOf(sid)}
+                          <span className="group-move-badge">{mc} {t('group_moves')}</span>
+                        </h4>
+                        <button
+                          type="button"
+                          className="group-mini-click"
+                          onClick={() => setFocusedStudentId(sid)}
+                          title={t('group_focus_pick')}
+                        >
+                          <GroupBoardArena variant="mini" miniSize={120}>
+                            {(boardSize) => (
+                              <Board
+                                id={`group-mini-${sid}`}
+                                fen={studentBoardFen(sid)}
+                                boardWidth={boardSize}
+                                showNotation={false}
+                                allowDragging={false}
+                                canDragPiece={() => false}
+                              />
+                            )}
+                          </GroupBoardArena>
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
               <button type="button" className="btn btn-secondary mt-2" onClick={() => setTeacherPhase('solution')}>
                 {t('group_go_solution')} →
               </button>
@@ -406,16 +510,30 @@ export default function GroupStudyPage() {
                 <input type="checkbox" checked={liveBroadcast} onChange={(e) => setLiveBroadcast(e.target.checked)} />
                 {t('group_live_broadcast')}
               </label>
-              <div className="group-board-row">
-                <Board id="group-solution-board" fen={solutionFen} onDrop={onSolutionDrop} allowDragging />
-              </div>
-              <div className="group-toolbar">
-                <button type="button" className="btn-game group-action-btn" onClick={showSolutionToAll}>
-                  {t('group_broadcast')}
-                </button>
-                <button type="button" className="btn btn-ghost" onClick={stopBroadcast}>
-                  {t('group_broadcast_stop')}
-                </button>
+              <div className="group-student-stage">
+                <GroupBoardArena
+                  toolbar={
+                    <>
+                      <button type="button" className="btn-game group-action-btn" onClick={showSolutionToAll}>
+                        {t('group_broadcast')}
+                      </button>
+                      <button type="button" className="btn btn-ghost" onClick={stopBroadcast}>
+                        {t('group_broadcast_stop')}
+                      </button>
+                    </>
+                  }
+                >
+                  {(boardSize) => (
+                    <Board
+                      id="group-solution-board"
+                      fen={solutionFen}
+                      boardWidth={boardSize}
+                      showNotation={false}
+                      onDrop={onSolutionDrop}
+                      allowDragging
+                    />
+                  )}
+                </GroupBoardArena>
               </div>
             </div>
           )}
@@ -477,8 +595,18 @@ export default function GroupStudyPage() {
       ) : (
         <>
           <p className="subtitle">{t('group_student_hint')}</p>
-          <div className="group-board-row group-student-main">
-            <Board id="group-student-board" fen={fen} onDrop={onStudentDrop} />
+          <div className="group-student-stage">
+            <GroupBoardArena>
+              {(boardSize) => (
+                <Board
+                  id="group-student-board"
+                  fen={fen}
+                  boardWidth={boardSize}
+                  showNotation={false}
+                  onDrop={onStudentDrop}
+                />
+              )}
+            </GroupBoardArena>
           </div>
           {myPair && (
             <div className="group-pairings game-panel" style={{ padding: 16, marginTop: 16 }}>
@@ -501,7 +629,17 @@ export default function GroupStudyPage() {
         <div className="group-broadcast-overlay" onClick={stopBroadcast}>
           <div className="group-broadcast-panel" onClick={(e) => e.stopPropagation()}>
             <h3>{t('group_solution')}</h3>
-            <Board id="group-broadcast-board" fen={broadcast.fen} allowDragging={false} />
+            <GroupBoardArena>
+              {(boardSize) => (
+                <Board
+                  id="group-broadcast-board"
+                  fen={broadcast.fen}
+                  boardWidth={boardSize}
+                  showNotation={false}
+                  allowDragging={false}
+                />
+              )}
+            </GroupBoardArena>
             <button type="button" className="btn btn-ghost btn-block mt-2" onClick={stopBroadcast}>
               {isTeacher ? t('group_broadcast_stop') : t('cancel')}
             </button>

@@ -1,0 +1,147 @@
+/* Group class — board arena (reuses .study-board-frame from study.css) */
+
+.group-board-arena {
+    width: 100%;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.group-board-arena__slot {
+    flex: 1;
+    min-height: min(72vh, 820px);
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.group-board-arena--mini {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+}
+
+.group-board-arena--mini .study-board-frame {
+    --study-coord-size: 11px;
+}
+
+.group-board-arena--mini .study-board-coord {
+    font-size: 8px;
+}
+
+.group-board-toolbar {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 12px 0;
+    box-sizing: border-box;
+}
+
+.group-student-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 12px 0 16px;
+}
+
+.group-student-chip {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--glass-border-soft);
+    background: rgba(255, 255, 255, 0.22);
+    cursor: pointer;
+    font-family: var(--font-body);
+    transition: var(--transition);
+    min-width: 88px;
+}
+
+.group-student-chip:hover {
+    background: rgba(255, 255, 255, 0.35);
+}
+
+.group-student-chip.active {
+    border-color: var(--peach-500);
+    background: rgba(255, 143, 98, 0.28);
+    box-shadow: 0 0 0 1px rgba(255, 112, 67, 0.25);
+}
+
+.group-student-chip__name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.group-student-chip__moves {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.group-spotlight {
+    margin-bottom: 20px;
+}
+
+.group-spotlight__title {
+    margin: 0 0 8px;
+    font-size: 14px;
+    font-weight: 700;
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+.group-mosaic-section {
+    margin-top: 8px;
+}
+
+.group-mosaic-section h4 {
+    margin: 0 0 10px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+}
+
+.group-student-stage {
+    max-width: min(960px, 100%);
+    margin: 0 auto;
+}
+
+.group-broadcast-panel .group-board-arena__slot {
+    min-height: 0;
+}
+
+.group-mini-board--active {
+    border-color: var(--peach-500);
+    box-shadow: 0 0 0 1px rgba(255, 112, 67, 0.3);
+}
+
+.group-board-toolbar .group-action-btn {
+    display: inline-flex;
+    margin: 0;
+    min-width: auto;
+    width: auto;
+}
+
+.group-mini-click {
+    border: none;
+    padding: 0;
+    background: transparent;
+    width: 100%;
+    font: inherit;
+}
+
+@media (max-width: 768px) {
+    .group-board-arena__slot {
+        min-height: min(62vw, 58vh);
+    }
+}

@@ -106,18 +106,6 @@
   }
 
   /* ── Group class ── */
-  .group-board-row {
-    max-width: min(640px, 42vw);
-    margin-left: 0;
-    margin-right: auto;
-  }
-
-  .group-student-main {
-    max-width: min(720px, 48vw);
-    margin-left: auto;
-    margin-right: auto;
-  }
-
   .group-broadcast-panel {
     max-width: min(720px, 55vw);
   }
