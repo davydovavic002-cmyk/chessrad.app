@@ -4,16 +4,43 @@ import { useAuth } from '../auth/AuthContext';
 import { useI18n } from '../i18n/I18nContext';
 import '../styles/study-video.css';
 
-const ICE = [{ urls: 'stun:stun.l.google.com:19302' }];
+const ICE = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+  { urls: 'stun:stun2.l.google.com:19302' },
+];
+
+const MEDIA = {
+  video: { width: { ideal: 640, max: 1280 }, height: { ideal: 480, max: 720 }, frameRate: { ideal: 24, max: 30 } },
+  audio: { echoCancellation: true, noiseSuppression: true },
+};
+
+function RemoteVideo({ stream, username }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.srcObject = stream || null;
+  }, [stream]);
+  return (
+    <div className="study-video-tile">
+      <video ref={ref} autoPlay playsInline />
+      <span>{username}</span>
+    </div>
+  );
+}
 
 export default function StudyVideoRoom({ roomCode, teacherId, layout = 'inline', autoStart = false }) {
   const { user } = useAuth();
   const { t } = useI18n();
   const localVideoRef = useRef(null);
   const peersRef = useRef(new Map());
+  const pendingIceRef = useRef(new Map());
   const localStreamRef = useRef(null);
   const enabledRef = useRef(false);
+  const mutedRef = useRef(false);
   const [enabled, setEnabled] = useState(false);
+  const [muted, setMuted] = useState(false);
   const [remoteStreams, setRemoteStreams] = useState([]);
   const [error, setError] = useState('');
   const isTeacher = Number(teacherId) === Number(user.id);
@@ -26,12 +53,26 @@ export default function StudyVideoRoom({ roomCode, teacherId, layout = 'inline',
     setRemoteStreams(list);
   }, []);
 
+  const flushIce = useCallback(async (targetUserId, pc) => {
+    const queue = pendingIceRef.current.get(targetUserId) || [];
+    if (!queue.length || !pc.remoteDescription) return;
+    pendingIceRef.current.set(targetUserId, []);
+    for (const candidate of queue) {
+      try {
+        await pc.addIceCandidate(candidate);
+      } catch {
+        /* stale */
+      }
+    }
+  }, []);
+
   const closePeer = useCallback(
     (uid) => {
       const p = peersRef.current.get(uid);
       if (p) {
         p.pc?.close();
         peersRef.current.delete(uid);
+        pendingIceRef.current.delete(uid);
         syncRemote();
       }
     },
@@ -43,7 +84,7 @@ export default function StudyVideoRoom({ roomCode, teacherId, layout = 'inline',
       if (peersRef.current.has(targetUserId)) {
         const existing = peersRef.current.get(targetUserId);
         if (initiator && existing.pc?.signalingState === 'stable') {
-          const offer = await existing.pc.createOffer();
+          const offer = await existing.pc.createOffer({ iceRestart: true });
           await existing.pc.setLocalDescription(offer);
           getSocket().emit('video:signal', {
             roomCode,
@@ -53,7 +94,8 @@ export default function StudyVideoRoom({ roomCode, teacherId, layout = 'inline',
         }
         return existing.pc;
       }
-      const pc = new RTCPeerConnection({ iceServers: ICE });
+
+      const pc = new RTCPeerConnection({ iceServers: ICE, iceCandidatePoolSize: 4 });
       peersRef.current.set(targetUserId, { pc, username: targetUsername, stream: null });
 
       localStreamRef.current?.getTracks().forEach((tr) => pc.addTrack(tr, localStreamRef.current));
@@ -77,7 +119,11 @@ export default function StudyVideoRoom({ roomCode, teacherId, layout = 'inline',
       };
 
       pc.onconnectionstatechange = () => {
-        if (pc.connectionState === 'failed' || pc.connectionState === 'closed') closePeer(targetUserId);
+        if (pc.connectionState === 'failed') {
+          pc.restartIce?.();
+        } else if (pc.connectionState === 'closed') {
+          closePeer(targetUserId);
+        }
       };
 
       if (initiator) {
@@ -117,6 +163,7 @@ export default function StudyVideoRoom({ roomCode, teacherId, layout = 'inline',
 
       if (data.type === 'offer') {
         await pc.setRemoteDescription(data.sdp);
+        await flushIce(fromUserId, pc);
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
         getSocket().emit('video:signal', {
@@ -126,7 +173,14 @@ export default function StudyVideoRoom({ roomCode, teacherId, layout = 'inline',
         });
       } else if (data.type === 'answer') {
         await pc.setRemoteDescription(data.sdp);
+        await flushIce(fromUserId, pc);
       } else if (data.type === 'ice' && data.candidate) {
+        if (!pc.remoteDescription) {
+          const q = pendingIceRef.current.get(fromUserId) || [];
+          q.push(data.candidate);
+          pendingIceRef.current.set(fromUserId, q);
+          return;
+        }
         try {
           await pc.addIceCandidate(data.candidate);
         } catch {
@@ -134,7 +188,7 @@ export default function StudyVideoRoom({ roomCode, teacherId, layout = 'inline',
         }
       }
     },
-    [user.id, isTeacher, teacherId, roomCode, createPeer, layout]
+    [user.id, isTeacher, teacherId, roomCode, createPeer, flushIce, layout]
   );
 
   const connectToPeer = useCallback(
@@ -156,17 +210,16 @@ export default function StudyVideoRoom({ roomCode, teacherId, layout = 'inline',
   const startVideo = useCallback(async () => {
     if (enabledRef.current) return;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia(MEDIA);
       localStreamRef.current = stream;
       if (localVideoRef.current) localVideoRef.current.srcObject = stream;
       enabledRef.current = true;
       setEnabled(true);
       setError('');
-      getSocket().emit('video:join', { roomCode, teacherId: Number(teacherId) });
     } catch {
       setError(t('video_permission_denied'));
     }
-  }, [roomCode, teacherId, t]);
+  }, [t]);
 
   useEffect(() => {
     if (!roomCode || !enabled) return;
@@ -215,6 +268,17 @@ export default function StudyVideoRoom({ roomCode, teacherId, layout = 'inline',
     await startVideo();
   }
 
+  function toggleMute() {
+    const stream = localStreamRef.current;
+    if (!stream) return;
+    const next = !mutedRef.current;
+    stream.getAudioTracks().forEach((tr) => {
+      tr.enabled = !next;
+    });
+    mutedRef.current = next;
+    setMuted(next);
+  }
+
   const showDuoPlaceholder = layout === 'sidebar' && enabled && remoteStreams.length === 0;
   const remoteLabel = isTeacher ? t('video_student') : t('video_teacher');
 
@@ -223,23 +287,42 @@ export default function StudyVideoRoom({ roomCode, teacherId, layout = 'inline',
       {layout !== 'sidebar' && (
         <div className="study-video-head">
           <span>{t('video_in_class')}</span>
-          <button type="button" className={`btn btn-sm${enabled ? ' btn-danger' : ' btn-primary'}`} onClick={toggleVideo}>
-            {enabled ? t('video_stop') : t('video_start')}
-          </button>
+          <div className="study-video-head-actions">
+            {enabled && (
+              <button type="button" className="btn btn-sm btn-secondary" onClick={toggleMute}>
+                {muted ? t('video_unmute') : t('video_mute')}
+              </button>
+            )}
+            <button type="button" className={`btn btn-sm${enabled ? ' btn-danger' : ' btn-primary'}`} onClick={toggleVideo}>
+              {enabled ? t('video_stop') : t('video_start')}
+            </button>
+          </div>
         </div>
       )}
       {error && <p className="study-video-error">{error}</p>}
       <div className="study-video-bar">
         {layout === 'sidebar' && (
-          <button
-            type="button"
-            className={`study-video-toggle${enabled ? ' study-video-toggle--on' : ''}`}
-            onClick={toggleVideo}
-            title={enabled ? t('video_stop') : t('video_start')}
-            aria-label={enabled ? t('video_stop') : t('video_start')}
-          >
-            {enabled ? '⏹' : '📷'}
-          </button>
+          <div className="study-video-controls-col">
+            <button
+              type="button"
+              className={`study-video-toggle${enabled ? ' study-video-toggle--on' : ''}`}
+              onClick={toggleVideo}
+              title={enabled ? t('video_stop') : t('video_start')}
+              aria-label={enabled ? t('video_stop') : t('video_start')}
+            >
+              {enabled ? '⏹' : '📷'}
+            </button>
+            <button
+              type="button"
+              className={`study-video-toggle study-video-toggle--mute${muted ? ' study-video-toggle--muted' : ''}`}
+              onClick={toggleMute}
+              disabled={!enabled}
+              title={muted ? t('video_unmute') : t('video_mute')}
+              aria-label={muted ? t('video_unmute') : t('video_mute')}
+            >
+              {muted ? '🔇' : '🔊'}
+            </button>
+          </div>
         )}
         <div className="study-video-grid">
           <div className={`study-video-tile${enabled ? '' : ' study-video-tile--off'}`}>
@@ -254,16 +337,7 @@ export default function StudyVideoRoom({ roomCode, teacherId, layout = 'inline',
           )}
 
           {remoteStreams.map((r) => (
-            <div key={r.userId} className="study-video-tile">
-              <video
-                autoPlay
-                playsInline
-                ref={(el) => {
-                  if (el && r.stream) el.srcObject = r.stream;
-                }}
-              />
-              <span>{r.username}</span>
-            </div>
+            <RemoteVideo key={r.userId} stream={r.stream} username={r.username} />
           ))}
 
           {layout === 'sidebar' && !enabled && (

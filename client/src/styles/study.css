@@ -159,12 +159,36 @@
     flex: 0 0 auto;
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: 8px;
     width: 100%;
     max-width: min(880px, calc(100dvh - 250px), calc(100vw - 480px)) !important;
     margin: 8px auto 0;
     padding: 0 12px 4px;
     box-sizing: border-box;
+}
+
+.study-control-select {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.study-control-label {
+    white-space: nowrap;
+}
+
+.study-control-select select {
+    padding: 6px 8px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--glass-border-soft);
+    background: rgba(255, 255, 255, 0.3);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    cursor: pointer;
 }
 
 .study-board-controls .study-btn-active {
@@ -270,14 +294,67 @@
 }
 
 .study-side-rail .chat-area.study-history-list {
-    flex: 1;
+    flex: 0 0 auto;
     min-height: 0;
     min-width: 0;
     width: 100%;
+    max-height: 72px;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 8px;
+    padding: 6px 8px;
     box-sizing: border-box;
+}
+
+.study-history-inline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 8px;
+    line-height: 1.35;
+}
+
+.study-history-pair {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+.study-hist-num {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+.study-hist-move {
+    padding: 1px 3px;
+    margin: 0;
+    border: none;
+    border-radius: 3px;
+    background: transparent;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color: var(--text-primary);
+    transition: var(--transition);
+}
+
+.study-hist-move:hover:not(:disabled) {
+    background: rgba(255, 143, 98, 0.2);
+}
+
+.study-hist-move.active {
+    background: rgba(255, 143, 98, 0.35);
+}
+
+.study-hist-move:disabled {
+    cursor: default;
+}
+
+.study-history-empty {
+    font-size: 11px;
+    color: var(--text-muted);
 }
 
 .study-side-rail .history-move {

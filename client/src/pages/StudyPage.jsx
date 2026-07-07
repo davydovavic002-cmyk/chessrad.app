@@ -59,7 +59,7 @@ export default function StudyPage() {
   const activeTabIdRef = useRef('play');
   const isTeacherRef = useRef(false);
   const orientationRef = useRef('white');
-  const roomSettingsRef = useRef({ studentMoveColor: 'w', demoStrict: false });
+  const roomSettingsRef = useRef({ studentMoveColor: 'w' });
 
   const [tabs, setTabs] = useState(tabsRef.current);
   const [boardSize, setBoardSize] = useState(320);
@@ -70,7 +70,7 @@ export default function StudyPage() {
   const [history, setHistory] = useState([]);
   const [shapes, setShapes] = useState([]);
   const [statusMsg, setStatusMsg] = useState('');
-  const [roomSettings, setRoomSettings] = useState({ studentMoveColor: 'w', demoStrict: false });
+  const [roomSettings, setRoomSettings] = useState({ studentMoveColor: 'w' });
   const [arrowDrawMode, setArrowDrawMode] = useState(false);
   const [libOpen, setLibOpen] = useState(false);
   const [libPositions, setLibPositions] = useState([]);
@@ -97,13 +97,21 @@ export default function StudyPage() {
   useLayoutEffect(() => {
     const el = boardSlotRef.current;
     if (!el) return;
+    let raf = 0;
     const measure = () => {
-      setBoardSize(measureStudyBoardSize(el.clientWidth, el.clientHeight));
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const next = measureStudyBoardSize(el.clientWidth, el.clientHeight);
+        setBoardSize((prev) => (prev === next ? prev : next));
+      });
     };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
-    return () => ro.disconnect();
+    return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+    };
   }, []);
 
   const syncTabsState = useCallback(
@@ -338,8 +346,7 @@ export default function StudyPage() {
       const pieceBefore = game.get(source);
       if (!pieceBefore) return false;
 
-      const freeDemo =
-        tab.type !== 'play' && (isTeacherRef.current || !roomSettingsRef.current.demoStrict);
+      const freeDemo = tab.type !== 'play' && isTeacherRef.current;
 
       const move = game.move({ from: source, to: target, promotion: 'q' });
       let moveNotation = '';
@@ -640,6 +647,20 @@ export default function StudyPage() {
     }
   }
 
+  function historyPairs() {
+    const pairs = [];
+    for (let i = 0; i < history.length; i += 2) {
+      pairs.push({
+        num: Math.floor(i / 2) + 1,
+        white: history[i],
+        black: history[i + 1] || null,
+        whiteIdx: i,
+        blackIdx: i + 1,
+      });
+    }
+    return pairs;
+  }
+
   const activeTab = tabs.find((t) => t.id === activeTabId);
   const noSection = t('library_no_section');
   const general = t('library_general');
@@ -691,7 +712,7 @@ export default function StudyPage() {
             <div className="study-board-shell">
               <div className="study-board-host" style={{ width: boardSize, height: boardSize }}>
                 <Board
-                  key={`${activeTabId}-${fen}`}
+                  key={activeTabId}
                   id="study-board"
                   fen={fen}
                   orientation={orientation}
@@ -717,36 +738,26 @@ export default function StudyPage() {
               <button type="button" className="btn-secondary" onClick={flipBoard}>
                 {t('study_flip')}
               </button>
-              <button
-                type="button"
-                className={`btn-secondary${arrowDrawMode ? ' study-btn-active' : ''}`}
-                onClick={() => setArrowDrawMode((v) => !v)}
-              >
-                {t('study_draw_arrows')}
-              </button>
-              <button
-                type="button"
-                className={`btn-secondary${roomSettings.studentMoveColor === 'w' ? ' study-btn-active' : ''}`}
-                onClick={() => updateRoomSettings({ studentMoveColor: 'w' })}
-              >
-                {t('study_white_move')}
-              </button>
-              <button
-                type="button"
-                className={`btn-secondary${roomSettings.studentMoveColor === 'b' ? ' study-btn-active' : ''}`}
-                onClick={() => updateRoomSettings({ studentMoveColor: 'b' })}
-              >
-                {t('study_black_move')}
-              </button>
-              {activeTab?.type === 'demo' && (
-                <button
-                  type="button"
-                  className={`btn-secondary${roomSettings.demoStrict ? ' study-btn-active' : ''}`}
-                  onClick={() => updateRoomSettings({ demoStrict: !roomSettings.demoStrict })}
+              <label className="study-control-select">
+                <span className="study-control-label">{t('study_draw_arrows')}</span>
+                <select
+                  value={arrowDrawMode ? 'on' : 'off'}
+                  onChange={(e) => setArrowDrawMode(e.target.value === 'on')}
                 >
-                  {t('study_demo_strict')}
-                </button>
-              )}
+                  <option value="off">{t('study_draw_off')}</option>
+                  <option value="on">{t('study_draw_on')}</option>
+                </select>
+              </label>
+              <label className="study-control-select">
+                <span className="study-control-label">{t('study_student_color')}</span>
+                <select
+                  value={roomSettings.studentMoveColor}
+                  onChange={(e) => updateRoomSettings({ studentMoveColor: e.target.value })}
+                >
+                  <option value="w">{t('study_white_move')}</option>
+                  <option value="b">{t('study_black_move')}</option>
+                </select>
+              </label>
               <button type="button" className="btn-secondary" onClick={() => applyFen(START_FEN)}>
                 {t('study_start')}
               </button>
@@ -811,26 +822,35 @@ export default function StudyPage() {
                   </button>
                 )}
               </div>
-              <div className="chat-area history-list study-history-list">
+              <div className="chat-area history-list study-history-list study-history-inline">
                 {history.length === 0 ? (
-                  <em>{t('study_history_empty')}</em>
+                  <em className="study-history-empty">{t('study_history_empty')}</em>
                 ) : (
-                  history.map((h, i) => {
-                    const isLast = i === history.length - 1;
-                    return (
+                  historyPairs().map((pair) => (
+                    <span key={pair.num} className="study-history-pair">
+                      <span className="study-hist-num">{pair.num}.</span>
                       <button
-                        key={`${h.fen}-${i}`}
                         type="button"
-                        className={`pgn-move history-move${isLast ? ' active' : ''}`}
-                        onClick={() => goToMove(i)}
+                        className={`study-hist-move${pair.whiteIdx === history.length - 1 ? ' active' : ''}`}
+                        onClick={() => goToMove(pair.whiteIdx)}
                         disabled={!isTeacher}
                         title={isTeacher ? t('study_goto_move') : undefined}
                       >
-                        <span className="history-move-num">{i + 1}.</span>
-                        <span className="history-move-label">{moveLabel(h)}</span>
+                        {moveLabel(pair.white)}
                       </button>
-                    );
-                  })
+                      {pair.black && (
+                        <button
+                          type="button"
+                          className={`study-hist-move${pair.blackIdx === history.length - 1 ? ' active' : ''}`}
+                          onClick={() => goToMove(pair.blackIdx)}
+                          disabled={!isTeacher}
+                          title={isTeacher ? t('study_goto_move') : undefined}
+                        >
+                          {moveLabel(pair.black)}
+                        </button>
+                      )}
+                    </span>
+                  ))
                 )}
               </div>
             </div>
