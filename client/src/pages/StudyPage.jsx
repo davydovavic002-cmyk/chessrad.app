@@ -50,7 +50,7 @@ function setFenSideToMove(fenStr, color) {
 }
 
 function activeMoveColor(settings = {}) {
-  return settings.activeMoveColor || settings.studentMoveColor || 'w';
+  return settings.activeMoveColor || 'w';
 }
 
 function turnSideLabel(color, t) {
@@ -63,7 +63,7 @@ function rolePieceColor(isTeacher, studentColor) {
 }
 
 function canPlayPiece(tab, pieceColor, isTeacher, settings) {
-  const studentColor = settings.studentMoveColor || 'w';
+  const studentColor = settings.studentMoveColor ?? 'b';
   const roleColor = rolePieceColor(isTeacher, studentColor);
   if (pieceColor !== roleColor) return false;
   if (tab.type === 'demo' && isTeacher) return true;
@@ -78,9 +78,9 @@ function normalizeFen(fen) {
 }
 
 function baseOrientationForRole(isTeacher, settings = {}) {
-  const studentColor = settings.studentMoveColor || 'w';
-  if (isTeacher) return 'white';
-  return studentColor === 'w' ? 'white' : 'black';
+  const studentColor = settings.studentMoveColor ?? 'b';
+  const myColor = rolePieceColor(isTeacher, studentColor);
+  return myColor === 'w' ? 'white' : 'black';
 }
 
 function resolveOrientation(isTeacher, settings = {}) {
@@ -105,7 +105,11 @@ export default function StudyPage() {
   const activeTabIdRef = useRef('play');
   const isTeacherRef = useRef(false);
   const orientationRef = useRef('white');
-  const roomSettingsRef = useRef({ studentMoveColor: 'w', activeMoveColor: 'w', boardFlipped: false });
+  const roomSettingsRef = useRef({
+    studentMoveColor: 'b',
+    activeMoveColor: 'w',
+    boardFlipped: false,
+  });
 
   const [tabs, setTabs] = useState(tabsRef.current);
   const [boardSize, setBoardSize] = useState(320);
@@ -117,7 +121,7 @@ export default function StudyPage() {
   const [shapes, setShapes] = useState([]);
   const [statusMsg, setStatusMsg] = useState('');
   const [roomSettings, setRoomSettings] = useState({
-    studentMoveColor: 'w',
+    studentMoveColor: 'b',
     activeMoveColor: 'w',
     boardFlipped: false,
   });
@@ -296,7 +300,7 @@ export default function StudyPage() {
       activeTabIdRef.current = d.activeTabId || activeTabIdRef.current;
       if (d.studySettings) {
         roomSettingsRef.current = {
-          studentMoveColor: 'w',
+          studentMoveColor: 'b',
           activeMoveColor: 'w',
           boardFlipped: false,
           ...d.studySettings,
@@ -352,7 +356,7 @@ export default function StudyPage() {
     const onSyncSettings = (d) => {
       if (!d.settings) return;
       roomSettingsRef.current = {
-        studentMoveColor: 'w',
+        studentMoveColor: 'b',
         activeMoveColor: 'w',
         boardFlipped: false,
         ...d.settings,
@@ -413,7 +417,6 @@ export default function StudyPage() {
       if (!isTeacherRef.current) return;
       const next = { ...roomSettingsRef.current, ...partial };
       if (partial.studentMoveColor) {
-        next.activeMoveColor = partial.studentMoveColor;
         next.boardFlipped = false;
       }
       roomSettingsRef.current = next;
@@ -421,11 +424,7 @@ export default function StudyPage() {
       applyOrientationFromSettings(isTeacherRef.current, next);
 
       const tab = tabsRef.current.find((t) => t.id === activeTabIdRef.current);
-      if (
-        tab &&
-        (tab.type === 'play' || tab.type === 'demo') &&
-        (partial.studentMoveColor || partial.activeMoveColor)
-      ) {
+      if (tab && (tab.type === 'play' || tab.type === 'demo') && partial.activeMoveColor) {
         const turn = activeMoveColor(next);
         const patched = setFenSideToMove(normalizeFen(tab.fen), turn);
         tab.fen = patched;
@@ -917,14 +916,14 @@ export default function StudyPage() {
                 <button
                   type="button"
                   className={`study-color-tool study-color-tool--w${activeMoveColor(roomSettings) === 'w' ? ' active' : ''}`}
-                  onClick={() => updateRoomSettings({ studentMoveColor: 'w' })}
+                  onClick={() => updateRoomSettings({ activeMoveColor: 'w' })}
                 >
                   {t('study_white_move')}
                 </button>
                 <button
                   type="button"
                   className={`study-color-tool study-color-tool--b${activeMoveColor(roomSettings) === 'b' ? ' active' : ''}`}
-                  onClick={() => updateRoomSettings({ studentMoveColor: 'b' })}
+                  onClick={() => updateRoomSettings({ activeMoveColor: 'b' })}
                 >
                   {t('study_black_move')}
                 </button>
