@@ -84,14 +84,14 @@ export default function StudyPage() {
   const [pgnImportOpen, setPgnImportOpen] = useState(false);
   const [pgnImportText, setPgnImportText] = useState('');
   const editorGameRef = useRef(new Chess(EMPTY_FEN));
-  const boardArenaRef = useRef(null);
+  const boardSlotRef = useRef(null);
 
   useEffect(() => {
     if (!roomCode) navigate('/lobby');
   }, [roomCode, navigate]);
 
   useLayoutEffect(() => {
-    const el = boardArenaRef.current;
+    const el = boardSlotRef.current;
     if (!el) return;
     const measure = () => {
       setBoardSize(measureStudyBoardSize(el.clientWidth, el.clientHeight));
@@ -615,30 +615,32 @@ export default function StudyPage() {
           )}
         </aside>
 
-        <div ref={boardArenaRef} className="board-section study-board-arena">
+        <div className="board-section study-board-arena">
           <div id="status-msg" className="study-status-msg">{statusMsg}</div>
-          <div className="study-board-shell">
-            <div className="study-board-host" style={{ width: boardSize, height: boardSize }}>
-              <Board
-                key={`${activeTabId}-${fen}`}
-                id="study-board"
-                fen={fen}
+          <div ref={boardSlotRef} className="study-board-slot">
+            <div className="study-board-shell">
+              <div className="study-board-host" style={{ width: boardSize, height: boardSize }}>
+                <Board
+                  key={`${activeTabId}-${fen}`}
+                  id="study-board"
+                  fen={fen}
+                  orientation={orientation}
+                  onDrop={onDrop}
+                  canDragPiece={canDragPiece}
+                  boardWidth={boardSize}
+                  showAnimations={false}
+                  allowDrawingArrows={false}
+                  allowDragOffBoard={false}
+                />
+              </div>
+              <StudyDrawOverlay
+                boardId="study-board"
+                shapes={shapes}
                 orientation={orientation}
-                onDrop={onDrop}
-                canDragPiece={canDragPiece}
-                boardWidth={boardSize}
-                showAnimations={false}
-                allowDrawingArrows={false}
-                allowDragOffBoard={false}
+                enabled={isTeacher}
+                onShapesChange={handleShapesChange}
               />
             </div>
-            <StudyDrawOverlay
-              boardId="study-board"
-              shapes={shapes}
-              orientation={orientation}
-              enabled={isTeacher}
-              onShapesChange={handleShapesChange}
-            />
           </div>
           {isTeacher && (
             <div className="board-controls study-board-controls">

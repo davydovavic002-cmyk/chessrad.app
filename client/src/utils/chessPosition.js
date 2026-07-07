@@ -5,10 +5,10 @@ export function normalizeStudyFen(fen) {
   return fen;
 }
 
-/** Fit board into the study center column (not the whole window). */
+/** Fit board into the study board slot between status and controls. */
 export function measureStudyBoardSize(containerWidth, containerHeight) {
-  const w = Math.max(0, containerWidth - 8);
-  const h = Math.max(0, containerHeight - 56);
+  const w = Math.max(0, containerWidth - 16);
+  const h = Math.max(0, containerHeight - 16);
   const size = Math.floor(Math.min(w, h, 560));
-  return Math.max(220, Math.min(size, w || 220));
+  return Math.max(220, size);
 }
