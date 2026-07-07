@@ -191,6 +191,104 @@
     cursor: pointer;
 }
 
+.study-draw-tools {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--glass-border-soft);
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.study-draw-tool {
+    width: 34px;
+    height: 30px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+
+.study-draw-tool:hover {
+    background: rgba(255, 255, 255, 0.35);
+}
+
+.study-draw-tool.active {
+    background: rgba(255, 143, 98, 0.35);
+    border-color: rgba(255, 143, 98, 0.55);
+}
+
+.study-draw-icon {
+    display: block;
+    pointer-events: none;
+}
+
+.study-draw-icon--off {
+    font-size: 16px;
+    line-height: 1;
+    color: var(--text-muted);
+}
+
+.study-draw-icon--circle {
+    width: 14px;
+    height: 14px;
+    border: 3px solid rgba(46, 204, 113, 0.95);
+    border-radius: 50%;
+    box-sizing: border-box;
+}
+
+.study-draw-icon--arrow-green,
+.study-draw-icon--arrow-red {
+    width: 22px;
+    height: 10px;
+    position: relative;
+}
+
+.study-draw-icon--arrow-green::before,
+.study-draw-icon--arrow-red::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 16px;
+    height: 4px;
+    border-radius: 2px;
+    transform: translateY(-50%);
+}
+
+.study-draw-icon--arrow-green::after,
+.study-draw-icon--arrow-red::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+}
+
+.study-draw-icon--arrow-green::before {
+    background: rgba(46, 204, 113, 0.95);
+}
+
+.study-draw-icon--arrow-green::after {
+    border-left: 7px solid rgba(46, 204, 113, 0.95);
+}
+
+.study-draw-icon--arrow-red::before {
+    background: rgba(231, 76, 60, 0.95);
+}
+
+.study-draw-icon--arrow-red::after {
+    border-left: 7px solid rgba(231, 76, 60, 0.95);
+}
+
 .study-board-controls .study-btn-active {
     background: var(--accent, #3498db);
     color: #fff;

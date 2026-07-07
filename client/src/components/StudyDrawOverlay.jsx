@@ -35,19 +35,24 @@ function drawArrow(ctx, fromX, fromY, toX, toY, color) {
 
 /**
  * Draws study arrows/circles over the chessboard.
+ * Drawing input is enabled only when drawTool !== 'off' (teacher-only in StudyPage).
  */
 export default function StudyDrawOverlay({
   boardId = 'study-board',
   shapes = [],
   orientation = 'white',
-  drawEnabled = false,
+  drawTool = 'off',
   onShapesChange,
 }) {
   const canvasRef = useRef(null);
   const shellRef = useRef(null);
   const drawingRef = useRef({ active: false, start: null });
   const shapesRef = useRef(shapes);
+  const drawToolRef = useRef(drawTool);
   shapesRef.current = shapes;
+  drawToolRef.current = drawTool;
+
+  const drawEnabled = drawTool !== 'off';
 
   const getBoardEl = useCallback(() => {
     return document.getElementById(`${boardId}-board`);
@@ -112,7 +117,8 @@ export default function StudyDrawOverlay({
         ctx.stroke();
       } else {
         const end = getCanvasCoords(s.endCol, s.endRow, size);
-        drawArrow(ctx, start.x, start.y, end.x, end.y, RED);
+        const color = s.color === 'green' ? GREEN : RED;
+        drawArrow(ctx, start.x, start.y, end.x, end.y, color);
       }
     });
   }, [getBoardEl, getCanvasCoords]);
@@ -167,18 +173,33 @@ export default function StudyDrawOverlay({
       drawingRef.current = { active: false, start: null };
       if (!start) return;
 
-      const nextShape =
-        start.col === gridPos.col && start.row === gridPos.row
-          ? { type: 'circle', startCol: start.col, startRow: start.row }
-          : {
-              type: 'arrow',
-              startCol: start.col,
-              startRow: start.row,
-              endCol: gridPos.col,
-              endRow: gridPos.row,
-            };
+      const tool = drawToolRef.current;
+      const sameCell = start.col === gridPos.col && start.row === gridPos.row;
+      let nextShape = null;
 
-      onShapesChange?.([...shapesRef.current, nextShape]);
+      if (tool === 'circle' && sameCell) {
+        nextShape = { type: 'circle', startCol: start.col, startRow: start.row };
+      } else if (tool === 'arrow-green' && !sameCell) {
+        nextShape = {
+          type: 'arrow',
+          color: 'green',
+          startCol: start.col,
+          startRow: start.row,
+          endCol: gridPos.col,
+          endRow: gridPos.row,
+        };
+      } else if (tool === 'arrow-red' && !sameCell) {
+        nextShape = {
+          type: 'arrow',
+          color: 'red',
+          startCol: start.col,
+          startRow: start.row,
+          endCol: gridPos.col,
+          endRow: gridPos.row,
+        };
+      }
+
+      if (nextShape) onShapesChange?.([...shapesRef.current, nextShape]);
     };
 
     boardEl.addEventListener('contextmenu', onContextMenu);
@@ -190,7 +211,7 @@ export default function StudyDrawOverlay({
       boardEl.removeEventListener('mousedown', onMouseDown);
       window.removeEventListener('mouseup', onMouseUp);
     };
-  }, [drawEnabled, getBoardEl, getCellCenter, onShapesChange]);
+  }, [drawEnabled, drawTool, getBoardEl, getCellCenter, onShapesChange]);
 
   return (
     <canvas

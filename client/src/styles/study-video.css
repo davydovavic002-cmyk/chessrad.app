@@ -109,15 +109,16 @@
 }
 
 .study-video-room--sidebar .study-video-grid {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 8px;
+  grid-template-columns: 1fr;
+  gap: 10px;
   min-width: 0;
 }
 
 .study-video-room--sidebar .study-video-tile {
-  aspect-ratio: 4 / 3;
-  min-height: 100px;
-  max-height: 180px;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  min-height: 150px;
+  max-height: 240px;
 }
 
 .study-video-room--group .study-video-grid {
@@ -158,8 +159,8 @@
 }
 
 .study-video-room--sidebar .study-video-tile span {
-  padding: 2px 5px;
-  font-size: 8px;
+  padding: 4px 8px;
+  font-size: 11px;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;

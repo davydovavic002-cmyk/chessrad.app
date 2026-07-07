@@ -71,7 +71,7 @@ export default function StudyPage() {
   const [shapes, setShapes] = useState([]);
   const [statusMsg, setStatusMsg] = useState('');
   const [roomSettings, setRoomSettings] = useState({ studentMoveColor: 'w' });
-  const [arrowDrawMode, setArrowDrawMode] = useState(false);
+  const [drawTool, setDrawTool] = useState('off');
   const [libOpen, setLibOpen] = useState(false);
   const [libPositions, setLibPositions] = useState([]);
   const [libView, setLibView] = useState({ level: 'folders', big: null, cat: null });
@@ -728,8 +728,8 @@ export default function StudyPage() {
                 boardId="study-board"
                 shapes={shapes}
                 orientation={orientation}
-                drawEnabled={isTeacher && arrowDrawMode}
-                onShapesChange={handleShapesChange}
+                drawTool={isTeacher ? drawTool : 'off'}
+                onShapesChange={isTeacher ? handleShapesChange : undefined}
               />
             </div>
           </div>
@@ -738,16 +738,44 @@ export default function StudyPage() {
               <button type="button" className="btn-secondary" onClick={flipBoard}>
                 {t('study_flip')}
               </button>
-              <label className="study-control-select">
-                <span className="study-control-label">{t('study_draw_arrows')}</span>
-                <select
-                  value={arrowDrawMode ? 'on' : 'off'}
-                  onChange={(e) => setArrowDrawMode(e.target.value === 'on')}
+              <div className="study-draw-tools" role="group" aria-label={t('study_draw_arrows')}>
+                <button
+                  type="button"
+                  className={`study-draw-tool${drawTool === 'off' ? ' active' : ''}`}
+                  onClick={() => setDrawTool('off')}
+                  title={t('study_draw_off')}
+                  aria-label={t('study_draw_off')}
                 >
-                  <option value="off">{t('study_draw_off')}</option>
-                  <option value="on">{t('study_draw_on')}</option>
-                </select>
-              </label>
+                  <span className="study-draw-icon study-draw-icon--off">⊘</span>
+                </button>
+                <button
+                  type="button"
+                  className={`study-draw-tool${drawTool === 'circle' ? ' active' : ''}`}
+                  onClick={() => setDrawTool('circle')}
+                  title={t('study_draw_circle')}
+                  aria-label={t('study_draw_circle')}
+                >
+                  <span className="study-draw-icon study-draw-icon--circle" />
+                </button>
+                <button
+                  type="button"
+                  className={`study-draw-tool${drawTool === 'arrow-green' ? ' active' : ''}`}
+                  onClick={() => setDrawTool('arrow-green')}
+                  title={t('study_draw_arrow_green')}
+                  aria-label={t('study_draw_arrow_green')}
+                >
+                  <span className="study-draw-icon study-draw-icon--arrow-green" />
+                </button>
+                <button
+                  type="button"
+                  className={`study-draw-tool${drawTool === 'arrow-red' ? ' active' : ''}`}
+                  onClick={() => setDrawTool('arrow-red')}
+                  title={t('study_draw_arrow_red')}
+                  aria-label={t('study_draw_arrow_red')}
+                >
+                  <span className="study-draw-icon study-draw-icon--arrow-red" />
+                </button>
+              </div>
               <label className="study-control-select">
                 <span className="study-control-label">{t('study_student_color')}</span>
                 <select
