@@ -130,7 +130,7 @@ export default function StudyDrawOverlay({
           end.x,
           end.y,
           isGreen ? GREEN : RED,
-          isGreen ? 10 : 6
+          isGreen ? 10 : 4
         );
       }
     });

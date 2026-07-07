@@ -23,34 +23,59 @@
 .study-video-bar {
   display: flex;
   align-items: stretch;
-  gap: 6px;
+  gap: 10px;
   width: 100%;
   min-width: 0;
 }
 
+.study-video-controls-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+  justify-content: center;
+}
+
 .study-video-toggle {
   flex-shrink: 0;
-  width: 32px;
-  border: 1px solid var(--glass-border-soft);
-  border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.15);
+  width: 46px;
+  height: 46px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 12px;
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.08));
+  box-shadow: 0 2px 8px rgba(45, 31, 26, 0.12);
   cursor: pointer;
-  font-size: 16px;
+  font-size: 20px;
   line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: var(--transition);
+  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .study-video-toggle:hover {
-  background: rgba(255, 143, 98, 0.2);
-  border-color: rgba(255, 143, 98, 0.45);
+  transform: translateY(-1px);
+  background: linear-gradient(165deg, rgba(255, 143, 98, 0.35), rgba(255, 143, 98, 0.15));
+  border-color: rgba(255, 143, 98, 0.55);
+  box-shadow: 0 4px 12px rgba(255, 143, 98, 0.2);
+}
+
+.study-video-toggle:active {
+  transform: translateY(0);
 }
 
 .study-video-toggle--on {
-  background: rgba(231, 76, 60, 0.15);
-  border-color: rgba(231, 76, 60, 0.35);
+  background: linear-gradient(165deg, rgba(231, 76, 60, 0.28), rgba(231, 76, 60, 0.12));
+  border-color: rgba(231, 76, 60, 0.45);
+}
+
+.study-video-toggle--mute-off {
+  opacity: 0.92;
+}
+
+.study-video-toggle--muted {
+  background: linear-gradient(165deg, rgba(231, 76, 60, 0.28), rgba(231, 76, 60, 0.12));
+  border-color: rgba(231, 76, 60, 0.45);
 }
 
 .study-video-room--bar .study-video-bar {
@@ -83,27 +108,6 @@
   gap: 10px;
   flex: 1;
   min-width: 0;
-}
-
-.study-video-controls-col {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex-shrink: 0;
-}
-
-.study-video-toggle--mute:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
-.study-video-toggle--mute-off {
-  opacity: 0.85;
-}
-
-.study-video-toggle--muted {
-  background: rgba(231, 76, 60, 0.15);
-  border-color: rgba(231, 76, 60, 0.35);
 }
 
 .study-video-head-actions {

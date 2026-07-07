@@ -137,13 +137,13 @@
     flex-shrink: 0;
     overflow: visible;
     line-height: 0;
-    border-radius: 8px;
+    border-radius: 0;
     max-width: 100%;
     margin: 0 auto;
 }
 
 .study-board-host #study-board-board {
-    border-radius: 8px;
+    border-radius: 0;
     overflow: visible;
 }
 
@@ -189,6 +189,42 @@
     font-family: var(--font-body);
     font-size: 0.75rem;
     cursor: pointer;
+}
+
+.study-color-tools {
+    display: inline-flex;
+    align-items: stretch;
+    gap: 0;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--glass-border-soft);
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.study-color-tool {
+    padding: 7px 12px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: var(--font-body);
+    font-size: 0.72rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--transition);
+    white-space: nowrap;
+}
+
+.study-color-tool + .study-color-tool {
+    border-left: 1px solid var(--glass-border-soft);
+}
+
+.study-color-tool:hover {
+    background: rgba(255, 255, 255, 0.35);
+}
+
+.study-color-tool.active {
+    background: rgba(255, 143, 98, 0.4);
+    color: var(--text-primary);
 }
 
 .study-draw-tools {
