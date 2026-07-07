@@ -12,9 +12,26 @@ export default function AuthPage() {
   const [searchParams] = useSearchParams();
   const [tab, setTab] = useState('login');
   const [selectedRole, setSelectedRole] = useState('student');
+  const [loginUsername, setLoginUsername] = useState('');
   const [loginError, setLoginError] = useState('');
+  const [loginNotice, setLoginNotice] = useState('');
   const [registerMsg, setRegisterMsg] = useState('');
   const [registerOk, setRegisterOk] = useState(false);
+
+  function navigateAfterAuth(authUser) {
+    const pending = sessionStorage.getItem('pendingLinkCode');
+    if (pending) {
+      sessionStorage.removeItem('pendingLinkCode');
+      navigate(`/link/${encodeURIComponent(pending)}`, { replace: true });
+      return;
+    }
+    const dest = authUser?.role === 'parent'
+      ? '/parent'
+      : authUser?.mustChangePassword
+        ? '/profile'
+        : '/lobby';
+    navigate(dest, { replace: true });
+  }
 
   useEffect(() => {
     const linkCode = searchParams.get('link');
@@ -39,21 +56,13 @@ export default function AuthPage() {
   async function handleLogin(e) {
     e.preventDefault();
     setLoginError('');
+    setLoginNotice('');
     const form = new FormData(e.target);
-    const result = await login(form.get('username'), form.get('password'));
+    const username = String(form.get('username') || loginUsername || '').trim();
+    const password = String(form.get('password') || '');
+    const result = await login(username, password);
     if (result.ok) {
-      const pending = sessionStorage.getItem('pendingLinkCode');
-      if (pending) {
-        sessionStorage.removeItem('pendingLinkCode');
-        navigate(`/link/${encodeURIComponent(pending)}`);
-        return;
-      }
-      const dest = result.user?.role === 'parent'
-        ? '/parent'
-        : result.user?.mustChangePassword
-          ? '/profile'
-          : '/lobby';
-      navigate(dest);
+      navigateAfterAuth(result.user);
     } else {
       setLoginError(result.message || t('auth_bad_creds'));
     }
@@ -64,14 +73,23 @@ export default function AuthPage() {
     setRegisterMsg('');
     setRegisterOk(false);
     const form = new FormData(e.target);
-    const result = await register(form.get('username'), form.get('password'), selectedRole, {
+    const username = String(form.get('username') || '').trim();
+    const password = String(form.get('password') || '');
+    const result = await register(username, password, selectedRole, {
       displayName: form.get('displayName'),
       teacherLinkCode: selectedRole === 'student' ? form.get('teacherLinkCode') : undefined,
     });
     if (result.ok) {
-      setRegisterOk(true);
-      setRegisterMsg(t('auth_created'));
+      const loginResult = await login(username, password);
+      if (loginResult.ok) {
+        navigateAfterAuth(loginResult.user);
+        return;
+      }
+      setLoginUsername(username);
+      setLoginNotice(t('auth_created_manual'));
       setTab('login');
+      setRegisterOk(true);
+      setRegisterMsg(t('auth_created_manual'));
     } else {
       setRegisterMsg(result.message || t('error'));
     }
@@ -101,21 +119,28 @@ export default function AuthPage() {
             <button
               type="button"
               className={`auth-tab${tab === 'login' ? ' active' : ''}`}
-              onClick={() => setTab('login')}
+              onClick={() => {
+                setTab('login');
+                setLoginError('');
+              }}
             >
               {t('auth_login_tab')}
             </button>
             <button
               type="button"
               className={`auth-tab${tab === 'register' ? ' active' : ''}`}
-              onClick={() => setTab('register')}
+              onClick={() => {
+                setTab('register');
+                setRegisterMsg('');
+                setRegisterOk(false);
+              }}
             >
               {t('auth_register_tab')}
             </button>
           </div>
 
           {tab === 'login' ? (
-            <form className="auth-form active" onSubmit={handleLogin}>
+            <form className="auth-form active" onSubmit={handleLogin} autoComplete="on">
               <div className="form-group">
                 <label htmlFor="login-username">{t('auth_username')}</label>
                 <input
@@ -123,6 +148,8 @@ export default function AuthPage() {
                   name="username"
                   className="form-input"
                   placeholder={t('auth_login_placeholder')}
+                  value={loginUsername}
+                  onChange={(e) => setLoginUsername(e.target.value)}
                   required
                   autoComplete="username"
                 />
@@ -142,10 +169,11 @@ export default function AuthPage() {
               <button type="submit" className="btn btn-primary btn-block">
                 {t('auth_login_btn')}
               </button>
+              {loginNotice ? <div className="auth-success">{loginNotice}</div> : null}
               <div className="auth-error">{loginError}</div>
             </form>
           ) : (
-            <form className="auth-form active" onSubmit={handleRegister}>
+            <form className="auth-form active" onSubmit={handleRegister} autoComplete="off">
               <div className="form-group">
                 <label htmlFor="reg-display-name">{t('auth_display_name')}</label>
                 <input
@@ -154,7 +182,7 @@ export default function AuthPage() {
                   className="form-input"
                   placeholder={t('auth_display_name_ph')}
                   required
-                  autoComplete="name"
+                  autoComplete="off"
                 />
               </div>
               <div className="form-group">
@@ -165,8 +193,9 @@ export default function AuthPage() {
                   className="form-input"
                   placeholder={t('auth_reg_username_ph')}
                   required
-                  autoComplete="username"
+                  autoComplete="off"
                 />
+                <p className="auth-hint">{t('auth_login_hint')}</p>
               </div>
               <div className="form-group">
                 <label htmlFor="reg-password">{t('auth_password')}</label>

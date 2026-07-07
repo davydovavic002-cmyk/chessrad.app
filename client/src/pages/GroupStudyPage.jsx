@@ -283,6 +283,43 @@ export default function GroupStudyPage() {
     (p) => Number(p.a) === Number(user.id) || Number(p.b) === Number(user.id)
   );
 
+  const showMosaicRail = isTeacher && teacherPhase === 'students' && studentIds.length > 0;
+
+  const mosaicTiles = studentIds.map((sid) => {
+    const b = studentBoards[sid] || studentBoards[String(sid)] || {};
+    const mc = moveCount(b);
+    const active = Number(focusedStudentId) === Number(sid);
+    return (
+      <div key={sid} className={`group-mini-board${active ? ' group-mini-board--active' : ''}`}>
+        <h4>
+          {nameOf(sid)}
+          <span className="group-move-badge">
+            {mc} {t('group_moves')}
+          </span>
+        </h4>
+        <button
+          type="button"
+          className="group-mini-click"
+          onClick={() => setFocusedStudentId(sid)}
+          title={t('group_focus_pick')}
+        >
+          <GroupBoardArena variant="mini" miniSize={120}>
+            {(boardSize) => (
+              <Board
+                id={`group-mini-${sid}`}
+                fen={studentBoardFen(sid)}
+                boardWidth={boardSize}
+                showNotation={false}
+                allowDragging={false}
+                canDragPiece={() => false}
+              />
+            )}
+          </GroupBoardArena>
+        </button>
+      </div>
+    );
+  });
+
   if (!room) {
     return (
       <div className="group-study-page page-wrap">
@@ -294,9 +331,11 @@ export default function GroupStudyPage() {
   return (
     <div className="group-study-page page-wrap">
       <BackButton to="/lobby" title={t('back_to_lobby')} />
-      <header className="game-hud">
+      <header className="game-hud group-studio__header">
         <span className="game-hud__badge">GROUP CLASS</span>
-        <h1>{t('group_title')} · {roomCode}</h1>
+        <h1>
+          {t('group_title')} · {roomCode}
+        </h1>
         <div className="group-phase-bar">
           {['exercise', 'solving', 'solution', 'tournament'].map((p) => (
             <span key={p} className={`group-phase-pill${phase === p ? ' active' : ''}`}>
@@ -304,58 +343,55 @@ export default function GroupStudyPage() {
             </span>
           ))}
         </div>
+        {isTeacher && (
+          <div className="group-studio__header-tools">
+            <button type="button" className="btn btn-secondary btn-sm" onClick={startPoll}>
+              {t('group_poll_start')}
+            </button>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={saveSession}>
+              {t('group_session_save')}
+            </button>
+          </div>
+        )}
       </header>
 
-      {roomCode && room?.teacher_id && (
-        <StudyVideoRoom roomCode={roomCode} teacherId={room.teacher_id} layout="group" />
-      )}
-
-      {poll?.active && (
-        <div className="group-poll-panel game-panel">
-          <h3>{poll.question}</h3>
-          {!isTeacher && (
-            <button type="button" className="btn btn-primary btn-sm" onClick={votePoll}>
-              {t('group_poll_vote')}
-            </button>
+      <div className="group-studio">
+        <div className="group-studio__main">
+          {poll?.active && (
+            <div className="group-poll-panel game-panel">
+              <h3>{poll.question}</h3>
+              {!isTeacher && (
+                <button type="button" className="btn btn-primary btn-sm" onClick={votePoll}>
+                  {t('group_poll_vote')}
+                </button>
+              )}
+              <ul className="group-poll-votes">
+                {Object.entries(poll.votes || {}).map(([uid, name]) => (
+                  <li key={uid}>✓ {name}</li>
+                ))}
+              </ul>
+              {isTeacher && (
+                <button type="button" className="btn btn-ghost btn-sm" onClick={endPoll}>
+                  {t('group_poll_end')}
+                </button>
+              )}
+            </div>
           )}
-          <ul className="group-poll-votes">
-            {Object.entries(poll.votes || {}).map(([uid, name]) => (
-              <li key={uid}>✓ {name}</li>
-            ))}
-          </ul>
-          {isTeacher && (
-            <button type="button" className="btn btn-ghost btn-sm" onClick={endPoll}>
-              {t('group_poll_end')}
-            </button>
-          )}
-        </div>
-      )}
 
-      {isTeacher && (
-        <div className="group-teacher-tools">
-          <button type="button" className="btn btn-secondary btn-sm" onClick={startPoll}>
-            {t('group_poll_start')}
-          </button>
-          <button type="button" className="btn btn-secondary btn-sm" onClick={saveSession}>
-            {t('group_session_save')}
-          </button>
-        </div>
-      )}
-
-      {isTeacher ? (
-        <>
-          <div className="group-teacher-tabs">
-            {['exercise', 'students', 'solution', 'tournament'].map((tab) => (
-              <button
-                key={tab}
-                type="button"
-                className={teacherPhase === tab ? 'active' : ''}
-                onClick={() => setTeacherPhase(tab)}
-              >
-                {t(`group_tab_${tab}`)}
-              </button>
-            ))}
-          </div>
+          {isTeacher ? (
+            <>
+              <nav className="group-teacher-tabs group-studio__tabs" aria-label={t('group_title')}>
+                {['exercise', 'students', 'solution', 'tournament'].map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    className={teacherPhase === tab ? 'active' : ''}
+                    onClick={() => setTeacherPhase(tab)}
+                  >
+                    {t(`group_tab_${tab}`)}
+                  </button>
+                ))}
+              </nav>
 
           {teacherPhase === 'exercise' && (
             <div className="group-panel game-panel">
@@ -454,47 +490,6 @@ export default function GroupStudyPage() {
                   </GroupBoardArena>
                 </div>
               )}
-
-              <div className="group-mosaic-section">
-                <h4>{t('group_mosaic_overview')}</h4>
-                <div className="group-teacher-grid">
-                  {studentIds.map((sid) => {
-                    const b = studentBoards[sid] || studentBoards[String(sid)] || {};
-                    const mc = moveCount(b);
-                    const active = Number(focusedStudentId) === Number(sid);
-                    return (
-                      <div
-                        key={sid}
-                        className={`group-mini-board${active ? ' group-mini-board--active' : ''}`}
-                      >
-                        <h4>
-                          {nameOf(sid)}
-                          <span className="group-move-badge">{mc} {t('group_moves')}</span>
-                        </h4>
-                        <button
-                          type="button"
-                          className="group-mini-click"
-                          onClick={() => setFocusedStudentId(sid)}
-                          title={t('group_focus_pick')}
-                        >
-                          <GroupBoardArena variant="mini" miniSize={120}>
-                            {(boardSize) => (
-                              <Board
-                                id={`group-mini-${sid}`}
-                                fen={studentBoardFen(sid)}
-                                boardWidth={boardSize}
-                                showNotation={false}
-                                allowDragging={false}
-                                canDragPiece={() => false}
-                              />
-                            )}
-                          </GroupBoardArena>
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
 
               <button type="button" className="btn btn-secondary mt-2" onClick={() => setTeacherPhase('solution')}>
                 {t('group_go_solution')} →
@@ -608,22 +603,41 @@ export default function GroupStudyPage() {
               )}
             </GroupBoardArena>
           </div>
-          {myPair && (
-            <div className="group-pairings game-panel" style={{ padding: 16, marginTop: 16 }}>
+        </>
+      )}
+        </div>
+
+        <aside className="group-studio__rail">
+          {roomCode && room?.teacher_id && (
+            <StudyVideoRoom roomCode={roomCode} teacherId={room.teacher_id} layout="sidebar" />
+          )}
+          {showMosaicRail && (
+            <div className="group-rail-panel game-panel">
+              <h4 className="group-rail-panel__title">{t('group_mosaic_overview')}</h4>
+              <p className="group-rail-panel__hint">{t('group_mosaic_hint')}</p>
+              <div className="group-teacher-grid group-teacher-grid--rail">{mosaicTiles}</div>
+            </div>
+          )}
+          {!isTeacher && myPair && (
+            <div className="group-pairings game-panel group-rail-panel">
               <strong>{t('group_your_pairings')}</strong>
               <div className="group-pair-item">
                 {t('group_play_vs', { name: nameOf(myPair.a === Number(user.id) ? myPair.b : myPair.a) })}
                 {myPair.result && <span> — {myPair.result}</span>}
                 {myPair.gameId && !myPair.result && (
-                  <Link to={`/game/${myPair.gameId}?returnGroup=${roomCode}`} className="btn btn-primary btn-sm" style={{ marginLeft: 8 }}>
+                  <Link
+                    to={`/game/${myPair.gameId}?returnGroup=${roomCode}`}
+                    className="btn btn-primary btn-sm"
+                    style={{ marginLeft: 8 }}
+                  >
                     {t('group_play_now')}
                   </Link>
                 )}
               </div>
             </div>
           )}
-        </>
-      )}
+        </aside>
+      </div>
 
       {broadcast.active && broadcast.fen && !broadcastDismissed && (
         <div className="group-broadcast-overlay" onClick={stopBroadcast}>

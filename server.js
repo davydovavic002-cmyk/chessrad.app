@@ -84,6 +84,7 @@ import {
     updateGroupPairingGame,
     getTournamentSchedule,
     getTournamentById,
+    ensureTournamentSchedulePopulated,
     applyGroupGameStandings,
     getLessonsInMinutesWindow,
     getTournamentsInMinutesWindow,
@@ -247,9 +248,21 @@ async function ensureTournamentInstance(id) {
         id,
         name: meta?.name || id,
     });
+    if (meta?.status === 'finished') {
+        t.status = 'finished';
+    } else if (meta?.status === 'running') {
+        t.status = 'running';
+        t.currentRound = 1;
+        t.totalRounds = 3;
+    }
     tournamentInstances.set(id, t);
     if (id === 'main-tournament-1') mainTournament = t;
     return t;
+}
+
+function tournamentPlayerCount(row, live) {
+    if (live) return live.players?.size ?? 0;
+    return row.demo_players || 0;
 }
 
 async function initTournamentInstances() {
@@ -287,7 +300,7 @@ async function broadcastTournamentSchedule() {
             return {
                 id: row.id,
                 liveStatus: live?.status || row.status,
-                playerCount: live?.players?.size || row.demo_players || 0,
+                playerCount: live ? (live.players?.size ?? 0) : (row.demo_players || 0),
                 currentRound: live?.currentRound || 0,
             };
         });
@@ -1601,16 +1614,19 @@ app.get('/api/student/calendar', authenticateToken, async (req, res) => {
 
 app.get('/api/tournaments', authenticateToken, async (req, res) => {
     try {
-        const rows = await getTournamentSchedule();
+        let rows = await getTournamentSchedule();
+        if (!rows.length) {
+            await ensureTournamentSchedulePopulated();
+            rows = await getTournamentSchedule();
+        }
         const tournaments = rows.map((row) => {
             const live = getTournamentByIdLive(row.id);
-            const liveCount = live?.players?.size || 0;
             return {
                 ...row,
                 league: row.league || 'open',
                 format_type: row.format_type || row.format || 'swiss',
                 liveStatus: live?.status || row.status,
-                playerCount: liveCount || row.demo_players || 0,
+                playerCount: tournamentPlayerCount(row, live),
                 currentRound: live?.currentRound || 0,
             };
         });
@@ -1632,7 +1648,7 @@ app.get('/api/tournaments/:id', authenticateToken, async (req, res) => {
                 league: meta.league || 'open',
                 format_type: meta.format_type || meta.format || 'swiss',
                 liveStatus: live?.status || meta.status,
-                playerCount: live?.players?.size || meta.demo_players || 0,
+                playerCount: live ? (live.players?.size ?? 0) : (meta.demo_players || 0),
                 currentRound: live?.currentRound || 0,
             },
         });

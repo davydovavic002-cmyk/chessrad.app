@@ -425,7 +425,7 @@
 
 .stat-card:hover {
 
-  transform: translateY(-2px);
+  box-shadow: var(--glass-shadow);
 
 }
 
@@ -1139,6 +1139,41 @@
   margin: -4px 0 0;
   font-size: 0.78rem;
   opacity: 0.85;
+}
+
+.profile-notify-compact {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--glass-border-soft);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.profile-notify-compact__label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.profile-notify-compact__checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-top: 8px;
+}
+
+.profile-notify-compact__checks .profile-check {
+  margin-top: 0;
+  font-size: 0.8rem;
+}
+
+.form-input--compact {
+  padding: 10px 12px;
+  font-size: 0.9rem;
 }
 
 .mt-1 { margin-top: 8px; }

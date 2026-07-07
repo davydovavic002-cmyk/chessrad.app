@@ -146,9 +146,9 @@
 }
 
 .menu-card:hover {
-    transform: translateY(-6px) scale(1.02);
     box-shadow: var(--glass-shadow-lg);
     background: var(--glass-gradient-strong);
+    border-color: rgba(255, 176, 136, 0.45);
 }
 
 .menu-card.primary {

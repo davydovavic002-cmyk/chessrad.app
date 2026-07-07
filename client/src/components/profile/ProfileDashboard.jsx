@@ -336,9 +336,16 @@ export function ProfileSettingsPanel({
   tzSecondary,
   setTzSecondary,
   TIMEZONE_OPTIONS,
+  showParentNotify,
+  parentEmail,
+  setParentEmail,
+  notifyEmail,
+  setNotifyEmail,
+  notifyPush,
+  setNotifyPush,
 }) {
   return (
-    <section className="profile-block profile-block--half">
+    <section className="profile-block profile-block--half profile-block--settings">
       <h3>{t('dash_settings')}</h3>
       <label className="profile-check" style={{ display: 'block', marginBottom: 10 }}>
         {t('profile_username')}
@@ -366,6 +373,32 @@ export function ProfileSettingsPanel({
       </button>
       {displayMsg && (
         <div className={`status-msg${displayOk ? ' success' : ' error'}`}>{displayMsg}</div>
+      )}
+
+      {showParentNotify && (
+        <div className="profile-notify-compact">
+          <label className="profile-notify-compact__label" htmlFor="parent-email-input">
+            {t('profile_parent_email')}
+          </label>
+          <input
+            id="parent-email-input"
+            className="form-input form-input--compact"
+            type="email"
+            value={parentEmail}
+            onChange={(e) => setParentEmail(e.target.value)}
+            placeholder="parent@email.com"
+          />
+          <div className="profile-notify-compact__checks">
+            <label className="profile-check">
+              <input type="checkbox" checked={notifyEmail} onChange={(e) => setNotifyEmail(e.target.checked)} />
+              {t('profile_notify_email')}
+            </label>
+            <label className="profile-check">
+              <input type="checkbox" checked={notifyPush} onChange={(e) => setNotifyPush(e.target.checked)} />
+              {t('profile_notify_push')}
+            </label>
+          </div>
+        </div>
       )}
 
       <div className="profile-dash-settings-row mt-2">

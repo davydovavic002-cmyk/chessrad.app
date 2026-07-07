@@ -171,6 +171,75 @@
   padding: 12px;
 }
 
+.group-studio {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.group-studio__header {
+  margin-bottom: 4px;
+}
+
+.group-studio__header-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 12px;
+}
+
+.group-studio__main {
+  min-width: 0;
+}
+
+.group-studio__rail {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.group-rail-panel {
+  padding: 12px;
+}
+
+.group-rail-panel__title {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.group-rail-panel__hint {
+  margin: 0 0 10px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+
+.group-teacher-grid--rail {
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+@media (min-width: 960px) {
+  .group-studio {
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+  }
+
+  .group-studio__rail {
+    position: sticky;
+    top: 12px;
+    max-height: calc(100vh - 24px);
+    overflow-y: auto;
+  }
+}
+
 .group-teacher-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));

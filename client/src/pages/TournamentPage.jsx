@@ -203,9 +203,14 @@ export default function TournamentPage() {
             {statusText(liveStatus)}
           </span>
           <h1>{title}</h1>
-          {meta?.description && <p className="tournament-sidebar-desc">{meta.description}</p>}
         </div>
         <div className="tournament-info-chips">
+          {meta?.starts_at && (
+            <span className="tournament-meta-chip">
+              <span className="tournament-meta-chip__icon" aria-hidden>📅</span>
+              {new Date(meta.starts_at).toLocaleString()}
+            </span>
+          )}
           {meta?.time_control && (
             <span className="tournament-meta-chip">
               <span className="tournament-meta-chip__icon" aria-hidden>⏱</span>
@@ -221,6 +226,17 @@ export default function TournamentPage() {
             <span className={`tag-league tag-league--${meta.league}`}>{t(`league_${meta.league}`)}</span>
           )}
         </div>
+        {meta?.description && (
+          <div className="tournament-about game-panel">
+            <h3>{t('tournament_about')}</h3>
+            <p>{meta.description}</p>
+            <ul className="tournament-about__list">
+              <li>{t('tournament_about_format', { fmt: meta.format_type === 'team' ? t('tournament_team_format') : t('tournament_format_swiss') })}</li>
+              <li>{t('tournament_about_control', { tc: meta.time_control || '—' })}</li>
+              {meta.max_players ? <li>{t('tournament_about_slots', { n: meta.max_players })}</li> : null}
+            </ul>
+          </div>
+        )}
         <div id="user-status" className="user-profile-box">
           {t('tournament_logged_as')} <strong>{user.username}</strong>
           <a href="#" className="tournament-logout-link" onClick={handleLogout}>

@@ -405,61 +405,91 @@ await db.exec(`
 
     const tourneyCount = await db.get('SELECT COUNT(*) as c FROM tournament_schedule');
     if (!tourneyCount?.c) {
-        const now = new Date();
-        const nextSat = new Date(now);
-        nextSat.setDate(now.getDate() + ((6 - now.getDay() + 7) % 7 || 7));
-        nextSat.setHours(18, 0, 0, 0);
-        const nextWed = new Date(now);
-        nextWed.setDate(now.getDate() + ((3 - now.getDay() + 7) % 7 || 7));
-        nextWed.setHours(19, 0, 0, 0);
-        await db.run(
-            `INSERT INTO tournament_schedule (id, name, description, status, starts_at, registration_opens_at, time_control, format, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [
-                'main-tournament-1',
-                'Главный еженедельный турнир',
-                'Швейцарская система, 5+0. Регистрация открыта — заходите и играйте!',
-                'registration',
-                nextSat.toISOString(),
-                now.toISOString(),
-                '5+0',
-                'swiss',
-                1,
-            ]
-        );
-        await db.run(
-            `INSERT INTO tournament_schedule (id, name, description, status, starts_at, registration_opens_at, time_control, format, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [
-                'blitz-wednesday',
-                'Среда — блиц 3+2',
-                'Быстрые партии для тренировки реакции. Формат: швейцарка на 3 раунда.',
-                'registration',
-                nextWed.toISOString(),
-                now.toISOString(),
-                '3+2',
-                'swiss',
-                2,
-            ]
-        );
-        await db.run(
-            `INSERT INTO tournament_schedule (id, name, description, status, starts_at, registration_opens_at, time_control, format, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [
-                'student-championship',
-                'Чемпионат учеников',
-                'Ежемесячный турнир для учеников школы. Призы — медали в профиле.',
-                'scheduled',
-                new Date(now.getFullYear(), now.getMonth() + 1, 1, 17, 0, 0).toISOString(),
-                new Date(now.getFullYear(), now.getMonth(), 25).toISOString(),
-                '10+0',
-                'swiss',
-                3,
-            ]
-        );
+        await seedCoreTournaments(db);
     }
 
     await seedDemoTournaments(db);
 
     console.log('[DB] База данных инициализирована.');
 };
+
+async function seedCoreTournaments(db) {
+    const now = new Date();
+    const nextSat = new Date(now);
+    nextSat.setDate(now.getDate() + ((6 - now.getDay() + 7) % 7 || 7));
+    nextSat.setHours(18, 0, 0, 0);
+    const nextWed = new Date(now);
+    nextWed.setDate(now.getDate() + ((3 - now.getDay() + 7) % 7 || 7));
+    nextWed.setHours(19, 0, 0, 0);
+    const rows = [
+        {
+            id: 'main-tournament-1',
+            name: 'Главный еженедельный турнир',
+            description: 'Швейцарская система, 5+0. Регистрация открыта — заходите и играйте!',
+            status: 'registration',
+            starts_at: nextSat.toISOString(),
+            time_control: '5+0',
+            format: 'swiss',
+            league: 'open',
+            max_players: 32,
+            sort_order: 1,
+        },
+        {
+            id: 'blitz-wednesday',
+            name: 'Среда — блиц 3+2',
+            description: 'Быстрые партии для тренировки реакции. Формат: швейцарка на 3 раунда.',
+            status: 'registration',
+            starts_at: nextWed.toISOString(),
+            time_control: '3+2',
+            format: 'swiss',
+            league: 'open',
+            max_players: 24,
+            sort_order: 2,
+        },
+        {
+            id: 'student-championship',
+            name: 'Чемпионат учеников',
+            description: 'Ежемесячный турнир для учеников школы. Призы — медали в профиле.',
+            status: 'scheduled',
+            starts_at: new Date(now.getFullYear(), now.getMonth() + 1, 1, 17, 0, 0).toISOString(),
+            time_control: '10+0',
+            format: 'swiss',
+            league: 'novice',
+            max_players: 20,
+            sort_order: 3,
+        },
+    ];
+    for (const row of rows) {
+        await db.run(
+            `INSERT INTO tournament_schedule (id, name, description, status, starts_at, registration_opens_at, time_control, format, format_type, league, demo_players, sort_order, max_players)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                row.id,
+                row.name,
+                row.description,
+                row.status,
+                row.starts_at,
+                now.toISOString(),
+                row.time_control,
+                row.format,
+                row.format,
+                row.league,
+                0,
+                row.sort_order,
+                row.max_players,
+            ]
+        );
+    }
+}
+
+export async function ensureTournamentSchedulePopulated() {
+    const db = await getDbConnection();
+    const tourneyCount = await db.get('SELECT COUNT(*) as c FROM tournament_schedule');
+    if (!tourneyCount?.c) {
+        await seedCoreTournaments(db);
+    }
+    await seedDemoTournaments(db);
+}
 
 async function seedDemoTournaments(db) {
     const demos = [

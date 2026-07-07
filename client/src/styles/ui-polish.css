@@ -274,7 +274,7 @@ a:focus:not(:focus-visible) {
 }
 
 .menu-card:not(.game-feature-card):hover::before {
-    opacity: 1;
+    opacity: 0.55;
 }
 
 .menu-card--profile {
@@ -304,12 +304,7 @@ a:focus:not(:focus-visible) {
     background: linear-gradient(145deg, rgba(255, 255, 255, 0.55), rgba(232, 244, 252, 0.35));
     border: 1px solid rgba(255, 255, 255, 0.5);
     box-shadow: 0 4px 12px rgba(140, 180, 210, 0.12), var(--surface-highlight);
-    transition: transform var(--transition-bounce), box-shadow var(--transition);
-}
-
-.menu-card:hover .card-icon {
-    transform: scale(1.06) rotate(-3deg);
-    box-shadow: 0 6px 18px rgba(255, 143, 98, 0.18);
+    transition: box-shadow var(--transition);
 }
 
 .card-text h3 {
@@ -444,7 +439,7 @@ a:focus:not(:focus-visible) {
 .profile-block {
     position: relative;
     overflow: hidden;
-    transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+    transition: box-shadow var(--transition), border-color var(--transition);
 }
 
 .profile-block::before {
@@ -456,10 +451,10 @@ a:focus:not(:focus-visible) {
     height: 3px;
     background: linear-gradient(90deg, var(--peach-400), var(--sky-400));
     opacity: 0.55;
+    pointer-events: none;
 }
 
 .profile-block:hover {
-    transform: translateY(-2px);
     box-shadow: var(--glass-shadow-lg), var(--surface-highlight);
     border-color: rgba(255, 255, 255, 0.6);
 }
@@ -467,26 +462,12 @@ a:focus:not(:focus-visible) {
 .profile-block--actions::before,
 .profile-block--actions:hover {
     display: none;
-    transform: none;
     box-shadow: none;
 }
 
-.profile-dash-stat {
-    transition: transform var(--transition), box-shadow var(--transition);
-}
-
-.profile-dash-stat:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--glow-sky);
-}
-
-.profile-dash-student-card {
-    transition: transform var(--transition), box-shadow var(--transition);
-}
-
+.profile-dash-stat:hover,
 .profile-dash-student-card:hover {
-    transform: translateX(4px);
-    box-shadow: var(--glow-peach);
+    box-shadow: var(--glow-sky);
 }
 
 .stat-card {

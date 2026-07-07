@@ -104,6 +104,7 @@ export default function TournamentListPage() {
   }, []);
 
   const filtered = tournaments.filter((row) => league === 'all' || (row.league || 'open') === league);
+  const filterEmpty = !loading && !error && tournaments.length > 0 && filtered.length === 0;
 
   const stats = useMemo(() => {
     const counts = { running: 0, upcoming: 0, finished: 0 };
@@ -164,6 +165,14 @@ export default function TournamentListPage() {
             ? `${t('tournament_list_error')} (${error.replace('load_failed_', '')})`
             : t('tournament_list_error')}
         </p>
+      ) : filterEmpty ? (
+        <div className="tournament-empty-state game-panel">
+          <span className="tournament-empty-state__icon">🔍</span>
+          <p>{t('tournament_filter_empty')}</p>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => setLeague('all')}>
+            {t('league_all')}
+          </button>
+        </div>
       ) : filtered.length === 0 ? (
         <div className="tournament-empty-state game-panel">
           <span className="tournament-empty-state__icon">♟</span>
@@ -173,7 +182,6 @@ export default function TournamentListPage() {
         <div className="tournament-schedule-grid">
           {filtered.map((row) => {
             const sk = statusKey(row);
-            const isTeam = row.format_type === 'team';
             const fillPct = row.max_players
               ? Math.min(100, Math.round(((row.playerCount || 0) / row.max_players) * 100))
               : null;
@@ -196,7 +204,7 @@ export default function TournamentListPage() {
                   </div>
                   <div className="tournament-card-tags">
                     <span className={`tag-league tag-league--${row.league || 'open'}`}>{t(`league_${row.league || 'open'}`)}</span>
-                    {isTeam && <span className="tag-team">{t('tournament_team_format')}</span>}
+                    <span className="tag-format">{row.format_type === 'team' ? t('tournament_team_format') : t('tournament_format_swiss')}</span>
                     {row.id.startsWith('demo-') && <span className="tag-demo">DEMO</span>}
                   </div>
                   {row.description && (

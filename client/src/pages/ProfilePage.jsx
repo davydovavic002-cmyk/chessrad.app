@@ -603,30 +603,14 @@ export default function ProfilePage() {
             tzSecondary={tzSecondary}
             setTzSecondary={setTzSecondary}
             TIMEZONE_OPTIONS={TIMEZONE_OPTIONS}
+            showParentNotify={isTeacher}
+            parentEmail={parentEmail}
+            setParentEmail={setParentEmail}
+            notifyEmail={notifyEmail}
+            setNotifyEmail={setNotifyEmail}
+            notifyPush={notifyPush}
+            setNotifyPush={setNotifyPush}
           />
-          {isTeacher && (
-            <section className="profile-block profile-block--half">
-              <h3>{t('profile_parent_email')}</h3>
-              <input
-                className="form-input"
-                type="email"
-                value={parentEmail}
-                onChange={(e) => setParentEmail(e.target.value)}
-                placeholder="parent@email.com"
-              />
-              <label className="profile-check mt-1">
-                <input type="checkbox" checked={notifyEmail} onChange={(e) => setNotifyEmail(e.target.checked)} />
-                {t('profile_notify_email')}
-              </label>
-              <label className="profile-check">
-                <input type="checkbox" checked={notifyPush} onChange={(e) => setNotifyPush(e.target.checked)} />
-                {t('profile_notify_push')}
-              </label>
-              <button type="button" className="btn btn-secondary btn-sm mt-2" onClick={saveSettings}>
-                {t('save')}
-              </button>
-            </section>
-          )}
           <section className="profile-block profile-block--half password-section">
             <h3>{t('profile_security')}</h3>
             <input
