@@ -915,7 +915,8 @@ export default function StudyPage() {
             </div>
           </div>
           {isTeacher && (
-            <div className="board-controls study-board-controls">
+            <div className="study-board-toolbar">
+              <div className="board-controls study-board-controls">
               {activeTab?.type === 'play' && (
                 <button type="button" className="btn-secondary" onClick={flipBoard}>
                   {t('study_flip')}
@@ -974,6 +975,7 @@ export default function StudyPage() {
               <button type="button" className="btn-danger-light" onClick={() => applyFen(EMPTY_FEN)}>
                 {t('study_clear')}
               </button>
+              </div>
             </div>
           )}
         </div>

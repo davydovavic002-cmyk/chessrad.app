@@ -79,22 +79,17 @@
 
 .study-board-arena {
     --study-status-row: 22px;
-    --study-controls-row: 0px;
     min-height: 0;
     min-width: 0;
     width: 100%;
     height: 100%;
     overflow: hidden;
     display: grid;
-    grid-template-rows: var(--study-status-row) minmax(0, 1fr) var(--study-controls-row);
+    grid-template-rows: var(--study-status-row) minmax(0, 1fr) auto;
     align-items: stretch;
     justify-content: stretch;
     padding: 0;
     box-sizing: border-box;
-}
-
-.study-board-arena:has(.study-board-controls) {
-    --study-controls-row: 48px;
 }
 
 .study-board-slot {
@@ -214,21 +209,34 @@
     z-index: 5;
 }
 
+.study-board-toolbar {
+    width: 100%;
+    min-width: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 10px 12px 12px;
+    box-sizing: border-box;
+}
+
 .study-board-controls {
     display: flex;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     align-items: center;
+    justify-content: center;
     gap: 8px;
-    width: 100%;
-    max-width: min(880px, calc(100dvh - 250px), calc(100vw - 480px)) !important;
-    height: var(--study-controls-row);
-    min-height: var(--study-controls-row);
-    max-height: var(--study-controls-row);
-    margin: 0 auto;
-    padding: 0 12px;
+    width: auto;
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
     box-sizing: border-box;
-    overflow-x: auto;
-    overflow-y: hidden;
+    overflow: visible;
+}
+
+.study-board-arena .study-board-controls.board-controls {
+    margin-top: 0;
+    max-width: 100% !important;
+    width: auto;
 }
 
 .study-control-select {
