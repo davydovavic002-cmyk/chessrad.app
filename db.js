@@ -716,8 +716,11 @@ export const createStudyRoom = async (teacherId, roomCode, roomType = 'duo') => 
 export const findStudyRoomByCode = async (code) => {
     const db = await getDbConnection();
     return await db.get(`
-        SELECT r.*, u.username as teacher_name FROM study_rooms r
-        JOIN users u ON r.teacher_id = u.id WHERE r.room_code = ?`, [code]);
+        SELECT r.*, tu.username as teacher_name, su.username as student_name
+        FROM study_rooms r
+        JOIN users tu ON r.teacher_id = tu.id
+        LEFT JOIN users su ON r.student_id = su.id
+        WHERE r.room_code = ?`, [code]);
 };
 
 export const countTeacherRooms = async (teacherId) => {

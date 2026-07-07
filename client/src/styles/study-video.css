@@ -154,16 +154,19 @@
   display: block;
 }
 
-.study-video-tile span {
+.study-video-tile span,
+.study-video-tile-label {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
+  z-index: 2;
   padding: 8px 10px;
   font-size: 12px;
   font-weight: 600;
   background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
   color: #fff;
+  pointer-events: none;
 }
 
 .study-video-room--sidebar .study-video-tile span {

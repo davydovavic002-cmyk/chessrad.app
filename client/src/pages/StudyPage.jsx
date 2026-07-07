@@ -52,6 +52,12 @@ function playOrientationForRole(isTeacher, studentMoveColor = 'w') {
   return studentMoveColor === 'w' ? 'white' : 'black';
 }
 
+function resolveOrientation(isTeacher, settings = {}) {
+  const base = playOrientationForRole(isTeacher, settings.studentMoveColor || 'w');
+  if (!settings.boardFlipped) return base;
+  return base === 'white' ? 'black' : 'white';
+}
+
 export default function StudyPage() {
   const { user } = useAuth();
   const { t, moveLabel: formatPieceMove } = useI18n();
@@ -64,8 +70,7 @@ export default function StudyPage() {
   const activeTabIdRef = useRef('play');
   const isTeacherRef = useRef(false);
   const orientationRef = useRef('white');
-  const orientationLockedRef = useRef(false);
-  const roomSettingsRef = useRef({ studentMoveColor: 'w' });
+  const roomSettingsRef = useRef({ studentMoveColor: 'w', boardFlipped: false });
 
   const [tabs, setTabs] = useState(tabsRef.current);
   const [boardSize, setBoardSize] = useState(320);
@@ -76,7 +81,7 @@ export default function StudyPage() {
   const [history, setHistory] = useState([]);
   const [shapes, setShapes] = useState([]);
   const [statusMsg, setStatusMsg] = useState('');
-  const [roomSettings, setRoomSettings] = useState({ studentMoveColor: 'w' });
+  const [roomSettings, setRoomSettings] = useState({ studentMoveColor: 'w', boardFlipped: false });
   const [drawTool, setDrawTool] = useState('off');
   const [libOpen, setLibOpen] = useState(false);
   const [libPositions, setLibPositions] = useState([]);
@@ -91,6 +96,8 @@ export default function StudyPage() {
   const [hwInstructions, setHwInstructions] = useState('');
   const [hwDue, setHwDue] = useState('');
   const [roomTeacherId, setRoomTeacherId] = useState(null);
+  const [roomTeacherName, setRoomTeacherName] = useState('');
+  const [roomStudentName, setRoomStudentName] = useState('');
   const [pgnImportOpen, setPgnImportOpen] = useState(false);
   const [pgnImportText, setPgnImportText] = useState('');
   const editorGameRef = useRef(new Chess(EMPTY_FEN));
@@ -120,6 +127,13 @@ export default function StudyPage() {
     };
   }, []);
 
+  const applyOrientationFromSettings = useCallback((asTeacher, settings) => {
+    const tab = tabsRef.current.find((t) => t.id === activeTabIdRef.current);
+    const ori = tab?.type === 'play' ? resolveOrientation(asTeacher, settings) : 'white';
+    orientationRef.current = ori;
+    setOrientation(ori);
+  }, []);
+
   const syncTabsState = useCallback(
     (opts = {}) => {
       const { resetOrientation = false } = opts;
@@ -134,11 +148,10 @@ export default function StudyPage() {
       setShapes(tab.shapes || []);
       setTabNotes(tab.notes || '');
       if (resetOrientation) {
-        orientationLockedRef.current = false;
         if (tab.type === 'play') {
-          orientationRef.current = playOrientationForRole(
+          orientationRef.current = resolveOrientation(
             isTeacherRef.current,
-            roomSettingsRef.current.studentMoveColor
+            roomSettingsRef.current
           );
         } else {
           orientationRef.current = 'white';
@@ -227,11 +240,17 @@ export default function StudyPage() {
       setIsTeacher(teacher);
       setRoomTeacherId(d.teacher_id || null);
       setRoomStudentId(d.student_id || null);
+      setRoomTeacherName(d.teacher_name || '');
+      setRoomStudentName(d.student_name || '');
       if (d.tabs?.length) tabsRef.current = d.tabs;
       activeTabIdRef.current = d.activeTabId || activeTabIdRef.current;
       if (d.studySettings) {
-        roomSettingsRef.current = d.studySettings;
-        setRoomSettings(d.studySettings);
+        roomSettingsRef.current = {
+          studentMoveColor: 'w',
+          boardFlipped: false,
+          ...d.studySettings,
+        };
+        setRoomSettings({ ...roomSettingsRef.current });
       }
       syncTabsState({ resetOrientation: true });
     };
@@ -279,18 +298,13 @@ export default function StudyPage() {
 
     const onSyncSettings = (d) => {
       if (!d.settings) return;
-      const prevColor = roomSettingsRef.current.studentMoveColor;
-      roomSettingsRef.current = d.settings;
-      setRoomSettings(d.settings);
-      const tab = tabsRef.current.find((x) => x.id === activeTabIdRef.current);
-      if (tab?.type === 'play' && d.settings.studentMoveColor !== prevColor) {
-        orientationLockedRef.current = false;
-        orientationRef.current = playOrientationForRole(
-          isTeacherRef.current,
-          d.settings.studentMoveColor
-        );
-        setOrientation(orientationRef.current);
-      }
+      roomSettingsRef.current = {
+        studentMoveColor: 'w',
+        boardFlipped: false,
+        ...d.settings,
+      };
+      setRoomSettings({ ...roomSettingsRef.current });
+      applyOrientationFromSettings(isTeacherRef.current, roomSettingsRef.current);
     };
 
     socket.on('study:roomData', onRoomData);
@@ -310,7 +324,7 @@ export default function StudyPage() {
       socket.off('study:syncNotes', onSyncNotes);
       socket.off('study:syncSettings', onSyncSettings);
     };
-  }, [roomCode, user.id, user.role, t, syncTabsState, switchTab]);
+  }, [roomCode, user.id, user.role, t, syncTabsState, switchTab, applyOrientationFromSettings]);
 
   const emitMove = useCallback(
     (tab) => {
@@ -336,30 +350,24 @@ export default function StudyPage() {
   const updateRoomSettings = useCallback(
     (partial) => {
       if (!isTeacherRef.current) return;
-      const prevColor = roomSettingsRef.current.studentMoveColor;
-      roomSettingsRef.current = { ...roomSettingsRef.current, ...partial };
-      setRoomSettings({ ...roomSettingsRef.current });
-      if (partial.studentMoveColor && partial.studentMoveColor !== prevColor) {
-        orientationLockedRef.current = false;
-        const tab = tabsRef.current.find((t) => t.id === activeTabIdRef.current);
-        if (tab?.type === 'play') {
-          orientationRef.current = playOrientationForRole(true, partial.studentMoveColor);
-          setOrientation(orientationRef.current);
-        }
+      const next = { ...roomSettingsRef.current, ...partial };
+      if (partial.studentMoveColor) {
+        next.boardFlipped = false;
       }
+      roomSettingsRef.current = next;
+      setRoomSettings({ ...next });
+      applyOrientationFromSettings(true, next);
       getSocket().emit('study:updateSettings', {
         roomCode,
         settings: roomSettingsRef.current,
       });
     },
-    [roomCode]
+    [roomCode, applyOrientationFromSettings]
   );
 
   function flipBoard() {
-    const next = orientationRef.current === 'white' ? 'black' : 'white';
-    orientationRef.current = next;
-    orientationLockedRef.current = true;
-    setOrientation(next);
+    if (!isTeacherRef.current) return;
+    updateRoomSettings({ boardFlipped: !roomSettingsRef.current.boardFlipped });
   }
 
   const onDrop = useCallback(
@@ -842,7 +850,13 @@ export default function StudyPage() {
         <aside className="study-side-rail info-panel">
           {roomCode && roomTeacherId && (
             <div className="study-video-rail-slot">
-              <StudyVideoRoom roomCode={roomCode} teacherId={roomTeacherId} layout="sidebar" autoStart />
+              <StudyVideoRoom
+                roomCode={roomCode}
+                teacherId={roomTeacherId}
+                layout="sidebar"
+                autoStart
+                peerDisplayName={isTeacher ? roomStudentName : roomTeacherName}
+              />
             </div>
           )}
 

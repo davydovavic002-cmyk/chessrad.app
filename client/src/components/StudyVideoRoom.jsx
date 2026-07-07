@@ -15,22 +15,29 @@ const MEDIA = {
   audio: { echoCancellation: true, noiseSuppression: true },
 };
 
-function RemoteVideo({ stream, username }) {
+function RemoteVideo({ stream, username, fallbackName }) {
   const ref = useRef(null);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     el.srcObject = stream || null;
   }, [stream]);
+  const label = username || fallbackName || '—';
   return (
     <div className="study-video-tile">
       <video ref={ref} autoPlay playsInline />
-      <span>{username}</span>
+      <span className="study-video-tile-label">{label}</span>
     </div>
   );
 }
 
-export default function StudyVideoRoom({ roomCode, teacherId, layout = 'inline', autoStart = false }) {
+export default function StudyVideoRoom({
+  roomCode,
+  teacherId,
+  layout = 'inline',
+  autoStart = false,
+  peerDisplayName = '',
+}) {
   const { user } = useAuth();
   const { t } = useI18n();
   const localVideoRef = useRef(null);
@@ -307,7 +314,8 @@ export default function StudyVideoRoom({ roomCode, teacherId, layout = 'inline',
   }
 
   const showDuoPlaceholder = layout === 'sidebar' && enabled && remoteStreams.length === 0;
-  const remoteLabel = isTeacher ? t('video_student') : t('video_teacher');
+  const remoteLabel =
+    peerDisplayName || (isTeacher ? t('video_student') : t('video_teacher'));
 
   return (
     <div className={`study-video-room study-video-room--${layout}${layout === 'sidebar' ? ' study-video-room--bar' : ''}`}>
@@ -351,17 +359,24 @@ export default function StudyVideoRoom({ roomCode, teacherId, layout = 'inline',
         <div className="study-video-grid">
           <div className={`study-video-tile${enabled && videoOn ? '' : ' study-video-tile--off'}`}>
             <video ref={localVideoRef} autoPlay muted playsInline />
-            <span>{user.username} {t('video_you')}</span>
+            <span className="study-video-tile-label">
+              {user.username} {t('video_you')}
+            </span>
           </div>
 
           {layout === 'sidebar' && showDuoPlaceholder && (
             <div className="study-video-tile study-video-tile--placeholder">
-              <span>{t('video_waiting')}</span>
+              <span>{peerDisplayName || t('video_waiting')}</span>
             </div>
           )}
 
           {remoteStreams.map((r) => (
-            <RemoteVideo key={r.userId} stream={r.stream} username={r.username} />
+            <RemoteVideo
+              key={r.userId}
+              stream={r.stream}
+              username={r.username}
+              fallbackName={peerDisplayName}
+            />
           ))}
 
           {layout === 'sidebar' && !enabled && (
