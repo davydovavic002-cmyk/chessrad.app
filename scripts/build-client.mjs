@@ -79,4 +79,17 @@ if (!fs.existsSync(viteBin)) {
 
 run('build client', 'npm', ['run', 'build'], clientDir);
 
-console.log('\nClient build complete.');
+const indexHtml = path.join(clientDir, 'dist', 'index.html');
+if (!fs.existsSync(indexHtml)) {
+  console.error('\nERROR: client/dist/index.html was not created.');
+  process.exit(1);
+}
+
+const assetsDir = path.join(clientDir, 'dist', 'assets');
+const assets = fs.existsSync(assetsDir) ? fs.readdirSync(assetsDir).slice(0, 4) : [];
+const builtAt = fs.statSync(indexHtml).mtime.toISOString();
+console.log(`\nDist ready: ${indexHtml}`);
+console.log(`Built at: ${builtAt}`);
+if (assets.length) console.log(`Assets: ${assets.join(', ')}`);
+
+console.log('\nClient build complete. Run: pm2 restart chessrad');

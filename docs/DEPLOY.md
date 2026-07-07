@@ -85,5 +85,17 @@ server {
 
 ## After deploy
 
-1. Hard refresh browser (Ctrl+Shift+R)
-2. Run smoke checks from [QA-CHECKLIST.md](./QA-CHECKLIST.md)
+1. Open **https://chessrad.app:3569** — port **443** is still the **old** HTML site.
+2. Hard refresh (Ctrl+Shift+R). PWA may cache the old UI: DevTools → Application → Service Workers → Unregister.
+3. Verify the new bundle loaded: View Source should reference recent `/assets/index-*.js` (not old hashes).
+
+### One-command deploy on the server
+
+```bash
+cd ~/chessrad.app
+bash scripts/deploy.sh
+```
+
+This resets git to `origin/main`, builds, and restarts PM2.
+
+## After deploy (smoke)

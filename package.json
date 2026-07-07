@@ -9,6 +9,7 @@
     "dev": "node --watch server.js",
     "dev:client": "npm run dev --prefix client",
     "build": "node scripts/build-client.mjs",
+    "deploy:server": "bash scripts/deploy.sh",
     "build:start": "npm run build && node server.js",
     "test:e2e": "playwright test"
   },
