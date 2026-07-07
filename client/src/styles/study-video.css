@@ -97,6 +97,10 @@
   cursor: not-allowed;
 }
 
+.study-video-toggle--mute-off {
+  opacity: 0.85;
+}
+
 .study-video-toggle--muted {
   background: rgba(231, 76, 60, 0.15);
   border-color: rgba(231, 76, 60, 0.35);

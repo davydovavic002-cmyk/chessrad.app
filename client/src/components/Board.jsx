@@ -22,6 +22,7 @@ export default function Board({
   boardWidth,
   showAnimations = true,
   allowDrawingArrows = true,
+  showNotation = true,
 }) {
   const resolvedPosition = useMemo(() => {
     if (position) return position;
@@ -38,6 +39,7 @@ export default function Board({
       showAnimations,
       animationDurationInMs: showAnimations ? 300 : 0,
       allowDrawingArrows,
+      showNotation,
       squareStyles,
       arrows,
       canDragPiece,
@@ -73,6 +75,7 @@ export default function Board({
       boardWidth,
       showAnimations,
       allowDrawingArrows,
+      showNotation,
     ]
   );
 

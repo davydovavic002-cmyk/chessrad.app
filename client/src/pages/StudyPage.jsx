@@ -47,6 +47,21 @@ function normalizeFen(fen) {
   return normalizeStudyFen(fen);
 }
 
+function squareRank(square) {
+  return Number(square?.[1] || 0);
+}
+
+/** Bottom half of the board for the current viewer orientation. */
+function isOnViewerSideSquare(square, orientation) {
+  const rank = squareRank(square);
+  return orientation === 'white' ? rank <= 4 : rank >= 5;
+}
+
+function playOrientationForRole(isTeacher, studentMoveColor = 'w') {
+  if (isTeacher) return studentMoveColor === 'w' ? 'black' : 'white';
+  return studentMoveColor === 'w' ? 'white' : 'black';
+}
+
 export default function StudyPage() {
   const { user } = useAuth();
   const { t, moveLabel: formatPieceMove } = useI18n();
@@ -129,7 +144,10 @@ export default function StudyPage() {
       setTabNotes(tab.notes || '');
       if (resetOrientation) {
         if (tab.type === 'play') {
-          orientationRef.current = isTeacherRef.current ? 'white' : 'black';
+          orientationRef.current = playOrientationForRole(
+            isTeacherRef.current,
+            roomSettingsRef.current.studentMoveColor
+          );
         } else {
           orientationRef.current = 'white';
         }
@@ -271,6 +289,14 @@ export default function StudyPage() {
       if (!d.settings) return;
       roomSettingsRef.current = d.settings;
       setRoomSettings(d.settings);
+      const tab = tabsRef.current.find((x) => x.id === activeTabIdRef.current);
+      if (tab?.type === 'play') {
+        orientationRef.current = playOrientationForRole(
+          isTeacherRef.current,
+          d.settings.studentMoveColor
+        );
+        setOrientation(orientationRef.current);
+      }
     };
 
     socket.on('study:roomData', onRoomData);
@@ -346,6 +372,10 @@ export default function StudyPage() {
       const pieceBefore = game.get(source);
       if (!pieceBefore) return false;
 
+      if (tab.type === 'play' && !isOnViewerSideSquare(source, orientationRef.current)) {
+        return false;
+      }
+
       const freeDemo = tab.type !== 'play' && isTeacherRef.current;
 
       const move = game.move({ from: source, to: target, promotion: 'q' });
@@ -388,17 +418,26 @@ export default function StudyPage() {
     [roomCode, formatPieceMove, t]
   );
 
-  const canDragPiece = useCallback(({ piece }) => {
+  const canDragPiece = useCallback(({ piece, square }) => {
     const tab = tabsRef.current.find((t) => t.id === activeTabIdRef.current);
-    if (!tab) return false;
+    if (!tab || !square) return false;
     const color = piece.pieceType?.charAt(0);
     const studentColor = roomSettingsRef.current.studentMoveColor || 'w';
     if (isTeacherRef.current) {
       if (tab.type === 'play') {
         const teacherColor = studentColor === 'w' ? 'b' : 'w';
-        return color === teacherColor;
+        return (
+          color === teacherColor &&
+          isOnViewerSideSquare(square, orientationRef.current)
+        );
       }
       return true;
+    }
+    if (tab.type === 'play') {
+      return (
+        color === studentColor &&
+        isOnViewerSideSquare(square, orientationRef.current)
+      );
     }
     return color === studentColor;
   }, []);
@@ -747,15 +786,6 @@ export default function StudyPage() {
                   aria-label={t('study_draw_off')}
                 >
                   <span className="study-draw-icon study-draw-icon--off">⊘</span>
-                </button>
-                <button
-                  type="button"
-                  className={`study-draw-tool${drawTool === 'circle' ? ' active' : ''}`}
-                  onClick={() => setDrawTool('circle')}
-                  title={t('study_draw_circle')}
-                  aria-label={t('study_draw_circle')}
-                >
-                  <span className="study-draw-icon study-draw-icon--circle" />
                 </button>
                 <button
                   type="button"

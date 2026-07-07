@@ -40,6 +40,7 @@ export default function StudyVideoRoom({ roomCode, teacherId, layout = 'inline',
   const enabledRef = useRef(false);
   const mutedRef = useRef(false);
   const [enabled, setEnabled] = useState(false);
+  const [videoOn, setVideoOn] = useState(false);
   const [muted, setMuted] = useState(false);
   const [remoteStreams, setRemoteStreams] = useState([]);
   const [error, setError] = useState('');
@@ -215,6 +216,29 @@ export default function StudyVideoRoom({ roomCode, teacherId, layout = 'inline',
       if (localVideoRef.current) localVideoRef.current.srcObject = stream;
       enabledRef.current = true;
       setEnabled(true);
+      setVideoOn(true);
+      mutedRef.current = false;
+      setMuted(false);
+      setError('');
+    } catch {
+      setError(t('video_permission_denied'));
+    }
+  }, [t]);
+
+  const startAudioOnly = useCallback(async () => {
+    if (enabledRef.current) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: false,
+        audio: MEDIA.audio,
+      });
+      localStreamRef.current = stream;
+      if (localVideoRef.current) localVideoRef.current.srcObject = null;
+      enabledRef.current = true;
+      setEnabled(true);
+      setVideoOn(false);
+      mutedRef.current = false;
+      setMuted(false);
       setError('');
     } catch {
       setError(t('video_permission_denied'));
@@ -262,17 +286,20 @@ export default function StudyVideoRoom({ roomCode, teacherId, layout = 'inline',
       peersRef.current.forEach((_, uid) => closePeer(uid));
       enabledRef.current = false;
       setEnabled(false);
+      setVideoOn(false);
       getSocket().emit('video:leave', { roomCode });
       return;
     }
     await startVideo();
   }
 
-  function toggleMute() {
-    const stream = localStreamRef.current;
-    if (!stream) return;
+  async function toggleMute() {
+    if (!localStreamRef.current) {
+      await startAudioOnly();
+      return;
+    }
     const next = !mutedRef.current;
-    stream.getAudioTracks().forEach((tr) => {
+    localStreamRef.current.getAudioTracks().forEach((tr) => {
       tr.enabled = !next;
     });
     mutedRef.current = next;
@@ -288,11 +315,9 @@ export default function StudyVideoRoom({ roomCode, teacherId, layout = 'inline',
         <div className="study-video-head">
           <span>{t('video_in_class')}</span>
           <div className="study-video-head-actions">
-            {enabled && (
-              <button type="button" className="btn btn-sm btn-secondary" onClick={toggleMute}>
-                {muted ? t('video_unmute') : t('video_mute')}
-              </button>
-            )}
+            <button type="button" className="btn btn-sm btn-secondary" onClick={toggleMute}>
+              {muted ? t('video_unmute') : t('video_mute')}
+            </button>
             <button type="button" className={`btn btn-sm${enabled ? ' btn-danger' : ' btn-primary'}`} onClick={toggleVideo}>
               {enabled ? t('video_stop') : t('video_start')}
             </button>
@@ -314,9 +339,8 @@ export default function StudyVideoRoom({ roomCode, teacherId, layout = 'inline',
             </button>
             <button
               type="button"
-              className={`study-video-toggle study-video-toggle--mute${muted ? ' study-video-toggle--muted' : ''}`}
+              className={`study-video-toggle study-video-toggle--mute${muted ? ' study-video-toggle--muted' : ''}${!enabled ? ' study-video-toggle--mute-off' : ''}`}
               onClick={toggleMute}
-              disabled={!enabled}
               title={muted ? t('video_unmute') : t('video_mute')}
               aria-label={muted ? t('video_unmute') : t('video_mute')}
             >
@@ -325,7 +349,7 @@ export default function StudyVideoRoom({ roomCode, teacherId, layout = 'inline',
           </div>
         )}
         <div className="study-video-grid">
-          <div className={`study-video-tile${enabled ? '' : ' study-video-tile--off'}`}>
+          <div className={`study-video-tile${enabled && videoOn ? '' : ' study-video-tile--off'}`}>
             <video ref={localVideoRef} autoPlay muted playsInline />
             <span>{user.username} {t('video_you')}</span>
           </div>

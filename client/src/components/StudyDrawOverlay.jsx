@@ -3,31 +3,36 @@ import { useCallback, useEffect, useRef } from 'react';
 const GREEN = 'rgba(46, 204, 113, 0.95)';
 const RED = 'rgba(231, 76, 60, 0.95)';
 
-function drawArrow(ctx, fromX, fromY, toX, toY, color) {
-  const angle = Math.atan2(toY - fromY, toX - fromX);
-  const headLen = Math.max(14, Math.min(22, ctx.lineWidth * 3));
-  const lineEndX = toX - headLen * 0.55 * Math.cos(angle);
-  const lineEndY = toY - headLen * 0.55 * Math.sin(angle);
+function drawArrow(ctx, fromX, fromY, toX, toY, color, lineWidth) {
+  const dx = toX - fromX;
+  const dy = toY - fromY;
+  const len = Math.hypot(dx, dy);
+  if (len < 6) return;
+
+  const angle = Math.atan2(dy, dx);
+  const headLen = Math.min(Math.max(12, lineWidth * 2.4), len * 0.45);
+  const shaftEndX = toX - headLen * Math.cos(angle);
+  const shaftEndY = toY - headLen * Math.sin(angle);
 
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
-  ctx.lineWidth = 10;
+  ctx.lineWidth = lineWidth;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
   ctx.beginPath();
   ctx.moveTo(fromX, fromY);
-  ctx.lineTo(lineEndX, lineEndY);
+  ctx.lineTo(shaftEndX, shaftEndY);
   ctx.stroke();
 
   ctx.beginPath();
   ctx.moveTo(toX, toY);
   ctx.lineTo(
-    toX - headLen * Math.cos(angle - Math.PI / 7),
-    toY - headLen * Math.sin(angle - Math.PI / 7)
+    toX - headLen * Math.cos(angle - Math.PI / 6.5),
+    toY - headLen * Math.sin(angle - Math.PI / 6.5)
   );
   ctx.lineTo(
-    toX - headLen * Math.cos(angle + Math.PI / 7),
-    toY - headLen * Math.sin(angle + Math.PI / 7)
+    toX - headLen * Math.cos(angle + Math.PI / 6.5),
+    toY - headLen * Math.sin(angle + Math.PI / 6.5)
   );
   ctx.closePath();
   ctx.fill();
@@ -117,8 +122,16 @@ export default function StudyDrawOverlay({
         ctx.stroke();
       } else {
         const end = getCanvasCoords(s.endCol, s.endRow, size);
-        const color = s.color === 'green' ? GREEN : RED;
-        drawArrow(ctx, start.x, start.y, end.x, end.y, color);
+        const isGreen = s.color === 'green';
+        drawArrow(
+          ctx,
+          start.x,
+          start.y,
+          end.x,
+          end.y,
+          isGreen ? GREEN : RED,
+          isGreen ? 10 : 6
+        );
       }
     });
   }, [getBoardEl, getCanvasCoords]);
@@ -177,26 +190,28 @@ export default function StudyDrawOverlay({
       const sameCell = start.col === gridPos.col && start.row === gridPos.row;
       let nextShape = null;
 
-      if (tool === 'circle' && sameCell) {
-        nextShape = { type: 'circle', startCol: start.col, startRow: start.row };
-      } else if (tool === 'arrow-green' && !sameCell) {
-        nextShape = {
-          type: 'arrow',
-          color: 'green',
-          startCol: start.col,
-          startRow: start.row,
-          endCol: gridPos.col,
-          endRow: gridPos.row,
-        };
-      } else if (tool === 'arrow-red' && !sameCell) {
-        nextShape = {
-          type: 'arrow',
-          color: 'red',
-          startCol: start.col,
-          startRow: start.row,
-          endCol: gridPos.col,
-          endRow: gridPos.row,
-        };
+      if (tool === 'arrow-green' || tool === 'arrow-red') {
+        if (sameCell) {
+          nextShape = { type: 'circle', startCol: start.col, startRow: start.row };
+        } else if (tool === 'arrow-green') {
+          nextShape = {
+            type: 'arrow',
+            color: 'green',
+            startCol: start.col,
+            startRow: start.row,
+            endCol: gridPos.col,
+            endRow: gridPos.row,
+          };
+        } else {
+          nextShape = {
+            type: 'arrow',
+            color: 'red',
+            startCol: start.col,
+            startRow: start.row,
+            endCol: gridPos.col,
+            endRow: gridPos.row,
+          };
+        }
       }
 
       if (nextShape) onShapesChange?.([...shapesRef.current, nextShape]);
