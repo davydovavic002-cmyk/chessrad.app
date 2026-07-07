@@ -16,6 +16,7 @@ import {
   ProfileSettingsPanel,
 } from '../components/profile/ProfileDashboard';
 import ProfileHero, { ProfileSection } from '../components/profile/ProfileHero';
+import { SECTION_PIECES } from '../components/profile/ProfileChessDecor';
 import { TIMEZONE_OPTIONS } from '../utils/timezone';
 import '../styles/profile.css';
 
@@ -353,9 +354,15 @@ export default function ProfilePage() {
       </Modal>
 
       <div className="profile-container page-wrap">
-        <ProfileHero user={user} rating={rating} isPlayer={isPlayer} />
+        <ProfileHero
+          user={user}
+          rating={rating}
+          dash={dash}
+          levelLabel={t(currentLevel.key)}
+          winStreak={Number(user?.win_streak) || 0}
+        />
 
-        <ProfileSection title={t('profile_section_now')}>
+        <ProfileSection title={t('profile_section_now')} piece={SECTION_PIECES.now}>
           {dashLoading && (
             <section className="profile-block profile-block--full">
               <p className="subtitle">{t('loading')}</p>
@@ -368,6 +375,8 @@ export default function ProfilePage() {
               navigate={navigate}
               tzPrimary={tzPrimary}
               tzSecondary={tzSecondary}
+              username={user?.username}
+              role={user?.role}
             />
           )}
           {!dashLoading && isTeacher && (
@@ -378,6 +387,8 @@ export default function ProfilePage() {
               onApproveRequest={approveRequest}
               onRejectRequest={rejectRequest}
               onCreateRoom={createStudyRoom}
+              username={user?.username}
+              role={user?.role}
             />
           )}
           {!dashLoading && isPlayer && (
@@ -390,12 +401,14 @@ export default function ProfilePage() {
               resultLabel={(r) => resultLabel(r, t)}
               resultColor={resultColor}
               userHistory={user.history}
+              username={user?.username}
+              role={user?.role}
             />
           )}
         </ProfileSection>
 
         {(isStudent || isTeacher) && (
-          <ProfileSection title={t('profile_section_connect')}>
+          <ProfileSection title={t('profile_section_connect')} piece={SECTION_PIECES.connect}>
             <section className="profile-block profile-block--full profile-block--link">
               <h3 className="profile-block__subtitle">{isStudent ? t('link_my_teachers') : t('link_my_students')}</h3>
               {isStudent && user.needs_teacher_link && (
@@ -449,7 +462,7 @@ export default function ProfilePage() {
         )}
 
         {isPlayer && (
-          <ProfileSection title={t('profile_section_game')}>
+          <ProfileSection title={t('profile_section_game')} piece={SECTION_PIECES.game}>
             <section className="profile-block profile-block--third">
               <div className="stats-grid stats-grid--row">
                 <div className="stat-card">
@@ -504,7 +517,7 @@ export default function ProfilePage() {
         )}
 
         {(isStudent || isTeacher) && (
-          <ProfileSection title={t('profile_section_materials')}>
+          <ProfileSection title={t('profile_section_materials')} piece={SECTION_PIECES.materials}>
             {isStudent && (
               <>
                 <section className="profile-block profile-block--wide">
@@ -584,7 +597,7 @@ export default function ProfilePage() {
           </ProfileSection>
         )}
 
-        <ProfileSection title={t('profile_section_account')}>
+        <ProfileSection title={t('profile_section_account')} piece={SECTION_PIECES.account}>
           <ProfileSettingsPanel
             t={t}
             username={username}

@@ -93,6 +93,12 @@
 
 }
 
+.profile-hero__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
 
 
 .profile-welcome-pill {
@@ -224,6 +230,266 @@
 
   box-shadow: 0 4px 14px rgba(255, 112, 67, 0.25);
 
+}
+
+.profile-hero--chess {
+  overflow: hidden;
+}
+
+.profile-hero__pieces {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.profile-hero__float-piece {
+  position: absolute;
+  font-size: clamp(1.2rem, 2.5vw, 2rem);
+  opacity: 0.12;
+  animation: profile-piece-float 8s ease-in-out infinite;
+}
+
+.profile-hero__float-piece--0 { top: 8%; left: 4%; animation-delay: 0s; }
+.profile-hero__float-piece--1 { top: 18%; right: 8%; animation-delay: 0.6s; }
+.profile-hero__float-piece--2 { bottom: 20%; left: 12%; animation-delay: 1.2s; }
+.profile-hero__float-piece--3 { top: 42%; right: 18%; animation-delay: 0.3s; }
+.profile-hero__float-piece--4 { bottom: 8%; right: 6%; animation-delay: 1.8s; }
+.profile-hero__float-piece--5 { top: 62%; left: 28%; animation-delay: 0.9s; }
+.profile-hero__float-piece--6 { top: 10%; left: 55%; animation-delay: 2.1s; opacity: 0.08; }
+.profile-hero__float-piece--7 { bottom: 30%; right: 35%; animation-delay: 1.5s; opacity: 0.1; }
+.profile-hero__float-piece--8 { top: 72%; right: 12%; animation-delay: 0.4s; opacity: 0.09; }
+.profile-hero__float-piece--9 { top: 35%; left: 2%; animation-delay: 2.4s; opacity: 0.11; }
+
+@keyframes profile-piece-float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-6px) rotate(4deg); }
+}
+
+.profile-hero__board-strip {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: min(180px, 42%);
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.profile-mini-board {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  aspect-ratio: 2 / 1;
+  border-radius: 4px 0 0 0;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.profile-mini-board__cell--light { background: #f0d9b5; }
+.profile-mini-board__cell--dark { background: #b58863; }
+
+[data-theme='dark'] .profile-mini-board__cell--light { background: #769656; }
+[data-theme='dark'] .profile-mini-board__cell--dark { background: #486030; }
+
+.profile-hero__avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.profile-hero__piece-ring {
+  position: absolute;
+  top: -10px;
+  right: -8px;
+  z-index: 2;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 1rem;
+  background: linear-gradient(135deg, var(--peach-400), var(--sky-400));
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(255, 112, 67, 0.35);
+}
+
+.profile-hero__avatar {
+  position: relative;
+  z-index: 1;
+}
+
+.profile-hero__motto {
+  margin: 8px 0 0;
+  font-size: 0.82rem;
+  font-style: italic;
+  color: var(--text-secondary);
+  max-width: 28rem;
+}
+
+.profile-hero__motto-piece {
+  margin-right: 6px;
+  opacity: 0.85;
+}
+
+.profile-hero__side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.profile-rating-pill--all {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.profile-rating-pill__piece {
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+
+.profile-hero-chip {
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.35);
+  border: 1px solid var(--glass-border-soft);
+}
+
+.profile-hero-chip--level {
+  background: rgba(126, 196, 232, 0.2);
+  color: var(--sky-700, #1565c0);
+}
+
+.profile-hero-chip--puzzle {
+  background: rgba(46, 213, 115, 0.15);
+}
+
+.profile-hero-chip--fire {
+  background: rgba(255, 71, 87, 0.12);
+}
+
+.profile-hero__record {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.profile-hero__record-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.25);
+  border: 1px solid var(--glass-border-soft);
+}
+
+.profile-hero__record-item--win span { color: #2ed573; }
+.profile-hero__record-item--draw span { color: #ff9f43; }
+.profile-hero__record-item--loss span { color: #ff4757; }
+
+.profile-section__piece {
+  display: inline-block;
+  margin-right: 8px;
+  font-size: 1rem;
+  opacity: 0.85;
+  vertical-align: middle;
+}
+
+.profile-chess-tip {
+  background: linear-gradient(135deg, rgba(255, 240, 230, 0.4), rgba(220, 238, 252, 0.35));
+  border-style: dashed;
+}
+
+.profile-chess-tip__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.profile-chess-tip__head h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.profile-chess-tip__piece {
+  font-size: 1.25rem;
+}
+
+.profile-chess-tip__text {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.profile-corner-badge {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.profile-corner-badge__piece {
+  font-size: 1.1rem;
+}
+
+.profile-dash-card--chess,
+.profile-block--chess {
+  position: relative;
+  overflow: hidden;
+}
+
+.profile-piece-progress {
+  margin-top: 12px;
+}
+
+.profile-piece-progress__track {
+  display: flex;
+  gap: 6px;
+}
+
+.profile-piece-progress__step {
+  font-size: 1rem;
+  opacity: 0.25;
+  filter: grayscale(0.6);
+  transition: opacity 0.2s, filter 0.2s, transform 0.2s;
+}
+
+.profile-piece-progress__step--on {
+  opacity: 1;
+  filter: none;
+  transform: translateY(-2px);
+}
+
+.profile-piece-progress__caption {
+  margin-top: 6px;
+}
+
+.profile-class-pieces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  margin: 8px 0 10px;
+}
+
+.profile-class-pieces__p {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.profile-class-pieces__p--dark {
+  opacity: 0.55;
 }
 
 
@@ -1321,6 +1587,20 @@
 
     padding: 14px 16px;
 
+  }
+
+  .profile-hero__side {
+    align-items: flex-start;
+    width: 100%;
+  }
+
+  .profile-hero__record {
+    justify-content: flex-start;
+  }
+
+  .profile-hero__board-strip {
+    width: 120px;
+    opacity: 0.25;
   }
 
 

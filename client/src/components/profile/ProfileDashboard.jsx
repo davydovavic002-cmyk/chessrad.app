@@ -1,5 +1,11 @@
 import { Link } from 'react-router-dom';
 import { formatTimeInZone, zoneShortName } from '../../utils/timezone';
+import {
+  ChessCornerBadge,
+  ChessTipCard,
+  ProfilePieceProgress,
+  TeacherClassPieces,
+} from './ProfileChessDecor';
 
 function StatPill({ label, value, tone }) {
   return (
@@ -66,7 +72,7 @@ function QuickActions({ actions }) {
   );
 }
 
-export function ProfileStudentDashboard({ dash, t, navigate, tzPrimary, tzSecondary }) {
+export function ProfileStudentDashboard({ dash, t, navigate, tzPrimary, tzSecondary, username, role }) {
   const lesson = dash?.nextLesson;
   const hw = dash?.homework;
   const progress = dash?.progress;
@@ -117,7 +123,8 @@ export function ProfileStudentDashboard({ dash, t, navigate, tzPrimary, tzSecond
             </Link>
           </div>
 
-          <div className="profile-dash-card">
+          <div className="profile-dash-card profile-dash-card--chess">
+            <ChessCornerBadge piece="♗" label={t('dash_learning')} />
             <h4>{t('dash_learning')}</h4>
             <p className="subtitle">
               {t('dash_topics_done', { n: progress?.topicsDone?.length || 0 })}
@@ -133,9 +140,17 @@ export function ProfileStudentDashboard({ dash, t, navigate, tzPrimary, tzSecond
                 {t('dash_weak_topics')}: {progress.topicsPlanned.slice(0, 4).join(', ')}
               </p>
             )}
+            <ProfilePieceProgress
+              t={t}
+              done={progress?.topicsDone?.length || 0}
+              total={Math.max((progress?.topicsDone?.length || 0) + (progress?.topicsPlanned?.length || 0), 1)}
+              piece="♙"
+            />
           </div>
         </div>
       </section>
+
+      <ChessTipCard t={t} username={username} role={role} />
 
       <section className="profile-block profile-block--third">
         <h3>{t('dash_puzzle_streak')}</h3>
@@ -157,6 +172,8 @@ export function ProfileTeacherDashboard({
   onApproveRequest,
   onRejectRequest,
   onCreateRoom,
+  username,
+  role,
 }) {
   const today = dash?.todayLessons || [];
   const requests = dash?.pendingRequests || [];
@@ -182,6 +199,7 @@ export function ProfileTeacherDashboard({
         </div>
         <div className="profile-teacher-today mt-2">
           <h4>{t('dash_teacher_schedule_today')}</h4>
+          <TeacherClassPieces count={students.length} t={t} />
           {today.length > 0 ? (
             <ul className="profile-dash-list">
               {today.map((l) => (
@@ -251,6 +269,8 @@ export function ProfileTeacherDashboard({
           </div>
         )}
       </section>
+
+      <ChessTipCard t={t} username={username} role={role} />
     </>
   );
 }
@@ -340,7 +360,7 @@ function PlayerTournamentList({ tournaments, t, navigate, lang }) {
   );
 }
 
-export function ProfilePlayerDashboard({ dash, rating, t, lang, navigate, resultLabel, resultColor, userHistory }) {
+export function ProfilePlayerDashboard({ dash, rating, t, lang, navigate, resultLabel, resultColor, userHistory, username, role }) {
   const history = dash?.history?.length ? dash.history : userHistory || [];
   const form = dash?.form;
   const recentGames = history.slice(0, 10);
@@ -348,7 +368,8 @@ export function ProfilePlayerDashboard({ dash, rating, t, lang, navigate, result
   return (
     <>
       {dash?.funTitle && (
-        <section className="profile-block profile-block--full profile-player-title-card">
+        <section className="profile-block profile-block--full profile-player-title-card profile-block--chess">
+          <ChessCornerBadge piece="♔" />
           <span className="profile-player-fun-title">{t(dash.funTitle)}</span>
           <p className="subtitle profile-player-fun-sub">{t('player_fun_title_hint')}</p>
         </section>
@@ -472,6 +493,8 @@ export function ProfilePlayerDashboard({ dash, rating, t, lang, navigate, result
           </table>
         </div>
       </section>
+
+      <ChessTipCard t={t} username={username} role={role} />
     </>
   );
 }
