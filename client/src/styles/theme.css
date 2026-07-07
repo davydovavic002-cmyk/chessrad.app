@@ -59,6 +59,7 @@
 
     --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-bounce: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    --transition-smooth: 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 *, *::before, *::after {
@@ -77,14 +78,18 @@ body {
     min-height: 100vh;
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
-    background: linear-gradient(
-        145deg,
-        #fffbf8 0%,
-        #fff0e8 22%,
-        #ffe8dc 42%,
-        #e8f4fc 72%,
-        #dceefb 100%
-    );
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    background:
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(255, 200, 170, 0.18), transparent 55%),
+        linear-gradient(
+            145deg,
+            #fffbf8 0%,
+            #fff0e8 22%,
+            #ffe8dc 42%,
+            #e8f4fc 72%,
+            #dceefb 100%
+        );
     background-attachment: fixed;
     position: relative;
     overflow-x: hidden;

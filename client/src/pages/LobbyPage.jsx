@@ -153,8 +153,13 @@ export default function LobbyPage() {
             <ThemeToggle />
             <LanguageToggle />
             <NotificationBell />
-            <span>
-              {t('lobby_hello')}, <strong>{user.display_name || user.username}</strong>! {streakHtml}
+            <span className="user-info__greeting">
+              <span className="user-avatar user-avatar--sm" aria-hidden>
+                {(user.display_name || user.username || '?')[0].toUpperCase()}
+              </span>
+              <span>
+                {t('lobby_hello')}, <strong>{user.display_name || user.username}</strong>! {streakHtml}
+              </span>
             </span>
             <button id="logout-btn" style={{ marginLeft: 15, cursor: 'pointer' }} onClick={handleLogout}>
               {t('logout')}
@@ -364,28 +369,16 @@ export default function LobbyPage() {
                   <div className="card-icon">🎓</div>
                   <div className="card-text" style={{ width: '100%' }}>
                     <h3>{t('lobby_join_study')}</h3>
-                    <div style={{ display: 'flex', flexDirection: 'row', gap: 8, marginTop: 10, alignItems: 'center' }}>
+                    <div className="study-join-row">
                       <input
                         type="text"
+                        className="form-input study-join-input"
                         placeholder={t('lobby_room_code')}
                         value={studyCode}
                         onChange={(e) => setStudyCode(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && joinStudy()}
-                        style={{ padding: 10, border: '1px solid #ddd', borderRadius: 6, width: 180, color: '#333' }}
                       />
-                      <button
-                        type="button"
-                        onClick={joinStudy}
-                        style={{
-                          padding: '10px 15px',
-                          background: '#2ecc71',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: 6,
-                          cursor: 'pointer',
-                          fontWeight: 600,
-                        }}
-                      >
+                      <button type="button" className="btn btn-primary btn-sm study-join-btn" onClick={joinStudy}>
                         {t('lobby_join')}
                       </button>
                     </div>
