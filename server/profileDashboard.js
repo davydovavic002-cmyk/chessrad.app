@@ -12,13 +12,14 @@ import {
 import { getBadgeSummary } from './achievements.js';
 
 export async function buildProfileDashboard(userId, role) {
-    const puzzle = await getPuzzleStatusForUser(userId);
     const badges = await getBadgeSummary(userId);
-    const base = { role, puzzle, badges };
+    const base = { role, badges };
 
     if (role === 'student') {
+        const puzzle = await getPuzzleStatusForUser(userId);
         return {
             ...base,
+            puzzle,
             nextLesson: await getNextLessonForStudent(userId),
             homework: await getStudentHomeworkSummary(userId),
             progress: await getStudentTopicProgress(userId),
@@ -38,6 +39,7 @@ export async function buildProfileDashboard(userId, role) {
     }
 
     if (role === 'player') {
+        const puzzle = await getPuzzleStatusForUser(userId);
         const user = await findUserById(userId);
         let history = [];
         try {
@@ -45,8 +47,9 @@ export async function buildProfileDashboard(userId, role) {
         } catch {
             history = [];
         }
-        return { ...base, history };
+        return { ...base, puzzle, history };
     }
 
-    return base;
+    const puzzle = await getPuzzleStatusForUser(userId);
+    return { ...base, puzzle };
 }

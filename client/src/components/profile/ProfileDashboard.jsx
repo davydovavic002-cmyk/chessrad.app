@@ -165,35 +165,40 @@ export function ProfileTeacherDashboard({
   return (
     <>
       <section className="profile-block profile-block--full">
-        <div className="profile-dash-inline-stats mb-2">
-          <StatPill label={t('dash_lessons_today')} value={today.length} />
-          <StatPill label={t('dash_requests')} value={dash?.pendingRequestsCount || 0} tone={dash?.pendingRequestsCount ? 'warn' : undefined} />
-          <StatPill label={t('dash_hw_check')} value={dash?.homeworkPendingTotal || 0} />
-          <StatPill label={t('dash_students')} value={students.length} />
+        <div className="profile-teacher-overview">
+          <div className="profile-dash-inline-stats">
+            <StatPill label={t('dash_lessons_today')} value={today.length} />
+            <StatPill label={t('dash_requests')} value={dash?.pendingRequestsCount || 0} tone={dash?.pendingRequestsCount ? 'warn' : undefined} />
+            <StatPill label={t('dash_hw_check')} value={dash?.homeworkPendingTotal || 0} />
+            <StatPill label={t('dash_students')} value={students.length} />
+          </div>
+          <QuickActions
+            actions={[
+              { key: 'room', label: t('dash_create_room'), icon: '➕', primary: true, onClick: onCreateRoom },
+              { key: 'schedule', label: t('profile_schedule'), onClick: () => navigate('/schedule') },
+              { key: 'journal', label: t('profile_journal'), onClick: () => navigate('/journal') },
+            ]}
+          />
         </div>
-        <QuickActions
-          actions={[
-            { key: 'room', label: t('dash_create_room'), icon: '➕', primary: true, onClick: onCreateRoom },
-            { key: 'schedule', label: t('profile_schedule'), onClick: () => navigate('/schedule') },
-            { key: 'journal', label: t('profile_journal'), onClick: () => navigate('/journal') },
-          ]}
-        />
-        {today.length > 0 ? (
-          <ul className="profile-dash-list mt-2">
-            {today.map((l) => (
-              <li key={l.id}>
-                <strong>{l.time_slot}</strong>
-                <span className="subtitle"> · {(l.studentIds || []).length} {t('dash_students_short')}</span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="subtitle">{t('dash_no_lessons_today')}</p>
-        )}
+        <div className="profile-teacher-today mt-2">
+          <h4>{t('dash_teacher_schedule_today')}</h4>
+          {today.length > 0 ? (
+            <ul className="profile-dash-list">
+              {today.map((l) => (
+                <li key={l.id}>
+                  <strong>{l.time_slot}</strong>
+                  <span className="subtitle"> · {(l.studentIds || []).length} {t('dash_students_short')}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="subtitle">{t('dash_no_lessons_today')}</p>
+          )}
+        </div>
       </section>
 
       {requests.length > 0 && (
-        <section className="profile-block profile-block--wide">
+        <section className="profile-block profile-block--full">
           <h3>{t('schedule_requests')}</h3>
           <ul className="profile-dash-list">
             {requests.map((r) => (
@@ -216,7 +221,7 @@ export function ProfileTeacherDashboard({
         </section>
       )}
 
-      <section className="profile-block profile-block--wide">
+      <section className="profile-block profile-block--full">
         <h3>{t('dash_my_class')}</h3>
         {students.length === 0 ? (
           <p className="subtitle">{t('link_no_students')}</p>
@@ -245,11 +250,6 @@ export function ProfileTeacherDashboard({
             ))}
           </div>
         )}
-      </section>
-
-      <section className="profile-block profile-block--third">
-        <h3>{t('dash_puzzle_streak')}</h3>
-        <PuzzleWidget puzzle={dash?.puzzle} t={t} navigate={navigate} />
       </section>
     </>
   );
@@ -319,6 +319,8 @@ export function ProfilePlayerDashboard({ dash, rating, t, navigate, resultLabel,
 
 export function ProfileSettingsPanel({
   t,
+  username,
+  setUsername,
   displayName,
   setDisplayName,
   onSaveDisplayName,
@@ -339,6 +341,17 @@ export function ProfileSettingsPanel({
     <section className="profile-block profile-block--half">
       <h3>{t('dash_settings')}</h3>
       <label className="profile-check" style={{ display: 'block', marginBottom: 10 }}>
+        {t('profile_username')}
+        <input
+          className="form-input mt-1"
+          value={username}
+          onChange={(e) => setUsername(e.target.value.replace(/\s/g, ''))}
+          placeholder={t('profile_username_ph')}
+          autoComplete="username"
+        />
+      </label>
+      <p className="subtitle profile-field-hint">{t('profile_username_hint')}</p>
+      <label className="profile-check" style={{ display: 'block', marginBottom: 10, marginTop: 12 }}>
         {t('auth_display_name')}
         <input
           className="form-input mt-1"
@@ -347,7 +360,8 @@ export function ProfileSettingsPanel({
           placeholder={t('auth_display_name_ph')}
         />
       </label>
-      <button type="button" className="btn btn-secondary btn-sm" onClick={onSaveDisplayName}>
+      <p className="subtitle profile-field-hint">{t('profile_display_name_hint')}</p>
+      <button type="button" className="btn btn-secondary btn-sm mt-1" onClick={onSaveDisplayName}>
         {t('save')}
       </button>
       {displayMsg && (

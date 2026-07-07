@@ -154,7 +154,7 @@ export default function LobbyPage() {
             <LanguageToggle />
             <NotificationBell />
             <span>
-              {t('lobby_hello')}, <strong>{user.username}</strong>! {streakHtml}
+              {t('lobby_hello')}, <strong>{user.display_name || user.username}</strong>! {streakHtml}
             </span>
             <button id="logout-btn" style={{ marginLeft: 15, cursor: 'pointer' }} onClick={handleLogout}>
               {t('logout')}
@@ -163,8 +163,11 @@ export default function LobbyPage() {
         </header>
 
         <main className="lobby-content">
-          <h2>{t('lobby_welcome')}</h2>
-          <p className="subtitle">{t('lobby_subtitle')}</p>
+          <div className="lobby-intro">
+            <span className="lobby-welcome-pill">{t('lobby_welcome')}</span>
+            <p className="lobby-intro__name">{user.display_name || user.username}</p>
+            <p className="subtitle lobby-intro__sub">{t('lobby_subtitle')}</p>
+          </div>
 
           {role === 'student' && user?.needs_teacher_link && (
             <div className="lobby-link-banner">
@@ -216,6 +219,7 @@ export default function LobbyPage() {
           )}
 
           <div className="menu-grid">
+            {role !== 'teacher' && role !== 'admin' && (
             <div className="menu-card primary glass-card" onClick={() => navigate('/game')}>
               <div className="card-icon">⚔️</div>
               <div className="card-text">
@@ -223,6 +227,29 @@ export default function LobbyPage() {
                 <p>{t('lobby_find_game_sub')}</p>
               </div>
             </div>
+            )}
+
+            {(role === 'teacher' || role === 'admin') && (
+              <>
+              <div
+                className="menu-card primary glass-card game-feature-card game-feature-card--journal"
+                onClick={() => navigate('/journal')}
+              >
+                <div className="card-icon">📓</div>
+                <div className="card-text">
+                  <h3>{t('lobby_journal')}</h3>
+                  <p>{t('lobby_journal_sub')}</p>
+                </div>
+              </div>
+              <div className="menu-card glass-card" onClick={() => navigate('/schedule')}>
+                <div className="card-icon">📅</div>
+                <div className="card-text">
+                  <h3>{t('lobby_schedule')}</h3>
+                  <p>{t('lobby_schedule_sub')}</p>
+                </div>
+              </div>
+              </>
+            )}
 
             <div className="menu-card glass-card" onClick={() => navigate('/profile')}>
               <div className="card-icon">👤</div>
@@ -232,7 +259,7 @@ export default function LobbyPage() {
               </div>
             </div>
 
-            {role !== 'player' && (
+            {role === 'student' && (
             <div className="menu-card glass-card" onClick={() => navigate('/schedule')}>
               <div className="card-icon">📅</div>
               <div className="card-text">
@@ -240,19 +267,6 @@ export default function LobbyPage() {
                 <p>{t('lobby_schedule_sub')}</p>
               </div>
             </div>
-            )}
-
-            {(role === 'teacher' || role === 'admin') && (
-              <div
-                className="menu-card glass-card game-feature-card game-feature-card--journal"
-                onClick={() => navigate('/journal')}
-              >
-                <div className="card-icon">📓</div>
-                <div className="card-text">
-                  <h3>{t('lobby_journal')}</h3>
-                  <p>{t('lobby_journal_sub')}</p>
-                </div>
-              </div>
             )}
 
             {role === 'student' && (
@@ -288,6 +302,7 @@ export default function LobbyPage() {
               </div>
             </div>
 
+            {role !== 'teacher' && role !== 'admin' && (
             <div className={puzzleCardClass} onClick={onPuzzleClick}>
               <div className="card-icon">{puzzleIcon}</div>
               <div className="card-text">
@@ -298,6 +313,7 @@ export default function LobbyPage() {
                 </div>
               </div>
             </div>
+            )}
 
             {role === 'admin' && (
               <div

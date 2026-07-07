@@ -1808,6 +1808,22 @@ export const updateUserSettings = async (userId, settings) => {
         fields.push('display_name = ?');
         values.push(String(settings.displayName).replace(/<\/?[^>]+(>|$)/g, '').trim().slice(0, 64));
     }
+    if (settings.username !== undefined) {
+        const un = String(settings.username).replace(/<\/?[^>]+(>|$)/g, '').trim();
+        if (un.length < 3 || un.length > 24 || !/^[a-zA-Z0-9_]+$/.test(un)) {
+            const err = new Error('username_invalid');
+            err.code = 'username_invalid';
+            throw err;
+        }
+        const existing = await db.get('SELECT id FROM users WHERE username = ? AND id != ?', [un, userId]);
+        if (existing) {
+            const err = new Error('username_taken');
+            err.code = 'username_taken';
+            throw err;
+        }
+        fields.push('username = ?');
+        values.push(un);
+    }
     if (!fields.length) return;
     values.push(userId);
     await db.run(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`, values);

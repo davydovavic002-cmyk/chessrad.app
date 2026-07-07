@@ -1176,11 +1176,18 @@ app.patch('/api/profile/settings', authenticateToken, async (req, res) => {
             tzPrimary: req.body.tzPrimary,
             tzSecondary: req.body.tzSecondary,
             displayName: req.body.displayName,
+            username: req.body.username,
         });
         const user = await findUserById(req.user.id);
         const { password_hash, ...profileData } = user;
         res.json(profileData);
     } catch (e) {
+        if (e.code === 'username_taken') {
+            return res.status(409).json({ success: false, message: 'username_taken' });
+        }
+        if (e.code === 'username_invalid') {
+            return res.status(400).json({ success: false, message: 'username_invalid' });
+        }
         res.status(500).json({ success: false });
     }
 });

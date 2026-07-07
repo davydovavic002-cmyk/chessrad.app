@@ -49,6 +49,7 @@ export default function ProfilePage() {
   const [dash, setDash] = useState(null);
   const [dashLoading, setDashLoading] = useState(true);
   const [displayName, setDisplayName] = useState('');
+  const [username, setUsername] = useState('');
   const [displayMsg, setDisplayMsg] = useState('');
   const [displayOk, setDisplayOk] = useState(false);
   const [forceOld, setForceOld] = useState('');
@@ -98,6 +99,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     setDisplayName(user?.display_name || user?.username || '');
+    setUsername(user?.username || '');
   }, [user]);
 
   async function connectByCode(code) {
@@ -180,10 +182,11 @@ export default function ProfilePage() {
   }
 
   async function saveSettings() {
-    const { res } = await apiJson('/api/profile/settings', {
+    const { res, data } = await apiJson('/api/profile/settings', {
       method: 'PATCH',
       body: JSON.stringify({
         displayName,
+        username,
         parentEmail,
         notifyEmail,
         notifyPush,
@@ -198,7 +201,13 @@ export default function ProfilePage() {
       await refreshUser();
       setTheme(theme);
     } else {
-      setDisplayMsg(t('error'));
+      const key =
+        data.message === 'username_taken'
+          ? 'username_taken'
+          : data.message === 'username_invalid'
+            ? 'username_invalid'
+            : 'error';
+      setDisplayMsg(t(key));
       setDisplayOk(false);
     }
   }
@@ -577,6 +586,8 @@ export default function ProfilePage() {
         <ProfileSection title={t('profile_section_account')}>
           <ProfileSettingsPanel
             t={t}
+            username={username}
+            setUsername={setUsername}
             displayName={displayName}
             setDisplayName={setDisplayName}
             onSaveDisplayName={saveSettings}

@@ -1113,6 +1113,34 @@
 
 .mb-2 { margin-bottom: 12px; }
 
+.profile-teacher-overview {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.profile-teacher-overview .profile-dash-inline-stats {
+  flex: 1 1 280px;
+}
+
+.profile-teacher-overview .profile-dash-quick-actions {
+  flex: 1 1 220px;
+}
+
+.profile-teacher-today h4 {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.profile-field-hint {
+  margin: -4px 0 0;
+  font-size: 0.78rem;
+  opacity: 0.85;
+}
+
 .mt-1 { margin-top: 8px; }
 
 .mt-2 { margin-top: 12px; }
