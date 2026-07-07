@@ -385,6 +385,7 @@ export default function ProfilePage() {
               dash={dash}
               rating={rating}
               t={t}
+              lang={lang}
               navigate={navigate}
               resultLabel={(r) => resultLabel(r, t)}
               resultColor={resultColor}

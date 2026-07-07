@@ -8,6 +8,11 @@ import {
     getTeacherStudentSnapshots,
     getTeacherHomeworkPendingTotal,
     getPuzzleStatusForUser,
+    getPlayerGameHistory,
+    summarizePlayerForm,
+    buildRatingSparkline,
+    pickPlayerFunTitle,
+    getFeaturedTournaments,
 } from '../db.js';
 import { getBadgeSummary } from './achievements.js';
 
@@ -41,13 +46,39 @@ export async function buildProfileDashboard(userId, role) {
     if (role === 'player') {
         const puzzle = await getPuzzleStatusForUser(userId);
         const user = await findUserById(userId);
-        let history = [];
+        const history = await getPlayerGameHistory(userId, 10);
+        const form = summarizePlayerForm(history);
+        const totalGames = (Number(user?.wins) || 0) + (Number(user?.losses) || 0) + (Number(user?.draws) || 0);
+        const allTimeWinRate = totalGames
+            ? Math.round(((Number(user?.wins) || 0) / totalGames) * 100)
+            : 0;
+        let trophyCount = 0;
         try {
-            history = typeof user?.history === 'string' ? JSON.parse(user.history) : user?.history || [];
+            const trophies = JSON.parse(user?.trophies || '[]');
+            trophyCount = trophies.filter((tr) => tr.type !== 'badge' && !tr.badgeId).length;
         } catch {
-            history = [];
+            trophyCount = 0;
         }
-        return { ...base, puzzle, history };
+        return {
+            ...base,
+            puzzle,
+            history,
+            form,
+            funTitle: pickPlayerFunTitle(user, puzzle?.streak || 0),
+            streaks: {
+                win: Number(user?.win_streak) || 0,
+                daily: Number(user?.daily_streak) || 0,
+            },
+            stats: {
+                wins: Number(user?.wins) || 0,
+                losses: Number(user?.losses) || 0,
+                draws: Number(user?.draws) || 0,
+                allTimeWinRate,
+                trophyCount,
+            },
+            ratingSparkline: buildRatingSparkline(user?.rating, history),
+            tournaments: await getFeaturedTournaments(4),
+        };
     }
 
     const puzzle = await getPuzzleStatusForUser(userId);

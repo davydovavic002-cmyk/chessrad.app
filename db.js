@@ -491,100 +491,262 @@ export async function ensureTournamentSchedulePopulated() {
     await seedDemoTournaments(db);
 }
 
+async function upsertTournamentRow(db, row, now) {
+    const startsAt = row.startsAt instanceof Date
+        ? row.startsAt
+        : row.startsAt
+            ? new Date(row.startsAt)
+            : new Date(now.getTime() + (row.startsInMin ?? 180) * 60000);
+    const formatType = row.format_type || 'swiss';
+    const format = formatType === 'team' ? 'team' : (row.format || 'swiss');
+    await db.run(
+        `INSERT INTO tournament_schedule (
+            id, name, description, status, starts_at, registration_opens_at,
+            time_control, format, format_type, league, demo_players, sort_order, max_players
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+            name = excluded.name,
+            description = excluded.description,
+            status = excluded.status,
+            starts_at = excluded.starts_at,
+            registration_opens_at = excluded.registration_opens_at,
+            time_control = excluded.time_control,
+            format = excluded.format,
+            format_type = excluded.format_type,
+            league = excluded.league,
+            demo_players = excluded.demo_players,
+            sort_order = excluded.sort_order,
+            max_players = excluded.max_players`,
+        [
+            row.id,
+            row.name,
+            row.description,
+            row.status,
+            startsAt.toISOString(),
+            (row.registrationOpensAt ? new Date(row.registrationOpensAt) : now).toISOString(),
+            row.time_control,
+            format,
+            formatType,
+            row.league || 'open',
+            row.demo_players ?? 0,
+            row.sort_order ?? 50,
+            row.max_players ?? 32,
+        ]
+    );
+}
+
 async function seedDemoTournaments(db) {
+    const now = new Date();
+    const nextFriday = new Date(now);
+    nextFriday.setDate(now.getDate() + ((5 - now.getDay() + 7) % 7 || 7));
+    nextFriday.setHours(20, 0, 0, 0);
+    const nextSaturday = new Date(now);
+    nextSaturday.setDate(now.getDate() + ((6 - now.getDay() + 7) % 7 || 7));
+    nextSaturday.setHours(11, 0, 0, 0);
+    const nextSunday = new Date(now);
+    nextSunday.setDate(now.getDate() + ((7 - now.getDay() + 7) % 7 || 7));
+    nextSunday.setHours(16, 0, 0, 0);
+
     const demos = [
         {
             id: 'demo-novice-open',
-            name: '🟢 Новички — открытая регистрация',
-            description: 'Лига для рейтинга до 1500. Тестовый турнир.',
+            name: 'Лига новичков ChessRad',
+            description: 'Открытая швейцарка для игроков до 1500. 5 раундов, контроль 5+3. Медаль в профиль за топ-3.',
             status: 'registration',
             league: 'novice',
             format_type: 'swiss',
             time_control: '5+3',
             demo_players: 14,
+            max_players: 24,
             sort_order: 10,
+            startsInMin: 60 * 36,
         },
         {
             id: 'demo-advanced-live',
-            name: '🔴 Продвинутые — идёт сейчас',
-            description: 'Лига 1500+. Демо: турнир в процессе.',
+            name: 'Швейцарка Pro — идёт сейчас',
+            description: 'Лига 1500+. Сейчас 2-й раунд из 5. Блиц 3+2, таблица обновляется после каждой партии.',
             status: 'running',
             league: 'advanced',
             format_type: 'swiss',
             time_control: '3+2',
             demo_players: 22,
+            max_players: 32,
             sort_order: 11,
+            startsInMin: -45,
         },
         {
             id: 'demo-team-class',
-            name: '👥 Учитель vs Класс',
-            description: 'Командный формат: ученики против учителя. Очки суммируются по командам.',
+            name: 'Командный матч: класс 7Б vs учитель',
+            description: 'Ученики одной группы играют против преподавателя. Очки команд суммируются — побеждает сильнейший состав.',
             status: 'registration',
             league: 'open',
             format_type: 'team',
             time_control: '5+0',
             demo_players: 18,
+            max_players: 20,
             sort_order: 12,
+            startsInMin: 60 * 72,
         },
         {
             id: 'demo-finished-cup',
-            name: '🏆 Кубок — завершён',
-            description: 'Демо завершённого турнира с итоговой таблицей.',
+            name: 'Кубок ChessRad — весенний финал',
+            description: 'Завершённый турнир: 16 участников, 5 раундов швейцарки 10+0. Итоговая таблица и медали уже в профилях.',
             status: 'finished',
             league: 'open',
             format_type: 'swiss',
             time_control: '10+0',
             demo_players: 16,
+            max_players: 16,
             sort_order: 13,
+            startsInMin: -60 * 24 * 12,
         },
         {
             id: 'demo-blitz-now',
-            name: '⚡ Блиц — старт через час',
-            description: 'Тест напоминания: старт скоро. Проверьте колокольчик уведомлений.',
+            name: 'Вечерний блиц 3+2',
+            description: 'Быстрый турнир после учёбы: регистрация открыта, старт через час. Подходит для разминки перед рейтинговой игрой.',
             status: 'registration',
-            league: 'novice',
+            league: 'open',
             format_type: 'swiss',
-            time_control: '1+0',
-            demo_players: 9,
+            time_control: '3+2',
+            demo_players: 11,
+            max_players: 28,
             sort_order: 14,
-            startsInMin: 60,
+            startsInMin: 55,
         },
         {
             id: 'demo-rapid-weekend',
-            name: '📅 Рапид — выходные',
-            description: 'Длинный контроль, открыта регистрация заранее.',
+            name: 'Рапид — воскресный тур',
+            description: 'Спокойный контроль 15+10, 4 раунда. Регистрация заранее — успей занять место в таблице.',
             status: 'scheduled',
             league: 'advanced',
             format_type: 'swiss',
             time_control: '15+10',
-            demo_players: 6,
+            demo_players: 9,
+            max_players: 20,
             sort_order: 15,
-            startsInMin: 60 * 48,
+            startsAt: nextSunday,
+        },
+        {
+            id: 'demo-kids-club',
+            name: 'Детский клуб — суббота',
+            description: 'Турнир для юных шахматистов: контроль 8+2, дружеская атмосфера, призы за fair play и лучший прогресс.',
+            status: 'registration',
+            league: 'novice',
+            format_type: 'swiss',
+            time_control: '8+2',
+            demo_players: 12,
+            max_players: 16,
+            sort_order: 16,
+            startsAt: nextSaturday,
+        },
+        {
+            id: 'demo-arena-bullet',
+            name: 'Арена Bullet 1+0',
+            description: 'Нон-стоп партии на скорость реакции. Побеждает тот, кто наберёт больше очков за 45 минут.',
+            status: 'running',
+            league: 'open',
+            format_type: 'arena',
+            time_control: '1+0',
+            demo_players: 31,
+            max_players: 64,
+            sort_order: 17,
+            startsInMin: -20,
+        },
+        {
+            id: 'demo-rating-band',
+            name: 'Лига 1200–1600',
+            description: 'Закрытая по рейтингу лига: комфортные соперники своего уровня. Швейцарка 5+0, 5 раундов.',
+            status: 'registration',
+            league: 'novice',
+            format_type: 'swiss',
+            time_control: '5+0',
+            demo_players: 10,
+            max_players: 24,
+            sort_order: 18,
+            startsInMin: 60 * 24,
+        },
+        {
+            id: 'demo-masters-series',
+            name: 'Серия Masters 10+5',
+            description: 'Ежемесячный турнир сильнейших: контроль 10+5, только для рейтинга 1800+. Приз — золотая медаль в профиль.',
+            status: 'scheduled',
+            league: 'advanced',
+            format_type: 'swiss',
+            time_control: '10+5',
+            demo_players: 8,
+            max_players: 16,
+            sort_order: 19,
+            startsInMin: 60 * 24 * 5,
+        },
+        {
+            id: 'demo-friday-marathon',
+            name: 'Пятничный марафон блиц',
+            description: 'Классика ChessRad: каждую пятницу в 20:00 — блиц 3+2, до 32 участников, быстрые раунды без пауз.',
+            status: 'registration',
+            league: 'open',
+            format_type: 'swiss',
+            time_control: '3+2',
+            demo_players: 19,
+            max_players: 32,
+            sort_order: 20,
+            startsAt: nextFriday,
+        },
+        {
+            id: 'demo-school-league',
+            name: 'Межшкольная лига — тур 2',
+            description: 'Школы соревнуются между собой: каждая команда из 4 учеников. Сейчас идёт второй тур группового этапа.',
+            status: 'running',
+            league: 'open',
+            format_type: 'team',
+            time_control: '10+0',
+            demo_players: 24,
+            max_players: 32,
+            sort_order: 21,
+            startsInMin: -90,
+        },
+        {
+            id: 'demo-night-owl',
+            name: 'Night Owl — поздний блиц',
+            description: 'Для тех, кто играет после 22:00. 2+1, 6 раундов, уютный формат без спешки на старте.',
+            status: 'registration',
+            league: 'open',
+            format_type: 'swiss',
+            time_control: '2+1',
+            demo_players: 7,
+            max_players: 20,
+            sort_order: 22,
+            startsInMin: 60 * 5,
+        },
+        {
+            id: 'demo-holiday-rapid',
+            name: 'Праздничный рапид',
+            description: 'Тематический турнир к каникулам: 12+3, приветственные призы всем участникам, топ-3 — медали.',
+            status: 'finished',
+            league: 'open',
+            format_type: 'swiss',
+            time_control: '12+3',
+            demo_players: 20,
+            max_players: 24,
+            sort_order: 23,
+            startsInMin: -60 * 24 * 30,
+        },
+        {
+            id: 'demo-open-championship',
+            name: 'Открытый чемпионат ChessRad',
+            description: 'Главный рейтинговый турнир месяца: 7 раундов швейцарки 5+3, регистрация до начала 1-го раунда.',
+            status: 'registration',
+            league: 'open',
+            format_type: 'swiss',
+            time_control: '5+3',
+            demo_players: 26,
+            max_players: 48,
+            sort_order: 24,
+            startsInMin: 60 * 24 * 3,
         },
     ];
 
-    const now = new Date();
-    for (const d of demos) {
-        const exists = await db.get('SELECT id FROM tournament_schedule WHERE id = ?', [d.id]);
-        if (exists) continue;
-        const start = new Date(now.getTime() + (d.startsInMin || 120) * 60000);
-        await db.run(
-            `INSERT INTO tournament_schedule (id, name, description, status, starts_at, registration_opens_at, time_control, format, format_type, league, demo_players, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [
-                d.id,
-                d.name,
-                d.description,
-                d.status,
-                start.toISOString(),
-                now.toISOString(),
-                d.time_control,
-                d.format_type === 'team' ? 'team' : 'swiss',
-                d.format_type,
-                d.league,
-                d.demo_players,
-                d.sort_order,
-            ]
-        );
+    for (const row of demos) {
+        await upsertTournamentRow(db, row, now);
     }
 }
 
@@ -737,7 +899,7 @@ export const findUserById = async (id) => {
         LEFT JOIN users u1 ON g.player1_id = u1.id
         LEFT JOIN users u2 ON g.player2_id = u2.id
         WHERE g.player1_id = ? OR g.player2_id = ?
-        ORDER BY g.id DESC LIMIT 5
+        ORDER BY g.id DESC LIMIT 10
     `, [id, id, id]);
 
     return { ...user, history: history || [] };
@@ -2457,4 +2619,92 @@ export const getPuzzleStatusForUser = async (userId) => {
         canRestore: user?.daily_streak === 0 && (user?.previous_streak || 0) > 0,
         previousStreak: user?.previous_streak || 0,
     };
+};
+
+const RESULT_WIN = new Set(['Победа', 'Win']);
+const RESULT_DRAW = new Set(['Ничья', 'Draw']);
+const RESULT_LOSS = new Set(['Поражение', 'Loss']);
+
+export const getPlayerGameHistory = async (userId, limit = 10) => {
+    const db = await getDbConnection();
+    return db.all(
+        `SELECT
+            CASE WHEN g.player1_id = ? THEN u2.username ELSE u1.username END as opponent,
+            g.result,
+            g.game_type as type,
+            g.date,
+            g.id
+        FROM games g
+        LEFT JOIN users u1 ON g.player1_id = u1.id
+        LEFT JOIN users u2 ON g.player2_id = u2.id
+        WHERE g.player1_id = ? OR g.player2_id = ?
+        ORDER BY g.id DESC
+        LIMIT ?`,
+        [userId, userId, userId, limit]
+    );
+};
+
+export function summarizePlayerForm(games = []) {
+    let wins = 0;
+    let draws = 0;
+    let losses = 0;
+    for (const game of games) {
+        if (RESULT_WIN.has(game.result)) wins += 1;
+        else if (RESULT_DRAW.has(game.result)) draws += 1;
+        else if (RESULT_LOSS.has(game.result)) losses += 1;
+    }
+    const total = games.length;
+    return {
+        wins,
+        draws,
+        losses,
+        total,
+        winRate: total ? Math.round((wins / total) * 100) : 0,
+    };
+}
+
+export function buildRatingSparkline(currentRating, games = []) {
+    const rating = Number(currentRating) || 0;
+    if (!games.length) return [rating];
+    const deltas = {
+        Победа: -15,
+        Win: -15,
+        Поражение: 10,
+        Loss: 10,
+        Ничья: -5,
+        Draw: -5,
+    };
+    let cursor = rating;
+    const points = [cursor];
+    for (const game of games) {
+        cursor += deltas[game.result] ?? 0;
+        points.unshift(Math.max(0, cursor));
+    }
+    return points.slice(-12);
+}
+
+export function pickPlayerFunTitle(user, puzzleStreak = 0) {
+    const rating = Number(user?.rating) || 0;
+    const winStreak = Number(user?.win_streak) || 0;
+    const dailyStreak = Number(user?.daily_streak) || 0;
+    if (winStreak >= 5) return 'player_title_unstoppable';
+    if (dailyStreak >= 7 || puzzleStreak >= 7) return 'player_title_puzzle_king';
+    if (rating >= 4500) return 'player_title_master';
+    if (rating >= 2500) return 'player_title_sniper';
+    if (rating >= 1500) return 'player_title_fighter';
+    return 'player_title_rising';
+}
+
+export const getFeaturedTournaments = async (limit = 4) => {
+    const db = await getDbConnection();
+    return db.all(
+        `SELECT id, name, description, status, starts_at, time_control, league, demo_players, max_players
+         FROM tournament_schedule
+         WHERE status IN ('registration', 'scheduled', 'running')
+         ORDER BY
+            CASE status WHEN 'running' THEN 0 WHEN 'registration' THEN 1 ELSE 2 END,
+            starts_at ASC
+         LIMIT ?`,
+        [limit]
+    );
 };

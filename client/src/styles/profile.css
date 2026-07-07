@@ -1180,6 +1180,115 @@
 
 .mt-2 { margin-top: 12px; }
 
+.profile-player-title-card {
+  text-align: center;
+  padding: 20px 16px;
+  background: linear-gradient(135deg, rgba(255, 200, 170, 0.22), rgba(180, 220, 245, 0.2));
+}
+
+.profile-player-fun-title {
+  display: block;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.profile-player-fun-sub {
+  margin-top: 6px;
+}
+
+.profile-player-form__dots {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.profile-player-form__dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+}
+
+.profile-player-form__dot--win { background: #2ed573; }
+.profile-player-form__dot--draw { background: #ff9f43; }
+.profile-player-form__dot--loss { background: #ff4757; }
+
+.profile-player-form-caption { margin-top: 10px; }
+
+.profile-player-chart-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.profile-player-sparkline {
+  width: 100%;
+  max-width: 240px;
+  color: var(--peach-500, #ff7043);
+}
+
+.profile-player-chart-meta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.profile-player-streaks {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.profile-player-streak {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.profile-player-streak__emoji { font-size: 1.5rem; }
+
+.profile-player-tourney-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.profile-player-tourney-list__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--glass-border-soft);
+  background: var(--glass-gradient);
+}
+
+.profile-player-tourney-list__main {
+  flex: 1;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.profile-player-tourney-list__main strong {
+  display: block;
+  font-size: 0.92rem;
+}
+
+.profile-player-tourney-list__meta {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
 
 
 @media (max-width: 900px) {
