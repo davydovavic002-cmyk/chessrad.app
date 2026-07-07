@@ -78,43 +78,50 @@
 }
 
 .study-board-arena {
+    --study-status-row: 22px;
+    --study-controls-row: 0px;
     min-height: 0;
     min-width: 0;
     width: 100%;
     height: 100%;
     overflow: hidden;
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-rows: var(--study-status-row) minmax(0, 1fr) var(--study-controls-row);
     align-items: stretch;
-    justify-content: flex-start;
+    justify-content: stretch;
     padding: 0;
     box-sizing: border-box;
 }
 
+.study-board-arena:has(.study-board-controls) {
+    --study-controls-row: 48px;
+}
+
 .study-board-slot {
-    flex: 1;
     min-height: 0;
     min-width: 0;
     width: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
-    overflow: visible;
-    padding: 8px 10px;
+    overflow: hidden;
+    padding: 8px;
     box-sizing: border-box;
 }
 
 .study-status-msg {
-    margin-bottom: 8px;
+    margin: 0;
     font-weight: 800;
     font-size: 14px;
     text-transform: uppercase;
     color: var(--peach-600);
-    flex-shrink: 0;
-    line-height: 1.2;
-    min-height: 1.2em;
+    line-height: var(--study-status-row);
+    height: var(--study-status-row);
     width: 100%;
     text-align: center;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 .study-board-shell {
@@ -136,10 +143,9 @@
 .study-board-host {
     position: relative;
     flex-shrink: 0;
-    overflow: visible;
+    overflow: hidden;
     line-height: 1;
     border-radius: 0;
-    max-width: 100%;
     margin: 0 auto;
     display: flex;
     align-items: center;
@@ -151,16 +157,21 @@
     overflow: visible;
 }
 
-/* react-chessboard paints the piece layer above notation without z-index */
+/* Notation overlay: full-square layer above pieces (avoid position:relative on the wrapper — it breaks absolute coords). */
+.study-board-host #study-board-board [data-square] {
+    isolation: isolate;
+}
+
 .study-board-host #study-board-board [data-square] > span {
-    position: relative;
+    position: absolute;
+    inset: 0;
     z-index: 5;
     pointer-events: none;
 }
 
-.study-board-host #study-board-board [data-square] > span span {
-    z-index: 5;
-    pointer-events: none;
+.study-board-host #study-board-board [data-square] > div {
+    position: relative;
+    z-index: 1;
 }
 
 .study-draw-canvas {
@@ -172,17 +183,20 @@
 }
 
 .study-board-controls {
-    flex: 0 0 auto;
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     gap: 8px;
     width: 100%;
     max-width: min(880px, calc(100dvh - 250px), calc(100vw - 480px)) !important;
-    min-height: 44px;
-    margin: 8px auto 0;
-    padding: 0 12px 4px;
+    height: var(--study-controls-row);
+    min-height: var(--study-controls-row);
+    max-height: var(--study-controls-row);
+    margin: 0 auto;
+    padding: 0 12px;
     box-sizing: border-box;
+    overflow-x: auto;
+    overflow-y: hidden;
 }
 
 .study-control-select {

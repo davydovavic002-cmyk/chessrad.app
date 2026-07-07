@@ -174,6 +174,7 @@ export default function StudyPage() {
   const [pgnImportOpen, setPgnImportOpen] = useState(false);
   const [pgnImportText, setPgnImportText] = useState('');
   const editorGameRef = useRef(new Chess(EMPTY_FEN));
+  const boardArenaRef = useRef(null);
   const boardSlotRef = useRef(null);
 
   useEffect(() => {
@@ -181,24 +182,26 @@ export default function StudyPage() {
   }, [roomCode, navigate]);
 
   useLayoutEffect(() => {
-    const el = boardSlotRef.current;
-    if (!el) return;
+    const arena = boardArenaRef.current;
+    const slot = boardSlotRef.current;
+    if (!arena || !slot) return;
     let raf = 0;
     const measure = () => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
-        const next = measureStudyBoardSize(el.clientWidth, el.clientHeight);
+        const next = measureStudyBoardSize(slot.clientWidth, slot.clientHeight);
         setBoardSize((prev) => (prev === next ? prev : next));
       });
     };
     measure();
     const ro = new ResizeObserver(measure);
-    ro.observe(el);
+    ro.observe(arena);
+    ro.observe(slot);
     return () => {
       cancelAnimationFrame(raf);
       ro.disconnect();
     };
-  }, [activeTabId, isTeacher]);
+  }, [isTeacher]);
 
   const applyOrientationFromSettings = useCallback((asTeacher, settings) => {
     const tab = tabsRef.current.find((t) => t.id === activeTabIdRef.current);
@@ -882,7 +885,7 @@ export default function StudyPage() {
           )}
         </aside>
 
-        <div className="board-section study-board-arena">
+        <div ref={boardArenaRef} className="board-section study-board-arena">
           <div id="status-msg" className="study-status-msg">{statusMsg}</div>
           <div ref={boardSlotRef} className="study-board-slot">
             <div className="study-board-shell">
