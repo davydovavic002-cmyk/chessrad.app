@@ -3,9 +3,15 @@
 ## Build
 
 ```bash
-cd client && npm ci && npm run build
+# From repo root (recommended — works even when NODE_ENV=production on the server)
+npm run build
+
+# Or manually:
+cd client && npm ci --include=dev && npm run build
 cd .. && npm ci
 ```
+
+`--include=dev` is required on production servers: otherwise `npm ci` skips Vite and the client build fails.
 
 Server serves `client/dist` when the folder exists.
 
