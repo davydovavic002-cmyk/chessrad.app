@@ -13,6 +13,7 @@ import {
     buildRatingSparkline,
     pickPlayerFunTitle,
     getFeaturedTournaments,
+    analyzePlayerExtras,
 } from '../db.js';
 import { getBadgeSummary } from './achievements.js';
 
@@ -47,6 +48,7 @@ export async function buildProfileDashboard(userId, role) {
         const puzzle = await getPuzzleStatusForUser(userId);
         const user = await findUserById(userId);
         const history = await getPlayerGameHistory(userId, 10);
+        const historyDeep = await getPlayerGameHistory(userId, 40);
         const form = summarizePlayerForm(history);
         const totalGames = (Number(user?.wins) || 0) + (Number(user?.losses) || 0) + (Number(user?.draws) || 0);
         const allTimeWinRate = totalGames
@@ -78,6 +80,7 @@ export async function buildProfileDashboard(userId, role) {
             },
             ratingSparkline: buildRatingSparkline(user?.rating, history),
             tournaments: await getFeaturedTournaments(4),
+            extras: analyzePlayerExtras(historyDeep, user, form, puzzle),
         };
     }
 

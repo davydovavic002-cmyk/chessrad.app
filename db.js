@@ -2708,3 +2708,109 @@ export const getFeaturedTournaments = async (limit = 4) => {
         [limit]
     );
 };
+
+const LUCKY_PIECES = [
+    { piece: '♔', key: 'player_lucky_king' },
+    { piece: '♕', key: 'player_lucky_queen' },
+    { piece: '♖', key: 'player_lucky_rook' },
+    { piece: '♗', key: 'player_lucky_bishop' },
+    { piece: '♘', key: 'player_lucky_knight' },
+];
+
+export function buildChessArmy(wins = 0) {
+    const w = Number(wins) || 0;
+    const tiers = [
+        { piece: '♙', min: 0, label: 'player_army_pawn' },
+        { piece: '♘', min: 3, label: 'player_army_knight' },
+        { piece: '♗', min: 8, label: 'player_army_bishop' },
+        { piece: '♖', min: 15, label: 'player_army_rook' },
+        { piece: '♕', min: 30, label: 'player_army_queen' },
+        { piece: '♔', min: 50, label: 'player_army_king' },
+    ];
+    return tiers.map((tier) => ({ ...tier, unlocked: w >= tier.min }));
+}
+
+export function pickPlaystyle(user, form = {}) {
+    const wins = Number(user?.wins) || 0;
+    const losses = Number(user?.losses) || 0;
+    const draws = Number(user?.draws) || 0;
+    const total = wins + losses + draws;
+    if (!total) return 'player_style_rookie';
+    if (form?.winRate >= 70 && form.total >= 3) return 'player_style_hot';
+    const winRate = wins / total;
+    const drawRate = draws / total;
+    if (winRate >= 0.55 && wins > losses) return 'player_style_attacker';
+    if (drawRate >= 0.28) return 'player_style_solid';
+    if (losses > wins && total >= 5) return 'player_style_fighter';
+    return 'player_style_balanced';
+}
+
+export function pickLuckyPiece(username = '') {
+    const day = new Date().toISOString().slice(0, 10);
+    let h = 0;
+    const seed = `${username}-${day}`;
+    for (let i = 0; i < seed.length; i += 1) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+    return LUCKY_PIECES[h % LUCKY_PIECES.length];
+}
+
+export function buildDailyQuest(puzzle, form = {}) {
+    if (puzzle?.completedToday) {
+        return { key: 'player_quest_done', done: true, icon: '✅' };
+    }
+    if ((puzzle?.solvedToday || 0) < 10) {
+        return {
+            key: 'player_quest_puzzle',
+            done: false,
+            icon: '🧩',
+            progress: puzzle?.solvedToday || 0,
+            target: 10,
+        };
+    }
+    const recentWin = form?.wins > 0;
+    if (!recentWin && (form?.total || 0) >= 3) {
+        return { key: 'player_quest_win', done: false, icon: '⚔️' };
+    }
+    return { key: 'player_quest_play', done: false, icon: '♟' };
+}
+
+export function analyzePlayerExtras(history = [], user = {}, form = {}, puzzle = null) {
+    const opponentCounts = {};
+    const typeCounts = {};
+    for (const game of history) {
+        if (game.opponent) {
+            opponentCounts[game.opponent] = (opponentCounts[game.opponent] || 0) + 1;
+        }
+        const typ = game.type || 'match';
+        typeCounts[typ] = (typeCounts[typ] || 0) + 1;
+    }
+    let nemesis = null;
+    let bestCount = 0;
+    for (const [username, games] of Object.entries(opponentCounts)) {
+        if (games > bestCount) {
+            bestCount = games;
+            nemesis = { username, games };
+        }
+    }
+    let favoriteMode = null;
+    let modeCount = 0;
+    for (const [mode, count] of Object.entries(typeCounts)) {
+        if (count > modeCount) {
+            modeCount = count;
+            favoriteMode = { mode, count };
+        }
+    }
+    const rivals = Object.entries(opponentCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([username, games]) => ({ username, games }));
+
+    return {
+        army: buildChessArmy(user?.wins),
+        playstyle: pickPlaystyle(user, form),
+        luckyPiece: pickLuckyPiece(user?.username),
+        dailyQuest: buildDailyQuest(puzzle, form),
+        nemesis: bestCount >= 2 ? nemesis : null,
+        favoriteMode: modeCount >= 2 ? favoriteMode : null,
+        rivals,
+    };
+}

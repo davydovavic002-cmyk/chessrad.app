@@ -6,6 +6,16 @@ import {
   ProfilePieceProgress,
   TeacherClassPieces,
 } from './ProfileChessDecor';
+import {
+  PlayerChessArmy,
+  PlayerDailyQuest,
+  PlayerFavoriteMode,
+  PlayerHistoryFlair,
+  PlayerLevelLadder,
+  PlayerLuckyPieceCard,
+  PlayerNemesisCard,
+  PlayerPlaystyleCard,
+} from './PlayerProfileFlair';
 
 function StatPill({ label, value, tone }) {
   return (
@@ -360,9 +370,24 @@ function PlayerTournamentList({ tournaments, t, navigate, lang }) {
   );
 }
 
-export function ProfilePlayerDashboard({ dash, rating, t, lang, navigate, resultLabel, resultColor, userHistory, username, role }) {
+export function ProfilePlayerDashboard({
+  dash,
+  rating,
+  t,
+  lang,
+  navigate,
+  resultLabel,
+  resultColor,
+  userHistory,
+  username,
+  role,
+  levelLabel,
+  progressPct,
+  pointsText,
+}) {
   const history = dash?.history?.length ? dash.history : userHistory || [];
   const form = dash?.form;
+  const extras = dash?.extras;
   const recentGames = history.slice(0, 10);
 
   return (
@@ -373,6 +398,25 @@ export function ProfilePlayerDashboard({ dash, rating, t, lang, navigate, result
           <span className="profile-player-fun-title">{t(dash.funTitle)}</span>
           <p className="subtitle profile-player-fun-sub">{t('player_fun_title_hint')}</p>
         </section>
+      )}
+
+      <PlayerDailyQuest quest={extras?.dailyQuest} t={t} navigate={navigate} />
+
+      <PlayerChessArmy army={extras?.army} t={t} />
+
+      <PlayerPlaystyleCard playstyle={extras?.playstyle} t={t} />
+      <PlayerLuckyPieceCard lucky={extras?.luckyPiece} t={t} />
+
+      <PlayerNemesisCard nemesis={extras?.nemesis} rivals={extras?.rivals} t={t} />
+      <PlayerFavoriteMode mode={extras?.favoriteMode} t={t} />
+
+      {levelLabel != null && (
+        <PlayerLevelLadder
+          levelLabel={levelLabel}
+          progressPct={progressPct ?? 0}
+          pointsText={pointsText}
+          t={t}
+        />
       )}
 
       <section className="profile-block profile-block--half">
@@ -464,6 +508,7 @@ export function ProfilePlayerDashboard({ dash, rating, t, lang, navigate, result
 
       <section className="profile-block profile-block--full">
         <h3>{t('profile_history')}</h3>
+        <PlayerHistoryFlair history={history} t={t} resultLabel={resultLabel} resultColor={resultColor} />
         <div className="table-wrapper">
           <table className="history-table">
             <thead>

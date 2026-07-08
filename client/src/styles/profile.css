@@ -1555,6 +1555,229 @@
   white-space: nowrap;
 }
 
+.profile-player-army__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.profile-player-army__piece {
+  flex: 1 1 72px;
+  text-align: center;
+  padding: 12px 8px;
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--glass-border-soft);
+  opacity: 0.35;
+  filter: grayscale(0.8);
+  transition: transform 0.2s, opacity 0.2s, filter 0.2s;
+}
+
+.profile-player-army__piece.is-unlocked {
+  opacity: 1;
+  filter: none;
+  border-style: solid;
+  background: linear-gradient(135deg, rgba(255, 200, 170, 0.25), rgba(180, 220, 245, 0.2));
+  box-shadow: 0 4px 14px rgba(255, 112, 67, 0.12);
+}
+
+.profile-player-army__piece.is-unlocked:hover {
+  transform: translateY(-3px) scale(1.04);
+}
+
+.profile-player-army__glyph {
+  display: block;
+  font-size: 2rem;
+  line-height: 1.1;
+}
+
+.profile-player-army__label {
+  display: block;
+  font-size: 0.68rem;
+  margin-top: 4px;
+  color: var(--text-muted);
+}
+
+.profile-player-style,
+.profile-player-lucky {
+  text-align: center;
+  padding-top: 18px;
+}
+
+.profile-player-style__icon,
+.profile-player-lucky__piece {
+  display: block;
+  font-size: 2.4rem;
+  margin-bottom: 8px;
+}
+
+.profile-player-style__name,
+.profile-player-lucky__name {
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin: 0 0 6px;
+}
+
+.profile-player-quest {
+  background: linear-gradient(135deg, rgba(255, 240, 230, 0.45), rgba(220, 238, 252, 0.35));
+  border: 1px solid rgba(255, 176, 136, 0.4);
+}
+
+.profile-player-quest--done {
+  border-color: rgba(46, 213, 115, 0.45);
+  background: linear-gradient(135deg, rgba(46, 213, 115, 0.12), rgba(180, 220, 245, 0.15));
+}
+
+.profile-player-quest__head {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.profile-player-quest__head h3 {
+  margin: 0 0 4px;
+}
+
+.profile-player-quest__icon {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.profile-player-quest__text {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--text-secondary);
+}
+
+.profile-player-quest__bar {
+  height: 8px;
+  margin-top: 12px;
+  border-radius: var(--radius-full);
+  background: rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.profile-player-quest__fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--peach-400), var(--sky-400));
+  border-radius: inherit;
+  transition: width 0.3s ease;
+}
+
+.profile-player-nemesis__hero {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 10px 0 14px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 71, 87, 0.08);
+  border: 1px solid rgba(255, 71, 87, 0.2);
+}
+
+.profile-player-nemesis__skull {
+  font-size: 1.6rem;
+}
+
+.profile-player-rivals {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.profile-player-rivals li {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr auto;
+  gap: 8px;
+  align-items: center;
+  font-size: 0.82rem;
+}
+
+.profile-player-rivals__bar-wrap {
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.profile-player-rivals__bar {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--peach-400), var(--coral));
+  border-radius: inherit;
+}
+
+.profile-player-mode__value {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin: 8px 0 4px;
+}
+
+.profile-player-ladder__level {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin: 0 0 10px;
+}
+
+.profile-player-ladder__steps {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  margin-bottom: 10px;
+  font-size: 1.35rem;
+}
+
+.profile-player-ladder__step {
+  opacity: 0.2;
+  filter: grayscale(0.9);
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.profile-player-ladder__step.is-active {
+  opacity: 1;
+  filter: none;
+  transform: scale(1.08);
+}
+
+.profile-player-ladder__bar {
+  margin-bottom: 8px;
+}
+
+.profile-player-history-flair {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.profile-player-history-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 72px;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--glass-border-soft);
+  background: var(--glass-gradient);
+  font-size: 0.72rem;
+}
+
+.profile-player-history-chip__piece {
+  font-size: 1.25rem;
+}
+
+.profile-player-history-chip__opp {
+  max-width: 68px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted);
+}
+
 
 
 @media (max-width: 900px) {

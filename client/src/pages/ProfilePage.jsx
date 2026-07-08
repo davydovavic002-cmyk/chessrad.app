@@ -403,6 +403,9 @@ export default function ProfilePage() {
               userHistory={user.history}
               username={user?.username}
               role={user?.role}
+              levelLabel={t(currentLevel.key)}
+              progressPct={progressPct}
+              pointsText={pointsText}
             />
           )}
         </ProfileSection>
