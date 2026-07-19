@@ -16,19 +16,25 @@ const ROLE_KEYS = {
 export default function ProfileHero({
   user,
   rating,
+  academicXp,
   dash,
   levelLabel,
+  xpTierLabel,
   winStreak = 0,
+  dualRatings = false,
+  academicLocked = false,
 }) {
   const { t } = useI18n();
   const displayName = user?.display_name || user?.username || '';
   const initial = (displayName[0] || '?').toUpperCase();
   const roleKey = ROLE_KEYS[user?.role] || 'auth_player';
   const piece = rolePiece(user?.role);
-  const puzzleStreak = dash?.puzzle?.streak || 0;
   const wins = Number(user?.wins) || 0;
   const losses = Number(user?.losses) || 0;
   const draws = Number(user?.draws) || 0;
+  const elo = Number(rating ?? user?.tournamentElo ?? user?.rating) || 0;
+  const xp = Number(academicXp ?? dash?.academicXp ?? user?.academicXp ?? user?.academic_xp) || 0;
+  const tierLabel = xpTierLabel || (user?.xpTierKey ? t(user.xpTierKey) : null);
 
   return (
     <header className="profile-hero profile-hero--chess">
@@ -60,16 +66,43 @@ export default function ProfileHero({
             <span className="profile-role-pill">
               <span aria-hidden>{piece}</span> {t(roleKey)}
             </span>
-            <span className="profile-rating-pill profile-rating-pill--all">
-              <span className="profile-rating-pill__piece" aria-hidden>♚</span>
-              {rating} Elo
-            </span>
+            {dualRatings ? (
+              <>
+                <span className="profile-rating-pill profile-rating-pill--all profile-rating-pill--elo" title={t('rating_tournament_hint')}>
+                  <span className="profile-rating-pill__piece" aria-hidden>🏆</span>
+                  <span className="profile-rating-pill__meta">
+                    <span className="profile-rating-pill__label">{t('rating_tournament')}</span>
+                    <span className="profile-rating-pill__value">{elo}</span>
+                  </span>
+                </span>
+                <span
+                  className={`profile-rating-pill profile-rating-pill--all profile-rating-pill--xp${academicLocked ? ' academic-chip-locked' : ''}`}
+                  title={academicLocked ? t('academic_locked_title') : t('rating_academic_hint')}
+                >
+                  <span className="profile-rating-pill__piece" aria-hidden>📚</span>
+                  <span className="profile-rating-pill__meta">
+                    <span className="profile-rating-pill__label">{t('rating_academic')}</span>
+                    <span className="profile-rating-pill__value">{xp} XP</span>
+                  </span>
+                </span>
+              </>
+            ) : (
+              <span className="profile-rating-pill profile-rating-pill--all">
+                <span className="profile-rating-pill__piece" aria-hidden>♚</span>
+                {elo} Elo
+              </span>
+            )}
             {levelLabel ? (
-              <span className="profile-hero-chip profile-hero-chip--level">{levelLabel}</span>
+              <span className="profile-hero-chip profile-hero-chip--level" title={t('rating_tournament')}>
+                🏆 {levelLabel}
+              </span>
             ) : null}
-            {puzzleStreak > 0 ? (
-              <span className="profile-hero-chip profile-hero-chip--puzzle">
-                🧩 {puzzleStreak}
+            {dualRatings && tierLabel ? (
+              <span
+                className={`profile-hero-chip profile-hero-chip--xp-tier${academicLocked ? ' academic-chip-locked' : ''}`}
+                title={academicLocked ? t('academic_locked_title') : t('rating_academic')}
+              >
+                📚 {tierLabel}
               </span>
             ) : null}
             {winStreak > 0 ? (

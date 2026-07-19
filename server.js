@@ -30,13 +30,8 @@ import {
     joinStudentToRoom,
     updateStudyRoomFen,
     getTeacherRooms,
-    getNextPuzzleForUser,
-    solvePuzzleUpdate,
     deleteStudyRoom,
-    initPuzzlesTable,
-    getSolvedCountToday,
-    completeDailyPuzzles,
-    restoreStreak,
+    attachRatingFields,
     updateTabNotes,
     createHomework,
     getHomeworkForStudent,
@@ -89,7 +84,6 @@ import {
     getLessonsInMinutesWindow,
     getTournamentsInMinutesWindow,
     getAllUserIds,
-    getPuzzlesByTheme,
     saveGroupSessionLog,
     getParentChildren,
     linkParentToStudent,
@@ -103,7 +97,9 @@ import {
     unlinkStudentFromTeacher,
     getTeacherStudents,
     getStudentTeachers,
+    canActorAccessStudent,
     countStudentTeachers,
+    teacherLinkedToStudent,
 } from './db.js';
 import { Game } from './gamelogic.js';
 import { Tournament } from './server/tournament.js';
@@ -123,15 +119,21 @@ const app = express();
 
 const AUTH_BYPASS = process.env.AUTH_BYPASS === 'true';
 
+const ALLOWED_ORIGINS = new Set([
+    'https://chessrad.app',
+    'https://www.chessrad.app',
+    'http://127.0.0.1:3011',
+    'http://localhost:3011',
+    'http://127.0.0.1:5173',
+    'http://localhost:5173',
+    'http://127.0.0.1:3569',
+    'http://localhost:3569',
+]);
+if (process.env.PUBLIC_ORIGIN) ALLOWED_ORIGINS.add(String(process.env.PUBLIC_ORIGIN).replace(/\/$/, ''));
+
 const corsOptions = {
     origin: (origin, callback) => {
-        // Разрешаем запросы с твоего домена и локальную разработку
-        if (
-            !origin ||
-            origin.includes('chessrad.app') ||
-            origin.includes('localhost') ||
-            origin.includes('127.0.0.1')
-        ) {
+        if (!origin || ALLOWED_ORIGINS.has(origin)) {
             callback(null, true);
         } else {
             callback(new Error('Not allowed by CORS'));
@@ -153,6 +155,30 @@ const io = new Server(httpServer, {
 const SQLiteStore = sqliteStore(session);
 app.set('trust proxy', 1); // Позволяет Express доверять Nginx и передавать Cookie
 
+const isProd = process.env.NODE_ENV === 'production';
+const JWT_SECRET = String(process.env.JWT_SECRET || '').trim();
+const SESSION_SECRET = String(process.env.SESSION_SECRET || process.env.JWT_SECRET || '').trim();
+
+if (isProd) {
+    if (!JWT_SECRET || JWT_SECRET.length < 16) {
+        console.error('[FATAL] JWT_SECRET must be set (≥16 chars) in production');
+        process.exit(1);
+    }
+    if (!SESSION_SECRET || SESSION_SECRET.length < 16) {
+        console.error('[FATAL] SESSION_SECRET must be set (≥16 chars) in production');
+        process.exit(1);
+    }
+} else if (!JWT_SECRET || JWT_SECRET.length < 16) {
+    console.warn('[auth] JWT_SECRET missing/short — using insecure DEV fallback. Set JWT_SECRET before production.');
+}
+
+const EFFECTIVE_JWT_SECRET = JWT_SECRET.length >= 16
+    ? JWT_SECRET
+    : 'dev-only-insecure-jwt-secret-change-me';
+const EFFECTIVE_SESSION_SECRET = SESSION_SECRET.length >= 16
+    ? SESSION_SECRET
+    : 'dev-only-insecure-session-secret';
+
 // Защита от слишком частых запросов (регистрация/логин)
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 минут
@@ -162,22 +188,36 @@ const authLimiter = rateLimit({
     message: { message: "Слишком много попыток. Попробуйте позже." }
 });
 
+const studyJoinHits = new Map();
+function studyJoinAllowed(userId) {
+    const now = Date.now();
+    const key = String(userId || 'anon');
+    let bucket = studyJoinHits.get(key);
+    if (!bucket || now - bucket.windowStart > 60_000) {
+        bucket = { windowStart: now, count: 0 };
+        studyJoinHits.set(key, bucket);
+    }
+    bucket.count += 1;
+    return bucket.count <= 30;
+}
+
 app.use(session({
-    // Указываем SQLite в качестве хранилища
+    // Указываем SQLite в качестве хранилища
     store: new SQLiteStore({
         db: 'chess-app.db',
         dir: DB_DIR
     }),
-    secret: 'chess-secret-key',
-    resave: false,
-    saveUninitialized: false, // Ставим false, чтобы не плодить пустые сессии
-    cookie: {
-        maxAge: 24 * 60 * 60 * 1000,
-        secure: process.env.NODE_ENV === 'production'
+    secret: EFFECTIVE_SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false, // Ставим false, чтобы не плодить пустые сессии
+    cookie: {
+        maxAge: 24 * 60 * 60 * 1000,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        httpOnly: true,
     }
 }));
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-if-env-missing';
-const PUBLIC_ORIGIN = process.env.PUBLIC_ORIGIN || 'http://127.0.0.1:3569';
+const PUBLIC_ORIGIN = process.env.PUBLIC_ORIGIN || 'http://127.0.0.1:3011';
 
 async function sendEmailOptional(to, subject, html) {
     if (!to || !process.env.SMTP_HOST) {
@@ -331,12 +371,6 @@ function createAndAssignTournament() {
     return ensureTournamentInstance('main-tournament-1');
 }
 
-app.get('/reset-tournament', async (req, res) => {
-    await createAndAssignTournament();
-    if (mainTournament) broadcastTournamentState(mainTournament);
-    res.redirect('/tournaments');
-});
-
 // ---------------------------------
 // 3. MIDDLEWARE
 // ---------------------------------
@@ -396,7 +430,7 @@ function buildAuthPayload(user) {
 }
 
 function setAuthCookie(res, user) {
-    const token = jwt.sign(buildAuthPayload(user), JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign(buildAuthPayload(user), EFFECTIVE_JWT_SECRET, { expiresIn: '7d' });
     res.cookie('token', token, {
         httpOnly: true,
         maxAge: 7 * 24 * 60 * 60 * 1000,
@@ -419,14 +453,14 @@ async function attachDevUser(req, res, next) {
     }
 }
 
-const authenticateToken = (req, res, next) => {
+const verifyAuthToken = (req, res, next) => {
     const token = req.cookies.token;
     if (!token) {
         if (AUTH_BYPASS) return attachDevUser(req, res, next);
         return res.status(401).json({ message: 'Доступ запрещен' });
     }
 
-    jwt.verify(token, JWT_SECRET, (err, user) => {
+    jwt.verify(token, EFFECTIVE_JWT_SECRET, (err, user) => {
         if (err) {
             if (AUTH_BYPASS) return attachDevUser(req, res, next);
             return res.status(403).json({ message: 'Недействительный токен' });
@@ -435,6 +469,34 @@ const authenticateToken = (req, res, next) => {
         next();
     });
 };
+
+const MUST_CHANGE_ALLOW = new Set([
+    'GET:/api/profile',
+    'POST:/api/profile/change-password',
+    'POST:/api/logout',
+]);
+
+/** Block API use until forced password change is done. */
+const rejectIfMustChangePassword = async (req, res, next) => {
+    try {
+        if (!req.user?.id) return next();
+        const key = `${req.method}:${req.path}`;
+        if (MUST_CHANGE_ALLOW.has(key)) return next();
+        const fresh = await findUserById(req.user.id);
+        if (fresh?.must_change_password) {
+            return res.status(403).json({
+                success: false,
+                mustChangePassword: true,
+                message: 'Требуется смена пароля',
+            });
+        }
+        next();
+    } catch (e) {
+        next(e);
+    }
+};
+
+const authenticateToken = [verifyAuthToken, rejectIfMustChangePassword];
 
 // Локальный обход логина: сразу в лобби под пользователем "dev"
 app.get('/', async (req, res, next) => {
@@ -450,21 +512,38 @@ app.get('/', async (req, res, next) => {
 });
 
 const requireAdmin = async (req, res, next) => {
-    try {
-        const user = await findUserById(req.user.id);
-        if (user && user.role === 'admin') {
-            next();
-        } else {
-            res.status(403).json({ message: 'Требуются права администратора' });
-        }
-    } catch (e) {
-        res.status(500).json({ message: 'Ошибка проверки прав' });
-    }
+    try {
+        const user = await findUserById(req.user.id);
+        if (user && user.role === 'admin') {
+            next();
+        } else {
+            res.status(403).json({ message: 'Требуются права администратора' });
+        }
+    } catch (e) {
+        res.status(500).json({ message: 'Ошибка проверки прав' });
+    }
 };
 
+app.get('/reset-tournament', authenticateToken, requireAdmin, async (req, res) => {
+    await createAndAssignTournament();
+    if (mainTournament) broadcastTournamentState(mainTournament);
+    res.redirect('/tournaments');
+});
+
+app.post('/api/admin/reset-tournament', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        await createAndAssignTournament();
+        if (mainTournament) broadcastTournamentState(mainTournament);
+        res.json({ success: true });
+    } catch (e) {
+        console.error('reset-tournament', e);
+        res.status(500).json({ success: false });
+    }
+});
+
 async function comparePasswords(password, hash) {
-    try { return await bcrypt.compare(password, hash); }
-    catch (error) { return false; }
+    try { return await bcrypt.compare(password, hash); }
+    catch (error) { return false; }
 }
 
 async function handleGameResultUpdate(winnerId, loserId, isDraw) {
@@ -502,7 +581,7 @@ function createAndStartGame(player1Socket, player2Socket) {
 // ---------------------------------
 
 app.post('/api/register', authLimiter, async (req, res) => {
-    let { username, password, role, displayName, teacherLinkCode } = req.body;
+    let { username, password, role, displayName, teacherLinkCode, teacherInviteCode } = req.body;
     if (username) username = username.replace(/<\/?[^>]+(>|$)/g, '').trim();
     displayName = (displayName || '').replace(/<\/?[^>]+(>|$)/g, '').trim();
 
@@ -515,8 +594,16 @@ app.post('/api/register', authLimiter, async (req, res) => {
         if (existingUser) return res.status(409).json({ message: 'Пользователь существует' });
 
         let userRole = 'student';
-        if (role === 'teacher') userRole = 'teacher';
-        else if (role === 'player') userRole = 'player';
+        if (role === 'teacher') {
+            const invite = String(process.env.TEACHER_INVITE_CODE || '').trim();
+            const provided = String(teacherInviteCode || '').trim();
+            if (!invite || provided !== invite) {
+                return res.status(403).json({
+                    message: 'Регистрация учителя только по коду приглашения',
+                });
+            }
+            userRole = 'teacher';
+        }
 
         const userId = await addUser(username, password, userRole, displayName || username);
 
@@ -547,7 +634,7 @@ app.post('/api/login', authLimiter, async (req, res) => {
         // 2. Генерация токена
         const token = jwt.sign(
             { id: user.id, username: user.username, role: user.role },
-            JWT_SECRET,
+            EFFECTIVE_JWT_SECRET,
             { expiresIn: '1d' }
         );
 
@@ -582,7 +669,8 @@ app.get('/api/profile', authenticateToken, async (req, res) => {
         if (!user) return res.status(404).json({ message: 'Пользователь не найден' });
         await ensureUserLinkCode(req.user.id);
         const fresh = await findUserById(req.user.id);
-        const { password_hash, ...profileData } = fresh;
+        const { password_hash, ...raw } = fresh;
+        const profileData = attachRatingFields(raw);
         profileData.display_name = fresh.display_name || fresh.username;
         profileData.link_code_formatted = formatLinkCode(fresh.link_code);
         if (fresh.role === 'student') {
@@ -683,17 +771,18 @@ app.delete('/api/admin/delete-user/:userId', authenticateToken, requireAdmin, as
 });
 
 app.post('/api/admin/reset-password', authenticateToken, requireAdmin, async (req, res) => {
-    try {
-        const { userId, newPassword } = req.body;
-        if (!newPassword || newPassword.length < 4) {
-            return res.status(400).json({ success: false, message: 'Пароль короткий' });
-        }
-        const { resetUserPassword } = await import('./db.js');
-        await resetUserPassword(userId, newPassword);
-        res.json({ success: true, message: 'Пароль сброшен' });
-    } catch (e) {
-        res.status(500).json({ success: false });
-    }
+    try {
+        const { userId, newPassword } = req.body;
+        if (!newPassword || newPassword.length < 6) {
+            return res.status(400).json({ success: false, message: 'Пароль короткий (мин. 6)' });
+        }
+        const { resetUserPassword } = await import('./db.js');
+        const hashed = await bcrypt.hash(String(newPassword), 10);
+        await resetUserPassword(userId, hashed);
+        res.json({ success: true, message: 'Пароль сброшен' });
+    } catch (e) {
+        res.status(500).json({ success: false });
+    }
 });
 
 // --- ОБУЧЕНИЕ ---
@@ -725,13 +814,15 @@ app.post('/api/study/join', authenticateToken, async (req, res) => {
         if (!room) return res.status(404).json({ success: false });
         if (Number(room.teacher_id) !== Number(req.user.id)) {
             if (req.user.role === 'student') {
-                const teacherCount = await countStudentTeachers(req.user.id);
-                if (teacherCount === 0) {
+                const linked = await teacherLinkedToStudent(room.teacher_id, req.user.id);
+                if (!linked) {
                     return res.status(403).json({
                         success: false,
                         message: 'teacher_link_required',
                     });
                 }
+            } else if (req.user.role !== 'admin') {
+                return res.status(403).json({ success: false, message: 'no_access' });
             }
             if (room.room_type === 'group') {
                 await joinGroupStudent(roomCode, req.user.id);
@@ -769,23 +860,28 @@ app.delete('/api/study/:roomCode', authenticateToken, async (req, res) => {
 });
 
 app.get('/api/positions', authenticateToken, async (req, res) => {
-    try {
-        const { getTeacherPositions } = await import('./db.js');
-        const positions = await getTeacherPositions();
-        res.json(positions);
-    } catch (e) {
-        res.status(500).json({ message: 'Ошибка при получении библиотеки' });
-    }
+    try {
+        const { getTeacherPositions } = await import('./db.js');
+        const isAdmin = req.user.role === 'admin';
+        if (req.user.role !== 'teacher' && !isAdmin) {
+            return res.status(403).json({ message: 'Нужна роль учителя' });
+        }
+        const positions = await getTeacherPositions(isAdmin ? null : req.user.id);
+        res.json(positions);
+    } catch (e) {
+        res.status(500).json({ message: 'Ошибка при получении библиотеки' });
+    }
 });
 
 app.post('/api/positions', authenticateToken, async (req, res) => {
     try {
-        // Добавляем big_folder в деструктуризацию
+        if (req.user.role !== 'teacher' && req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'Нужна роль учителя' });
+        }
         const { title, big_folder, category, fen } = req.body;
         if (!title || !fen) return res.status(400).json({ message: 'Данные обязательны' });
 
         const { addPosition } = await import('./db.js');
-        // Передаем big_folder в функцию БД
         await addPosition(req.user.id, title, category, fen, big_folder);
         res.json({ success: true });
     } catch (e) {
@@ -793,23 +889,30 @@ app.post('/api/positions', authenticateToken, async (req, res) => {
     }
 });
 app.delete('/api/positions/:id', authenticateToken, async (req, res) => {
-    try {
-        const { deletePosition } = await import('./db.js');
-        await deletePosition(req.params.id);
-        res.json({ success: true });
-    } catch (e) {
-        res.status(500).json({ message: 'Ошибка при удалении' });
-    }
+    try {
+        if (req.user.role !== 'teacher' && req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'Нужна роль учителя' });
+        }
+        const { deletePosition } = await import('./db.js');
+        const ownerId = req.user.role === 'admin' ? null : req.user.id;
+        const result = await deletePosition(req.params.id, ownerId);
+        if (!result?.changes) return res.status(404).json({ success: false });
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ message: 'Ошибка при удалении' });
+    }
 });
 
 app.put('/api/positions/:id', authenticateToken, async (req, res) => {
     try {
+        if (req.user.role !== 'teacher' && req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'Нужна роль учителя' });
+        }
         const positionId = req.params.id;
-        const { title, big_folder, category, fen } = req.body; // Добавляем big_folder
+        const { title, big_folder, category, fen } = req.body;
         const { updatePosition } = await import('./db.js');
-
-        // В объекте данных передаем big_folder
-        const result = await updatePosition(positionId, null, { title, big_folder, category, fen });
+        const ownerId = req.user.role === 'admin' ? null : req.user.id;
+        const result = await updatePosition(positionId, ownerId, { title, big_folder, category, fen });
 
         if (result && result.changes > 0) {
             res.json({ success: true });
@@ -823,13 +926,23 @@ app.put('/api/positions/:id', authenticateToken, async (req, res) => {
 app.post('/api/positions/reorder', authenticateToken, async (req, res) => {
     const { positions } = req.body;
     try {
+        if (req.user.role !== 'teacher' && req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'Нужна роль учителя' });
+        }
+        if (!Array.isArray(positions)) return res.status(400).json({ message: 'Bad payload' });
         await db.run('BEGIN TRANSACTION');
-        for (let item of positions) {
-            // Убираем teacher_id, так как база общая
-            await db.run(
-                'UPDATE position_library SET order_index = ? WHERE id = ?',
-                [item.order_index, item.id]
-            );
+        for (const item of positions) {
+            if (req.user.role === 'admin') {
+                await db.run(
+                    'UPDATE position_library SET order_index = ? WHERE id = ?',
+                    [item.order_index, item.id]
+                );
+            } else {
+                await db.run(
+                    'UPDATE position_library SET order_index = ? WHERE id = ? AND teacher_id = ?',
+                    [item.order_index, item.id, req.user.id]
+                );
+            }
         }
         await db.run('COMMIT');
         res.sendStatus(200);
@@ -838,148 +951,14 @@ app.post('/api/positions/reorder', authenticateToken, async (req, res) => {
         res.status(500).send(err.message);
     }
 });
-// --- API ДЛЯ ТРЕНАЖЕРА И СТРИКОВ ---
 
-// --- ОБНОВЛЕННОЕ API ДЛЯ ТРЕНАЖЕРА ---
-
-// --- ОБНОВЛЕННОЕ API ДЛЯ ТРЕНАЖЕРА ---
-
-// 0. Сброс офсета сессии
-
-// ---------------------------------
-// API ДЛЯ ТРЕНАЖЕРА (Интеграция с db.js)
-// ---------------------------------
-
-// 0. Сброс офсета сессии (оставляем, так как это логика сессии, а не БД)
-app.post('/api/puzzle/reset-session', authenticateToken, (req, res) => {
-    req.session.puzzleOffset = 0;
-    res.json({ success: true });
-});
-
-// 1. Статус для Лобби
-// 1. Статус для Лобби
-app.get('/api/user/puzzle-status', authenticateToken, async (req, res) => {
-    try {
-        const userId = req.user.id;
-
-        // ДИНАМИЧЕСКИЙ ИМПОРТ (как в твоих рабочих апи с positions)
-        // Импортируем функции прямо здесь, чтобы они не конфликтовали с верхним блоком
-        const { checkAndResetStreak, getSolvedCountToday } = await import('./db.js');
-
-        // Вызываем проверку стрика
-        await checkAndResetStreak(userId);
-
-        const solvedToday = await getSolvedCountToday(userId);
-        const user = await findUserById(userId);
-
-        if (!user) return res.status(404).json({ message: "User not found" });
-
-        res.json({
-            solvedToday: solvedToday || 0,
-            streak: user.daily_streak || 0,
-            completedToday: solvedToday >= 10,
-            canRestore: (user.daily_streak === 0 && user.previous_streak > 0),
-            previousStreak: user.previous_streak || 0
-        });
-    } catch (err) {
-        console.error("Ошибка в puzzle-status:", err);
-        res.status(500).json({ error: "Server error" });
-    }
-});
-// 2. Получить следующую задачу
-app.get('/api/puzzle/next', authenticateToken, async (req, res) => {
-    try {
-        const userId = req.user.id;
-        const theme = req.query.theme ? String(req.query.theme).trim() : '';
-        if (theme) {
-            const themed = await getPuzzlesByTheme(theme, 1);
-            if (themed[0]) return res.json(themed[0]);
-        }
-        if (req.session.puzzleOffset === undefined) req.session.puzzleOffset = 0;
-
-        const user = await findUserById(userId);
-
-        const puzzle = await db.get(
-            'SELECT * FROM puzzles ORDER BY id LIMIT 1 OFFSET ?',
-            [(user.puzzle_level || 0) + req.session.puzzleOffset]
-        );
-
-        if (!puzzle) {
-            return res.status(404).json({ message: 'Задачи закончились' });
-        }
-
-        req.session.puzzleOffset++;
-        res.json(puzzle);
-    } catch (error) {
-        console.error("Ошибка в /puzzle/next:", error);
-        res.status(500).json({ message: 'Ошибка сервера' });
-    }
-});
-
-app.get('/api/puzzle/by-theme', authenticateToken, async (req, res) => {
-    try {
-        const theme = String(req.query.theme || '').trim();
-        if (!theme) return res.status(400).json({ success: false });
-        const puzzles = await getPuzzlesByTheme(theme, 20);
-        res.json({ success: true, puzzles });
-    } catch (e) {
-        res.status(500).json({ success: false });
-    }
-});
-
-// 3. Засчитать решение
-app.post('/api/puzzle/solve', authenticateToken, async (req, res) => {
-    try {
-        const { puzzleId } = req.body;
-        const userId = req.user.id;
-
-        // Твоя функция из db.js (она должна обновлять puzzle_level и записывать решение в историю)
-        await solvePuzzleUpdate(userId, puzzleId);
-
-        // Уменьшаем офсет сессии, так как уровень в БД вырос, и "следующая" задача теперь имеет другой индекс
-        if (req.session.puzzleOffset > 0) {
-            req.session.puzzleOffset--;
-        }
-
-        res.json({ success: true });
-    } catch (e) {
-        console.error("Ошибка в /puzzle/solve:", e);
-        res.status(500).json({ success: false });
-    }
-});
-
-// 4. Завершить дневную норму
-app.post('/api/puzzle/complete-daily', authenticateToken, async (req, res) => {
-    try {
-        const userId = req.user.id;
-        const solvedToday = await getSolvedCountToday(userId);
-
-        if (solvedToday >= 10) {
-            const result = await completeDailyPuzzles(userId);
-            req.session.puzzleOffset = 0;
-            await notifyAchievementBadges(userId, 'puzzle');
-            res.json(result);
-        } else {
-            res.status(400).json({ success: false, message: `Решено только ${solvedToday}/10` });
-        }
-    } catch (e) {
-        console.error("Ошибка в /complete-daily:", e);
-        res.status(500).json({ success: false });
-    }
-});
-
-// 5. Восстановление стрика
-app.post('/api/puzzle/restore-streak', authenticateToken, async (req, res) => {
-    try {
-        const userId = req.user.id;
-        // Твоя функция из db.js
-        const success = await restoreStreak(userId);
-        res.json({ success });
-    } catch (e) {
-        console.error("Ошибка в /restore-streak:", e);
-        res.status(500).json({ success: false });
-    }
-});
+/** Puzzles temporarily removed from the product — all puzzle endpoints are gone. */
+const puzzleGone = (_req, res) => {
+    res.status(410).json({ success: false, message: 'puzzles_disabled' });
+};
+app.all('/api/puzzle', puzzleGone);
+app.all('/api/puzzle/*', puzzleGone);
+app.get('/api/user/puzzle-status', puzzleGone);
 
 // --- РАСПИСАНИЕ ---
 app.get('/api/schedule', authenticateToken, async (req, res) => {
@@ -1020,8 +999,14 @@ app.post('/api/schedule', authenticateToken, async (req, res) => {
         if (!lessonDate || !timeSlot) {
             return res.status(400).json({ success: false, message: 'Нужны дата и время' });
         }
+        const ids = Array.isArray(studentIds) ? studentIds : [];
+        for (const sid of ids) {
+            if (!(await canActorAccessStudent(req.user, sid))) {
+                return res.status(403).json({ success: false, message: 'Нет доступа к ученику' });
+            }
+        }
         const { upsertScheduleLesson } = await import('./db.js');
-        const id = await upsertScheduleLesson(req.user.id, lessonDate, timeSlot, studentIds || [], videoUrl || '');
+        const id = await upsertScheduleLesson(req.user.id, lessonDate, timeSlot, ids, videoUrl || '');
         res.json({ success: true, id });
     } catch (e) {
         console.error('schedule save:', e);
@@ -1034,11 +1019,17 @@ app.put('/api/schedule/:id', authenticateToken, async (req, res) => {
         if (req.user.role !== 'teacher' && req.user.role !== 'admin') {
             return res.status(403).json({ success: false, message: 'Только для учителей' });
         }
+        const ids = Array.isArray(req.body.studentIds) ? req.body.studentIds : [];
+        for (const sid of ids) {
+            if (!(await canActorAccessStudent(req.user, sid))) {
+                return res.status(403).json({ success: false, message: 'Нет доступа к ученику' });
+            }
+        }
         const { updateScheduleLessonMeta } = await import('./db.js');
         const id = await updateScheduleLessonMeta(
             req.params.id,
             req.user.id,
-            req.body.studentIds || [],
+            ids,
             req.body.videoUrl || '',
             req.user.role === 'admin'
         );
@@ -1082,17 +1073,28 @@ app.post('/api/schedule/requests', authenticateToken, async (req, res) => {
         if (!lessonDate || !timeSlot) {
             return res.status(400).json({ success: false, message: 'Нужны дата и время' });
         }
+        const myTeachers = await getStudentTeachers(req.user.id);
+        const linkedTeacherIds = new Set(myTeachers.map((t) => Number(t.id)));
+        if (teacherId) {
+            if (!linkedTeacherIds.has(Number(teacherId)) && req.user.role !== 'admin') {
+                return res.status(403).json({ success: false, message: 'Нет связи с учителем' });
+            }
+        } else if (!linkedTeacherIds.size) {
+            return res.status(403).json({ success: false, message: 'teacher_link_required' });
+        }
         const { createScheduleRequest } = await import('./db.js');
-        const result = await createScheduleRequest(req.user.id, lessonDate, timeSlot, teacherId || null);
+        const result = await createScheduleRequest(
+            req.user.id,
+            lessonDate,
+            timeSlot,
+            teacherId ? Number(teacherId) : null
+        );
         if (!result.ok) return res.status(409).json({ success: false, message: result.message });
 
         const student = await findUserById(req.user.id);
-        const teacherIds = teacherId ? [Number(teacherId)] : [];
-        if (!teacherIds.length) {
-            const { getAllUsers } = await import('./db.js');
-            const all = await getAllUsers('new');
-            all.filter((u) => u.role === 'teacher' || u.role === 'admin').forEach((u) => teacherIds.push(u.id));
-        }
+        const teacherIds = teacherId
+            ? [Number(teacherId)]
+            : [...linkedTeacherIds];
         for (const tid of [...new Set(teacherIds)]) {
             await pushNotification(
                 tid,
@@ -1288,6 +1290,9 @@ app.post('/api/homework', authenticateToken, async (req, res) => {
         if (!studentId || !title || !fen || !dueDate) {
             return res.status(400).json({ success: false, message: 'Missing fields' });
         }
+        if (!(await canActorAccessStudent(req.user, studentId))) {
+            return res.status(403).json({ success: false, message: 'Нет доступа к ученику' });
+        }
         const id = await createHomework({
             teacherId: req.user.id,
             studentId,
@@ -1364,6 +1369,9 @@ app.get('/api/journal', authenticateToken, async (req, res) => {
             return res.status(403).json({ success: false });
         }
         const studentId = req.query.studentId ? Number(req.query.studentId) : null;
+        if (studentId && !(await canActorAccessStudent(req.user, studentId))) {
+            return res.status(403).json({ success: false });
+        }
         const entries = await getJournalEntries(req.user.id, studentId);
         res.json({ success: true, entries });
     } catch (e) {
@@ -1375,6 +1383,9 @@ app.post('/api/journal', authenticateToken, async (req, res) => {
     try {
         if (req.user.role !== 'teacher' && req.user.role !== 'admin') {
             return res.status(403).json({ success: false });
+        }
+        if (req.body.studentId && !(await canActorAccessStudent(req.user, req.body.studentId))) {
+            return res.status(403).json({ success: false, message: 'Нет доступа к ученику' });
         }
         const id = await upsertJournalEntry(req.user.id, req.body);
         if (!id) return res.status(400).json({ success: false });
@@ -1433,6 +1444,9 @@ app.get('/api/plan', authenticateToken, async (req, res) => {
         if (!studentId || !from || !to) {
             return res.status(400).json({ success: false });
         }
+        if (!(await canActorAccessStudent(req.user, studentId))) {
+            return res.status(403).json({ success: false });
+        }
         const items = await getPlanItems(req.user.id, Number(studentId), from, to);
         res.json({ success: true, items });
     } catch (e) {
@@ -1443,6 +1457,9 @@ app.get('/api/plan', authenticateToken, async (req, res) => {
 app.post('/api/plan', authenticateToken, async (req, res) => {
     try {
         if (req.user.role !== 'teacher' && req.user.role !== 'admin') {
+            return res.status(403).json({ success: false });
+        }
+        if (req.body.studentId && !(await canActorAccessStudent(req.user, req.body.studentId))) {
             return res.status(403).json({ success: false });
         }
         const id = await upsertPlanItem(req.user.id, req.body);
@@ -1505,6 +1522,9 @@ app.delete('/api/templates/:id', authenticateToken, async (req, res) => {
 app.get('/api/pgn-archive', authenticateToken, async (req, res) => {
     try {
         const studentId = req.query.studentId ? Number(req.query.studentId) : null;
+        if (studentId && !(await canActorAccessStudent(req.user, studentId))) {
+            return res.status(403).json({ success: false });
+        }
         const items = await getPgnArchive(req.user.id, req.user.role, studentId);
         res.json({ success: true, items });
     } catch (e) {
@@ -1514,6 +1534,12 @@ app.get('/api/pgn-archive', authenticateToken, async (req, res) => {
 
 app.post('/api/pgn-archive', authenticateToken, async (req, res) => {
     try {
+        if (req.user.role !== 'teacher' && req.user.role !== 'admin') {
+            return res.status(403).json({ success: false });
+        }
+        if (req.body.studentId && !(await canActorAccessStudent(req.user, req.body.studentId))) {
+            return res.status(403).json({ success: false, message: 'Нет доступа к ученику' });
+        }
         const id = await savePgnArchive({
             teacherId: req.user.id,
             studentId: req.body.studentId,
@@ -1533,7 +1559,7 @@ app.post('/api/pgn-archive', authenticateToken, async (req, res) => {
 app.get('/api/student/progress', authenticateToken, async (req, res) => {
     try {
         const studentId = req.query.studentId ? Number(req.query.studentId) : req.user.id;
-        if (req.user.role === 'student' && studentId !== req.user.id) {
+        if (!(await canActorAccessStudent(req.user, studentId))) {
             return res.status(403).json({ success: false });
         }
         const progress = await getStudentTopicProgress(studentId);
@@ -1566,7 +1592,14 @@ app.get('/api/parent/dashboard', authenticateToken, async (req, res) => {
             const cal = await getStudentCalendar(child.id, from.toISOString().slice(0, 10), to.toISOString().slice(0, 10));
             const entries = await getJournalEntriesForStudent(child.id, 3);
             dashboard.push({
-                student: { id: child.id, username: child.username, rating: child.rating, level: child.level },
+                student: attachRatingFields({
+                    id: child.id,
+                    username: child.username,
+                    display_name: child.display_name,
+                    rating: child.rating,
+                    academic_xp: child.academic_xp,
+                    level: child.level,
+                }),
                 progress,
                 lessons: cal.lessons.slice(0, 5),
                 homework: cal.homework.slice(0, 5),
@@ -1586,11 +1619,19 @@ app.post('/api/parent/link', authenticateToken, async (req, res) => {
         }
         const { studentId, parentEmail } = req.body;
         if (!studentId || !parentEmail) return res.status(400).json({ success: false });
+        if (!(await canActorAccessStudent(req.user, studentId))) {
+            return res.status(403).json({ success: false, message: 'Нет доступа к ученику' });
+        }
         let parent = await findParentByEmail(parentEmail);
         if (!parent) {
-            const tempPass = Math.random().toString(36).slice(2, 10);
-            const parentId = await addUser(parentEmail, tempPass, 'parent');
+            const tempPass = Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6);
+            const parentId = await addUser(parentEmail, tempPass, 'parent', '', { mustChangePassword: true });
             parent = await findUserById(parentId);
+            await sendEmailOptional(
+                parentEmail,
+                'Доступ родителя ChessRad',
+                `<p>Временный пароль: <strong>${tempPass}</strong></p><p>При входе потребуется смена пароля.</p>`
+            );
         }
         await linkParentToStudent(parent.id, Number(studentId));
         res.json({ success: true, parentId: parent.id, message: 'Parent linked' });
@@ -1605,6 +1646,9 @@ app.get('/api/student/calendar', authenticateToken, async (req, res) => {
         if (!from || !to) return res.status(400).json({ success: false });
         const studentId = req.user.role === 'student' ? req.user.id : Number(req.query.studentId);
         if (!studentId) return res.status(400).json({ success: false });
+        if (!(await canActorAccessStudent(req.user, studentId))) {
+            return res.status(403).json({ success: false });
+        }
         const data = await getStudentCalendar(studentId, from, to);
         res.json({ success: true, ...data });
     } catch (e) {
@@ -1751,7 +1795,11 @@ io.use(async (socket, next) => {
 
     if (cookies.token) {
         try {
-            socket.user = jwt.verify(cookies.token, JWT_SECRET);
+            socket.user = jwt.verify(cookies.token, EFFECTIVE_JWT_SECRET);
+            const fresh = await findUserById(socket.user.id);
+            if (fresh?.must_change_password) {
+                return next(new Error('must_change_password'));
+            }
             return next();
         } catch {
             // fall through to AUTH_BYPASS or error
@@ -1782,13 +1830,40 @@ io.on('connection', (socket) => {
 
     const userId = socket.user.id; // Удобная константа для использования ниже
 
+    function parseGroupStudentIds(room) {
+        try {
+            return JSON.parse(room.group_student_ids || '[]').map(Number);
+        } catch {
+            return [];
+        }
+    }
+
+    /** Owner of the room or platform admin — not every teacher. */
+    function isStudyRoomOwner(room, uid, role) {
+        return Number(room.teacher_id) === Number(uid) || role === 'admin';
+    }
+
+    function isStudyRoomMember(room, uid) {
+        if (Number(room.teacher_id) === Number(uid)) return true;
+        if (Number(room.student_id) === Number(uid)) return true;
+        return parseGroupStudentIds(room).includes(Number(uid));
+    }
+
     onlineUsers.set(userId, { id: userId, username: socket.user.username, socket: socket });
 
 // --- ОБУЧЕНИЕ (С ВКЛАДКАМИ) ---
 socket.on('study:join', async ({ roomCode }) => {
     try {
+        if (!studyJoinAllowed(userId)) {
+            socket.emit('study:error', { message: 'rate_limited' });
+            return;
+        }
         const room = await findStudyRoomByCode(roomCode);
-        if (room) {
+        if (!room) return;
+        if (!isStudyRoomMember(room, userId)) {
+            socket.emit('study:error', { message: 'no_access' });
+            return;
+        }
             socket.join(roomCode);
             // Если в БД есть вкладки (в виде JSON), парсим их, иначе отправляем стандарт
             const tabsData = room.tabs ? (typeof room.tabs === 'string' ? JSON.parse(room.tabs) : room.tabs) : null;
@@ -1800,13 +1875,11 @@ socket.on('study:join', async ({ roomCode }) => {
                 pgn: room.pgn || '',
                 studySettings: getStudySettings(roomCode),
             });
-        }
     } catch (error) {
         console.error('Ошибка в study:join:', error);
     }
 });
 
-// --- ОБНОВЛЕННЫЙ БЛОК ХОДОВ (STUDY) ---
 // --- ОБНОВЛЕННЫЙ БЛОК ХОДОВ (STUDY) ---
 socket.on('study:move', async ({ roomCode, tabId, fen, pgn, customHistory }) => {
     try {
@@ -1814,15 +1887,12 @@ socket.on('study:move', async ({ roomCode, tabId, fen, pgn, customHistory }) => 
         const room = await findStudyRoomByCode(roomCode);
         if (!room) return;
 
-        // Права: учитель, админ или назначенный ученик
-        const isTeacher = (Number(room.teacher_id) === Number(userId) || socket.user.role === 'admin' || socket.user.role === 'teacher');
-        const isStudent = (Number(room.student_id) === Number(userId));
+        const isTeacher = isStudyRoomOwner(room, userId, socket.user.role);
+        const isStudent = isStudyRoomMember(room, userId) && !isTeacher;
 
-        // Разрешаем ходить, если это учитель/админ ИЛИ если это ученик этой комнаты
         if (!isTeacher && !isStudent) return;
 
         // ВАЖНО: Обновляем данные в базе данных.
-        // Убедитесь, что ваша функция updateStudyRoomFen умеет принимать и сохранять customHistory в объект вкладки
         await updateStudyRoomFen(roomCode, fen, tabId, pgn, customHistory);
 
         if (fen && tabId === 'play') {
@@ -1832,15 +1902,14 @@ socket.on('study:move', async ({ roomCode, tabId, fen, pgn, customHistory }) => 
             io.to(roomCode).emit('study:syncSettings', { settings: merged });
         }
 
-        // Рассылаем обновленное состояние ВСЕМ участникам комнаты, ВКЛЮЧАЯ customHistory
         io.to(roomCode).emit('study:syncMove', {
             tabId,
             fen,
             pgn,
-            customHistory: customHistory || [] // Передаем историю, чтобы клиент мог её отрисовать
+            customHistory: customHistory || []
         });
 
-        // Если это игровая вкладка 'play', проверяем завершение партии
+        // Study games do NOT affect tournament Elo — academic training only.
         if (tabId === 'play') {
             const game = new Chess(fen);
             if (game.game_over()) {
@@ -1848,7 +1917,6 @@ socket.on('study:move', async ({ roomCode, tabId, fen, pgn, customHistory }) => 
                     let winnerId = null, loserId = null, isDraw = false;
 
                     if (game.in_checkmate()) {
-                        // Если сейчас ход белых и мат — значит победили черные (ученик)
                         if (game.turn() === 'w') {
                             winnerId = room.student_id;
                             loserId = room.teacher_id;
@@ -1857,12 +1925,13 @@ socket.on('study:move', async ({ roomCode, tabId, fen, pgn, customHistory }) => 
                             loserId = room.student_id;
                         }
                     } else {
-                        // Пат или иная ничья
                         isDraw = true;
-                        // Для статистики можно передать обоих или обработать отдельно в updateUserStats
                     }
 
-                    await updateUserStats(winnerId, loserId, isDraw);
+                    await updateUserStats(winnerId, loserId, isDraw, {
+                        affectsRating: false,
+                        gameType: 'Учёба',
+                    });
                     io.to(roomCode).emit('study:gameFinished', { winnerId, isDraw });
                 }
             }
@@ -1878,7 +1947,7 @@ socket.on('study:updateTabs', async ({ roomCode, tabs, activeTabId }) => {
         const userId = socket.user.id;
         const room = await findStudyRoomByCode(roomCode);
 
-        if (room && (Number(room.teacher_id) === Number(userId) || socket.user.role === 'admin' || socket.user.role === 'teacher')) {
+        if (room && isStudyRoomOwner(room, userId, socket.user.role)) {
             const { updateRoomTabs } = await import('./db.js');
             await updateRoomTabs(roomCode, tabs, activeTabId);
             io.to(roomCode).emit('study:syncTabs', { tabs, activeTabId });
@@ -1893,9 +1962,7 @@ socket.on('study:importPgn', async ({ roomCode, pgn, title }) => {
         const userId = socket.user.id;
         const room = await findStudyRoomByCode(roomCode);
         if (!room) return;
-        const isTeacher = Number(room.teacher_id) === Number(userId) || socket.user.role === 'admin' || socket.user.role === 'teacher';
-        const isStudent = Number(room.student_id) === Number(userId);
-        if (!isTeacher && !isStudent) return;
+        if (!isStudyRoomMember(room, userId)) return;
         if (!pgn || typeof pgn !== 'string') return;
 
         let tabs = [];
@@ -1944,7 +2011,7 @@ socket.on('study:switchTab', async ({ roomCode, tabId }) => {
         const userId = socket.user.id;
         const room = await findStudyRoomByCode(roomCode);
 
-        if (room && (Number(room.teacher_id) === Number(userId) || socket.user.role === 'admin' || socket.user.role === 'teacher')) {
+        if (room && isStudyRoomOwner(room, userId, socket.user.role)) {
             const { updateActiveTab } = await import('./db.js');
             await updateActiveTab(roomCode, tabId);
             socket.to(roomCode).emit('study:syncSwitchTab', { tabId });
@@ -1961,7 +2028,7 @@ socket.on('study:draw', async ({ roomCode, tabId, shapes }) => {
         const room = await findStudyRoomByCode(roomCode);
 
         // Рисовать может только учитель/админ
-        if (room && (Number(room.teacher_id) === Number(userId) || socket.user.role === 'admin' || socket.user.role === 'teacher')) {
+        if (room && isStudyRoomOwner(room, userId, socket.user.role)) {
             // Сохраняем shapes во вкладке, чтобы не терялись при перезагрузке
             if (room.tabs) {
                 let tabs = typeof room.tabs === 'string' ? JSON.parse(room.tabs) : room.tabs;
@@ -1981,11 +2048,7 @@ socket.on('study:notes', async ({ roomCode, tabId, notes }) => {
         const userId = socket.user.id;
         const room = await findStudyRoomByCode(roomCode);
         if (!room) return;
-        const isTeacher =
-            Number(room.teacher_id) === Number(userId) ||
-            socket.user.role === 'admin' ||
-            socket.user.role === 'teacher';
-        if (!isTeacher) return;
+        if (!isStudyRoomOwner(room, userId, socket.user.role)) return;
         await updateTabNotes(roomCode, tabId, notes || '');
         io.to(roomCode).emit('study:syncNotes', { tabId, notes: notes || '' });
     } catch (error) {
@@ -1998,11 +2061,7 @@ socket.on('study:updateSettings', async ({ roomCode, settings }) => {
         const userId = socket.user.id;
         const room = await findStudyRoomByCode(roomCode);
         if (!room) return;
-        const isTeacher =
-            Number(room.teacher_id) === Number(userId) ||
-            socket.user.role === 'admin' ||
-            socket.user.role === 'teacher';
-        if (!isTeacher || !settings) return;
+        if (!isStudyRoomOwner(room, userId, socket.user.role) || !settings) return;
         const merged = { ...getStudySettings(roomCode), ...settings };
         studyRoomSettings.set(roomCode, merged);
         io.to(roomCode).emit('study:syncSettings', { settings: merged });
@@ -2018,11 +2077,23 @@ socket.on('group:join', async ({ roomCode }) => {
         const raw = await findStudyRoomByCode(roomCode);
         const room = await enrichGroupRoom(raw);
         if (!room || room.room_type !== 'group') return;
-        socket.join(roomCode);
         const userId = socket.user.id;
-        if (Number(room.teacher_id) !== Number(userId)) {
+        const isOwner = Number(room.teacher_id) === Number(userId) || socket.user.role === 'admin';
+        let ids = [];
+        try {
+            ids = JSON.parse(raw.group_student_ids || '[]').map(Number);
+        } catch { /* ignore */ }
+        if (!isOwner && !ids.includes(Number(userId))) {
+            const { getStudentTeachers } = await import('./db.js');
+            const teachers = await getStudentTeachers(userId);
+            const linked = teachers.some((t) => Number(t.id) === Number(room.teacher_id));
+            if (!linked) {
+                socket.emit('group:error', { message: 'no_access' });
+                return;
+            }
             await joinGroupStudent(roomCode, userId);
         }
+        socket.join(roomCode);
         const fresh = await enrichGroupRoom(await findStudyRoomByCode(roomCode));
         socket.emit('group:roomData', fresh);
         io.to(roomCode).emit('group:presence', {
@@ -2367,11 +2438,13 @@ const clientDist = path.join(__dirname, 'client', 'dist');
 const publicDir = path.join(__dirname, 'public');
 
 if (fs.existsSync(clientDist)) {
+    app.get('/puzzle.html', (_req, res) => res.redirect(302, '/lobby'));
     app.use(express.static(clientDist));
     app.get(/^(?!\/api(?:\/|$)|\/socket\.io(?:\/|$)).*/, (req, res) => {
         res.sendFile(path.join(clientDist, 'index.html'));
     });
 } else {
+    app.get('/puzzle.html', (_req, res) => res.redirect(302, '/lobby'));
     app.use(express.static(publicDir));
 }
 
@@ -2438,7 +2511,6 @@ const startServer = async () => {
     try {
         // Подготовка базы
         await initDb();
-        await initPuzzlesTable();
         await initTournamentInstances();
         broadcastTournamentSchedule();
         runReminderCheck();
@@ -2447,7 +2519,7 @@ const startServer = async () => {
         console.log('[DB] Все таблицы проверены и готовы.');
 
         // ВАЖНО: Слушаем именно httpServer, к которому привязаны сокеты!
-        const PORT = Number(process.env.PORT) || 3569;
+        const PORT = Number(process.env.PORT) || 3011;
         const HOST = process.env.HOST || '127.0.0.1';
         httpServer.listen(PORT, HOST, () => {
             console.log(`🚀 Шахматный сервер (API + Sockets) запущен на ${HOST}:${PORT}`);

@@ -7,28 +7,70 @@ import {
     getPendingScheduleRequests,
     getTeacherStudentSnapshots,
     getTeacherHomeworkPendingTotal,
-    getPuzzleStatusForUser,
     getPlayerGameHistory,
     summarizePlayerForm,
     buildRatingSparkline,
-    pickPlayerFunTitle,
+    computeRatingDeltaWeek,
     getFeaturedTournaments,
     analyzePlayerExtras,
+    buildChessArmy,
+    buildLearningArmy,
+    attachRatingFields,
 } from '../db.js';
 import { getBadgeSummary } from './achievements.js';
 
+async function buildPlayStatsBlock(userId, user) {
+    const history = await getPlayerGameHistory(userId, 10);
+    const historyDeep = await getPlayerGameHistory(userId, 40);
+    const form = summarizePlayerForm(history);
+    const totalGames = (Number(user?.wins) || 0) + (Number(user?.losses) || 0) + (Number(user?.draws) || 0);
+    const allTimeWinRate = totalGames
+        ? Math.round(((Number(user?.wins) || 0) / totalGames) * 100)
+        : 0;
+    return {
+        history,
+        form,
+        stats: {
+            wins: Number(user?.wins) || 0,
+            losses: Number(user?.losses) || 0,
+            draws: Number(user?.draws) || 0,
+            allTimeWinRate,
+        },
+        ratingSparkline: buildRatingSparkline(user?.rating, history),
+        ratingDeltaWeek: computeRatingDeltaWeek(historyDeep, user?.rating),
+        playArmy: buildChessArmy(user?.wins),
+        tournaments: await getFeaturedTournaments(3),
+        extras: analyzePlayerExtras(historyDeep, user, form),
+    };
+}
+
 export async function buildProfileDashboard(userId, role) {
     const badges = await getBadgeSummary(userId);
-    const base = { role, badges };
+    const user = attachRatingFields(await findUserById(userId));
+    const tournamentElo = Number(user?.tournamentElo ?? user?.rating) || 0;
+    const academicXp = Number(user?.academicXp ?? user?.academic_xp) || 0;
+    const base = {
+        role,
+        badges,
+        tournamentElo,
+        academicXp,
+        ratings: {
+            tournamentElo,
+            academicXp,
+        },
+        xpTierKey: user?.xpTierKey || null,
+    };
 
-    if (role === 'student') {
-        const puzzle = await getPuzzleStatusForUser(userId);
+    if (role === 'student' || role === 'player') {
+        const progress = await getStudentTopicProgress(userId);
+        const play = await buildPlayStatsBlock(userId, user);
         return {
             ...base,
-            puzzle,
             nextLesson: await getNextLessonForStudent(userId),
             homework: await getStudentHomeworkSummary(userId),
-            progress: await getStudentTopicProgress(userId),
+            progress,
+            learnArmy: buildLearningArmy(academicXp),
+            play,
         };
     }
 
@@ -44,46 +86,5 @@ export async function buildProfileDashboard(userId, role) {
         };
     }
 
-    if (role === 'player') {
-        const puzzle = await getPuzzleStatusForUser(userId);
-        const user = await findUserById(userId);
-        const history = await getPlayerGameHistory(userId, 10);
-        const historyDeep = await getPlayerGameHistory(userId, 40);
-        const form = summarizePlayerForm(history);
-        const totalGames = (Number(user?.wins) || 0) + (Number(user?.losses) || 0) + (Number(user?.draws) || 0);
-        const allTimeWinRate = totalGames
-            ? Math.round(((Number(user?.wins) || 0) / totalGames) * 100)
-            : 0;
-        let trophyCount = 0;
-        try {
-            const trophies = JSON.parse(user?.trophies || '[]');
-            trophyCount = trophies.filter((tr) => tr.type !== 'badge' && !tr.badgeId).length;
-        } catch {
-            trophyCount = 0;
-        }
-        return {
-            ...base,
-            puzzle,
-            history,
-            form,
-            funTitle: pickPlayerFunTitle(user, puzzle?.streak || 0),
-            streaks: {
-                win: Number(user?.win_streak) || 0,
-                daily: Number(user?.daily_streak) || 0,
-            },
-            stats: {
-                wins: Number(user?.wins) || 0,
-                losses: Number(user?.losses) || 0,
-                draws: Number(user?.draws) || 0,
-                allTimeWinRate,
-                trophyCount,
-            },
-            ratingSparkline: buildRatingSparkline(user?.rating, history),
-            tournaments: await getFeaturedTournaments(4),
-            extras: analyzePlayerExtras(historyDeep, user, form, puzzle),
-        };
-    }
-
-    const puzzle = await getPuzzleStatusForUser(userId);
-    return { ...base, puzzle };
+    return { ...base };
 }

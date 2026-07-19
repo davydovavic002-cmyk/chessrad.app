@@ -81,26 +81,10 @@
     }
 
     async function handleWin() {
-        const mode = new URLSearchParams(window.location.search).get('mode');
-        if (mode === 'restore_streak') {
-            try {
-                const res = await fetch('/api/puzzle/restore-streak', { method: 'POST' });
-                const data = await res.json();
-                if (data.success) {
-                    Swal.fire('Победа!', 'Стрик восстановлен! 🔥', 'success').then(() => {
-                        if (window.parent !== window) window.parent.postMessage({ type: 'STREAK_RESTORED' }, '*');
-                        else window.location.href = '/lobby';
-                    });
-                }
-            } catch {
-                Swal.fire('Ошибка', 'Не удалось восстановить стрик.', 'error');
-            }
-        } else {
-            Swal.fire('Победа!', 'Отличная игра!', 'success').then(() => {
-                if (window.parent !== window) window.parent.postMessage({ type: 'STREAK_RESTORED' }, '*');
-                else window.location.href = '/lobby';
-            });
-        }
+        Swal.fire('Победа!', 'Отличная игра!', 'success').then(() => {
+            if (window.parent !== window) window.parent.postMessage({ type: 'BOT_GAME_DONE' }, '*');
+            else window.location.href = '/lobby';
+        });
     }
 
     board = Chessboard('myBoard', {

@@ -1,0 +1,81 @@
+/* Academic mode preview — blurred until teacher is linked */
+
+.academic-locked-wrap {
+  position: relative;
+  border-radius: var(--radius-lg, 12px);
+}
+
+.academic-locked-wrap__content {
+  transition: filter 0.28s ease, opacity 0.28s ease;
+}
+
+.academic-locked-wrap.is-locked .academic-locked-wrap__content {
+  filter: blur(5px) saturate(0.55);
+  opacity: 0.42;
+  pointer-events: none;
+  user-select: none;
+}
+
+.academic-locked-wrap__veil {
+  display: none;
+}
+
+.academic-locked-wrap.is-locked .academic-locked-wrap__veil {
+  display: flex;
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 16px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.06) 0%,
+    rgba(255, 255, 255, 0.14) 45%,
+    rgba(255, 255, 255, 0.06) 100%
+  );
+  backdrop-filter: blur(2px);
+  border-radius: inherit;
+}
+
+.academic-locked-wrap__card {
+  max-width: 320px;
+  text-align: center;
+  padding: 18px 16px;
+  border: 1px dashed rgba(61, 155, 122, 0.45);
+}
+
+.academic-locked-wrap__icon {
+  display: block;
+  font-size: 1.6rem;
+  margin-bottom: 6px;
+}
+
+.academic-locked-wrap__title {
+  margin: 0 0 6px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+
+.academic-locked-wrap__hint {
+  margin: 0 0 12px;
+  font-size: 0.82rem;
+}
+
+.academic-chip-locked {
+  position: relative;
+  opacity: 0.55 !important;
+  filter: grayscale(0.35) blur(0.4px);
+}
+
+.academic-chip-locked::after {
+  content: '🔒';
+  position: absolute;
+  top: -6px;
+  right: -4px;
+  font-size: 0.62rem;
+  line-height: 1;
+  filter: none;
+  opacity: 1;
+}

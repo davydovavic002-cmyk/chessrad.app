@@ -1,8 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Chess } from 'chess.js';
 import Swal from 'sweetalert2';
-import { api } from '../api';
 import Board from '../components/Board';
 import BackButton from '../components/BackButton';
 import { useI18n } from '../i18n/I18nContext';
@@ -18,7 +17,6 @@ function botMove(fen) {
 }
 
 export default function PlayBotPage() {
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { t } = useI18n();
   const inIframe = typeof window !== 'undefined' && window.parent !== window;
@@ -27,25 +25,10 @@ export default function PlayBotPage() {
   const [status, setStatus] = useState('Твой ход (Белые)');
 
   const finishWin = useCallback(async () => {
-    const mode = searchParams.get('mode');
-    if (mode === 'restore_streak') {
-      try {
-        const res = await api('/api/puzzle/restore-streak', { method: 'POST' });
-        const data = await res.json();
-        if (data.success) {
-          await Swal.fire('Победа!', 'Стрик восстановлен! 🔥', 'success');
-          if (window.parent !== window) window.parent.postMessage({ type: 'STREAK_RESTORED' }, '*');
-          else navigate('/lobby');
-        }
-      } catch {
-        Swal.fire('Ошибка', 'Не удалось восстановить стрик.', 'error');
-      }
-    } else {
-      await Swal.fire('Победа!', 'Отличная игра!', 'success');
-      if (window.parent !== window) window.parent.postMessage({ type: 'STREAK_RESTORED' }, '*');
-      else navigate('/lobby');
-    }
-  }, [navigate, searchParams]);
+    await Swal.fire('Победа!', 'Отличная игра!', 'success');
+    if (window.parent !== window) window.parent.postMessage({ type: 'BOT_GAME_DONE' }, '*');
+    else navigate('/lobby');
+  }, [navigate]);
 
   const updateStatus = useCallback(async () => {
     const game = gameRef.current;

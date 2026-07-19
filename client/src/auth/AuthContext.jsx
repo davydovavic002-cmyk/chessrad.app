@@ -49,6 +49,7 @@ export function AuthProvider({ children }) {
         role,
         displayName: extras.displayName,
         teacherLinkCode: extras.teacherLinkCode,
+        teacherInviteCode: extras.teacherInviteCode,
       }),
     });
     if (res.ok) return { ok: true };

@@ -12,34 +12,21 @@ import ProfileLinkCard from '../components/ProfileLinkCard';
 import {
   ProfileStudentDashboard,
   ProfileTeacherDashboard,
-  ProfilePlayerDashboard,
   ProfileSettingsPanel,
 } from '../components/profile/ProfileDashboard';
 import ProfileHero, { ProfileSection } from '../components/profile/ProfileHero';
 import { SECTION_PIECES } from '../components/profile/ProfileChessDecor';
 import { TIMEZONE_OPTIONS } from '../utils/timezone';
 import '../styles/profile.css';
+import '../styles/academic-lock.css';
 
 const LEVEL_KEYS = [
-  { key: 'profile_level_novice', min: 0, next: 1500 },
-  { key: 'profile_level_amateur', min: 1500, next: 2500 },
-  { key: 'profile_level_skilled', min: 2500, next: 4500 },
-  { key: 'profile_level_master', min: 4500, next: 7500 },
-  { key: 'profile_level_grandmaster', min: 7500, next: Infinity },
+  { key: 'profile_level_novice', min: 0, next: 700 },
+  { key: 'profile_level_amateur', min: 700, next: 1000 },
+  { key: 'profile_level_skilled', min: 1000, next: 1400 },
+  { key: 'profile_level_master', min: 1400, next: 2000 },
+  { key: 'profile_level_grandmaster', min: 2000, next: Infinity },
 ];
-
-function resultLabel(result, t) {
-  if (result === 'Победа' || result === 'Win') return t('profile_result_win');
-  if (result === 'Ничья' || result === 'Draw') return t('profile_result_draw');
-  if (result === 'Поражение' || result === 'Loss') return t('profile_result_loss');
-  return result;
-}
-
-function resultColor(result) {
-  if (result === 'Победа' || result === 'Win') return '#2ed573';
-  if (result === 'Ничья' || result === 'Draw') return '#ff9f43';
-  return '#ff4757';
-}
 
 export default function ProfilePage() {
   const { user, logout, refreshUser } = useAuth();
@@ -73,8 +60,10 @@ export default function ProfilePage() {
 
   const mustChange = user?.must_change_password === 1;
   const isTeacher = user?.role === 'teacher' || user?.role === 'admin';
-  const isStudent = user?.role === 'student';
-  const isPlayer = user?.role === 'player';
+  /** Legacy `player` accounts share the student dual-rating CRM surface. */
+  const isStudent = user?.role === 'student' || user?.role === 'player';
+  const dualRatings = user?.role === 'student' || user?.role === 'player';
+  const academicLocked = user?.role === 'student' && Boolean(user?.needs_teacher_link);
 
   const loadRooms = useCallback(async () => {
     if (!isTeacher) return;
@@ -162,25 +151,6 @@ export default function ProfilePage() {
 
   const rating = parseInt(user?.rating, 10) || 0;
   const currentLevel = LEVEL_KEYS.find((l) => rating >= l.min && rating < l.next) || LEVEL_KEYS[0];
-  let progressPct = 100;
-  let pointsText = t('profile_level_max');
-  if (currentLevel.next !== Infinity) {
-    const range = currentLevel.next - currentLevel.min;
-    progressPct = Math.max(5, Math.min(100, ((rating - currentLevel.min) / range) * 100));
-    const nextLevel = LEVEL_KEYS[LEVEL_KEYS.indexOf(currentLevel) + 1];
-    pointsText = t('profile_level_points', {
-      name: t(nextLevel.key),
-      n: currentLevel.next - rating,
-    });
-  }
-
-  let trophies = [];
-  try {
-    const all = typeof user?.trophies === 'string' ? JSON.parse(user.trophies) : user?.trophies || [];
-    trophies = all.filter((tr) => tr.type !== 'badge' && !tr.badgeId);
-  } catch {
-    trophies = [];
-  }
 
   async function saveSettings() {
     const { res, data } = await apiJson('/api/profile/settings', {
@@ -357,9 +327,13 @@ export default function ProfilePage() {
         <ProfileHero
           user={user}
           rating={rating}
+          academicXp={Number(user?.academicXp ?? user?.academic_xp) || 0}
           dash={dash}
           levelLabel={t(currentLevel.key)}
+          xpTierLabel={user?.xpTierKey ? t(user.xpTierKey) : null}
           winStreak={Number(user?.win_streak) || 0}
+          dualRatings={dualRatings}
+          academicLocked={academicLocked}
         />
 
         <ProfileSection title={t('profile_section_now')} piece={SECTION_PIECES.now}>
@@ -377,6 +351,7 @@ export default function ProfilePage() {
               tzSecondary={tzSecondary}
               username={user?.username}
               role={user?.role}
+              academicLocked={academicLocked}
             />
           )}
           {!dashLoading && isTeacher && (
@@ -389,23 +364,6 @@ export default function ProfilePage() {
               onCreateRoom={createStudyRoom}
               username={user?.username}
               role={user?.role}
-            />
-          )}
-          {!dashLoading && isPlayer && (
-            <ProfilePlayerDashboard
-              dash={dash}
-              rating={rating}
-              t={t}
-              lang={lang}
-              navigate={navigate}
-              resultLabel={(r) => resultLabel(r, t)}
-              resultColor={resultColor}
-              userHistory={user.history}
-              username={user?.username}
-              role={user?.role}
-              levelLabel={t(currentLevel.key)}
-              progressPct={progressPct}
-              pointsText={pointsText}
             />
           )}
         </ProfileSection>
@@ -446,7 +404,9 @@ export default function ProfilePage() {
                       <li key={st.id} className="profile-link-list__item">
                         <span>
                           <strong>{st.display_name || st.username}</strong>
-                          <span className="subtitle"> · {st.rating} Elo</span>
+                          <span className="subtitle">
+                            {' '}· 🏆 {st.rating} · 📚 {st.academic_xp ?? st.academicXp ?? 0} XP
+                          </span>
                         </span>
                         <button
                           type="button"
@@ -460,61 +420,6 @@ export default function ProfilePage() {
                   )}
                 </ul>
               )}
-            </section>
-          </ProfileSection>
-        )}
-
-        {isPlayer && (
-          <ProfileSection title={t('profile_section_game')} piece={SECTION_PIECES.game}>
-            <section className="profile-block profile-block--third">
-              <div className="stats-grid stats-grid--row">
-                <div className="stat-card">
-                  <span className="stat-value">{Number(user.wins) || 0}</span>
-                  <span className="stat-label">{t('profile_wins')}</span>
-                </div>
-                <div className="stat-card">
-                  <span className="stat-value">{Number(user.draws) || 0}</span>
-                  <span className="stat-label">{t('profile_draws')}</span>
-                </div>
-                <div className="stat-card">
-                  <span className="stat-value">{Number(user.losses) || 0}</span>
-                  <span className="stat-label">{t('profile_losses')}</span>
-                </div>
-              </div>
-            </section>
-            <section className="profile-block profile-block--third">
-              <h3>{t('profile_progress')}: <span>{t(currentLevel.key)}</span></h3>
-              <div className="progress-container">
-                <div id="progress-fill-bar" style={{ width: `${progressPct}%` }} />
-              </div>
-              <p className="subtitle">{pointsText}</p>
-            </section>
-            <section className="profile-block profile-block--third">
-              <h3>{t('profile_trophies')}</h3>
-              <div className="trophy-shelf">
-                {trophies.length === 0 ? (
-                  <p className="subtitle">{t('profile_no_trophies')}</p>
-                ) : (
-                  trophies.map((tr, i) => {
-                    const bgColor =
-                      { red: '#ff4757', blue: '#2e86de', green: '#2ed573', yellow: '#ffa502' }[tr.color] || '#ffd700';
-                    return (
-                      <div
-                        key={i}
-                        className="trophy-chip"
-                        title={t('profile_trophy_tip', {
-                          name: tr.tournamentName || t('profile_tournament'),
-                          place: tr.place,
-                          date: tr.date,
-                        })}
-                        style={{ background: bgColor }}
-                      >
-                        {tr.place === 1 ? '🏆' : '🏅'}
-                      </div>
-                    );
-                  })
-                )}
-              </div>
             </section>
           </ProfileSection>
         )}

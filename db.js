@@ -3,24 +3,51 @@ import { open } from 'sqlite';
 import bcrypt from 'bcrypt';
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
+import {
+    ELO_LEVEL_BANDS,
+    PUZZLE_XP,
+    DAILY_BONUS_XP,
+    HW_XP_ON_TIME,
+    HW_XP_LATE,
+    getLevelByRating,
+    computeAcademicXpFromParts,
+    decontaminateTournamentElo,
+    getXpTier,
+    attachRatingFields,
+    buildXpSparklineFromEvents,
+    buildRatingSparkline,
+    computeRatingDeltaWeek,
+    pickPlayerFunTitle,
+    buildChessArmy,
+    buildLearningArmy,
+    puzzleMoveMatches,
+} from './db/ratings-pure.js';
+
+export {
+    ELO_LEVEL_BANDS,
+    PUZZLE_XP,
+    DAILY_BONUS_XP,
+    HW_XP_ON_TIME,
+    HW_XP_LATE,
+    getLevelByRating,
+    computeAcademicXpFromParts,
+    decontaminateTournamentElo,
+    getXpTier,
+    attachRatingFields,
+    buildXpSparklineFromEvents,
+    buildRatingSparkline,
+    computeRatingDeltaWeek,
+    pickPlayerFunTitle,
+    buildChessArmy,
+    buildLearningArmy,
+    puzzleMoveMatches,
+};
 
 export let db;
 
 const DB_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'db');
-
-const LEVEL_THRESHOLDS = [
-    { name: 'Большой мастер', min: 7500 },
-    { name: 'Мастер', min: 4500 },
-    { name: 'Опытный', min: 2500 },
-    { name: 'Любитель', min: 1500 },
-    { name: 'Новичок', min: 0 }
-];
-
-function getLevelByRating(rating) {
-    const level = LEVEL_THRESHOLDS.find(l => rating >= l.min);
-    return level ? level.name : 'Новичок';
-}
 
 export async function getDbConnection() {
     if (!db) {
@@ -36,6 +63,7 @@ export async function getDbConnection() {
         try {
             await db.run('PRAGMA journal_mode = WAL');
             await db.run('PRAGMA busy_timeout = 5000');
+            await db.run('PRAGMA foreign_keys = ON');
             console.log('[DB] Настройки оптимизации применены: WAL mode и Busy Timeout.');
         } catch (err) {
             console.error('[DB] Ошибка при настройке PRAGMA:', err);
@@ -59,6 +87,7 @@ export const initDb = async () => {
             draws INTEGER NOT NULL DEFAULT 0,
             level TEXT NOT NULL DEFAULT 'Новичок',
             rating INTEGER NOT NULL DEFAULT 500,
+            academic_xp INTEGER NOT NULL DEFAULT 0,
             win_streak INTEGER NOT NULL DEFAULT 0,
             daily_streak INTEGER NOT NULL DEFAULT 0,
             previous_streak INTEGER NOT NULL DEFAULT 0,
@@ -286,6 +315,104 @@ await db.exec(`
     if (!userCols2.includes('tz_secondary')) await db.exec("ALTER TABLE users ADD COLUMN tz_secondary TEXT DEFAULT 'Europe/Berlin'");
     if (!userCols2.includes('display_name')) await db.exec('ALTER TABLE users ADD COLUMN display_name TEXT DEFAULT ""');
     if (!userCols2.includes('link_code')) await db.exec('ALTER TABLE users ADD COLUMN link_code TEXT DEFAULT ""');
+    if (!userCols2.includes('academic_xp')) {
+        await db.exec('ALTER TABLE users ADD COLUMN academic_xp INTEGER NOT NULL DEFAULT 0');
+    }
+    if (!userCols2.includes('elo_decontaminated')) {
+        await db.exec('ALTER TABLE users ADD COLUMN elo_decontaminated INTEGER NOT NULL DEFAULT 0');
+    }
+
+    await db.exec(`
+        CREATE TABLE IF NOT EXISTS schema_meta (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        )
+    `);
+
+    // Deduplicate puzzle solves, then enforce uniqueness (blocks XP farming).
+    await db.exec(`
+        DELETE FROM user_puzzles
+        WHERE id NOT IN (
+            SELECT MIN(id) FROM user_puzzles GROUP BY user_id, puzzle_id
+        )
+    `);
+    await db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_user_puzzles_unique ON user_puzzles(user_id, puzzle_id)');
+
+    const splitV2 = await db.get(`SELECT value FROM schema_meta WHERE key = 'ratings_split_v2'`);
+    if (splitV2 && splitV2.value && splitV2.value !== 'pending' && !String(splitV2.value).startsWith('done')) {
+        // Legacy successful v2 (ISO timestamp) — stamp per-user flag so Elo never re-subtracts.
+        await db.run('UPDATE users SET elo_decontaminated = 1');
+        await db.run(
+            `UPDATE schema_meta SET value = ? WHERE key = 'ratings_split_v2'`,
+            [`done:${splitV2.value}`]
+        );
+    } else if (!splitV2 || splitV2.value === 'pending') {
+        await db.run(
+            `INSERT INTO schema_meta (key, value) VALUES ('ratings_split_v2', 'pending')
+             ON CONFLICT(key) DO UPDATE SET value = 'pending'`
+        );
+        await db.exec('BEGIN IMMEDIATE');
+        try {
+            const users = await db.all('SELECT id, rating, elo_decontaminated FROM users');
+            for (const u of users) {
+                const puzzleRow = await db.get(
+                    'SELECT COUNT(DISTINCT puzzle_id) AS c FROM user_puzzles WHERE user_id = ?',
+                    [u.id]
+                );
+                const hwOk = await db.get(
+                    `SELECT COUNT(*) AS c FROM homework_assignments
+                     WHERE student_id = ? AND status = 'completed'`,
+                    [u.id]
+                );
+                const hwLate = await db.get(
+                    `SELECT COUNT(*) AS c FROM homework_assignments
+                     WHERE student_id = ? AND status = 'late'`,
+                    [u.id]
+                );
+                const puzzleSolves = puzzleRow?.c || 0;
+                const academicXp = computeAcademicXpFromParts({
+                    puzzleSolves,
+                    hwCompleted: hwOk?.c || 0,
+                    hwLate: hwLate?.c || 0,
+                });
+                const tournamentElo = u.elo_decontaminated
+                    ? Number(u.rating) || 0
+                    : decontaminateTournamentElo(u.rating, puzzleSolves);
+                const level = getLevelByRating(tournamentElo);
+                await db.run(
+                    `UPDATE users
+                     SET rating = ?, academic_xp = ?, level = ?, elo_decontaminated = 1
+                     WHERE id = ?`,
+                    [tournamentElo, academicXp, level, u.id]
+                );
+            }
+            await db.run(
+                `UPDATE schema_meta SET value = ? WHERE key = 'ratings_split_v2'`,
+                [`done:${new Date().toISOString()}`]
+            );
+            await db.exec('COMMIT');
+            console.log('[DB] ratings_split_v2: Elo decontaminated (idempotent), academic_xp recalculated');
+        } catch (e) {
+            await db.exec('ROLLBACK');
+            console.error('[DB] ratings_split_v2 failed, rolled back:', e);
+            throw e;
+        }
+    }
+
+    await db.exec(`
+        CREATE TABLE IF NOT EXISTS academic_xp_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            delta INTEGER NOT NULL,
+            reason TEXT NOT NULL,
+            ref_id INTEGER,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        )
+    `);
+    await db.exec(
+        'CREATE INDEX IF NOT EXISTS idx_academic_xp_events_user ON academic_xp_events(user_id, created_at DESC)'
+    );
 
     await db.exec(`
         CREATE TABLE IF NOT EXISTS teacher_student_links (
@@ -825,16 +952,71 @@ export const unlinkStudentFromTeacher = async (teacherId, studentId) => {
     return r.changes > 0;
 };
 
+export const teacherLinkedToStudent = async (teacherId, studentId) => {
+    const db = await getDbConnection();
+    const row = await db.get(
+        'SELECT 1 AS ok FROM teacher_student_links WHERE teacher_id = ? AND student_id = ?',
+        [teacherId, studentId]
+    );
+    return Boolean(row);
+};
+
+export const parentLinkedToStudent = async (parentUserId, studentId) => {
+    const db = await getDbConnection();
+    const row = await db.get(
+        'SELECT 1 AS ok FROM parent_student_links WHERE parent_user_id = ? AND student_id = ?',
+        [parentUserId, studentId]
+    );
+    return Boolean(row);
+};
+
+/** Authorization helper for student-scoped resources. */
+export const canActorAccessStudent = async (actor, studentId) => {
+    if (!actor?.id || !studentId) return false;
+    const sid = Number(studentId);
+    if (!Number.isFinite(sid)) return false;
+    if (Number(actor.id) === sid) return true;
+    if (actor.role === 'admin') return true;
+    if (actor.role === 'teacher') return teacherLinkedToStudent(actor.id, sid);
+    if (actor.role === 'parent') return parentLinkedToStudent(actor.id, sid);
+    return false;
+};
+
 export const getTeacherStudents = async (teacherId) => {
     const db = await getDbConnection();
     return db.all(
-        `SELECT u.id, u.username, u.display_name, u.rating, u.level, l.created_at AS linked_at
+        `SELECT u.id, u.username, u.display_name, u.rating, u.academic_xp, u.level, l.created_at AS linked_at
          FROM teacher_student_links l
          JOIN users u ON u.id = l.student_id
          WHERE l.teacher_id = ?
          ORDER BY u.username COLLATE NOCASE ASC`,
         [teacherId]
     );
+};
+
+/**
+ * Apply academic XP on an open connection (caller owns the transaction).
+ * Does not touch tournament Elo (`rating`).
+ */
+export async function applyAcademicXp(database, userId, points = 0, reason = 'misc', refId = null) {
+    const pts = Number(points) || 0;
+    if (!pts || !userId) return null;
+    await database.run(
+        'UPDATE users SET academic_xp = MAX(0, COALESCE(academic_xp, 0) + ?) WHERE id = ?',
+        [pts, userId]
+    );
+    await database.run(
+        'INSERT INTO academic_xp_events (user_id, delta, reason, ref_id) VALUES (?, ?, ?, ?)',
+        [userId, pts, reason, refId]
+    );
+    const user = await database.get('SELECT academic_xp FROM users WHERE id = ?', [userId]);
+    return user?.academic_xp ?? null;
+}
+
+/** Award academic XP (puzzles, homework, study). Does not touch tournament Elo (`rating`). */
+export const awardAcademicXp = async (userId, points = 0, reason = 'misc', refId = null) => {
+    const database = await getDbConnection();
+    return applyAcademicXp(database, userId, points, reason, refId);
 };
 
 export const getStudentTeachers = async (studentId) => {
@@ -860,13 +1042,14 @@ export const countStudentTeachers = async (studentId) => {
 
 // --- УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЯМИ ---
 
-export const addUser = async (username, password, role = 'student', displayName = '') => {
+export const addUser = async (username, password, role = 'student', displayName = '', opts = {}) => {
     const db = await getDbConnection();
     const password_hash = await bcrypt.hash(password, 10);
     const safeDisplay = (displayName || '').trim() || username;
+    const mustChange = opts.mustChangePassword ? 1 : 0;
     const result = await db.run(
-        'INSERT INTO users (username, password_hash, role, display_name) VALUES (?, ?, ?, ?)',
-        [username, password_hash, role, safeDisplay]
+        'INSERT INTO users (username, password_hash, role, display_name, must_change_password) VALUES (?, ?, ?, ?, ?)',
+        [username, password_hash, role, safeDisplay, mustChange]
     );
     await ensureUserLinkCode(result.lastID);
     return result.lastID;
@@ -880,7 +1063,7 @@ export const findUserByUsername = async (username) => {
 export const findUserById = async (id) => {
     const db = await getDbConnection();
     const user = await db.get(`
-        SELECT id, username, role, wins, losses, draws, level, rating,
+        SELECT id, username, role, wins, losses, draws, level, rating, academic_xp,
                win_streak, daily_streak, previous_streak, last_puzzle_date, puzzle_level,
                trophies, must_change_password, avatar_url,
                parent_email, onboarding_done, theme, notify_email, notify_push,
@@ -890,18 +1073,7 @@ export const findUserById = async (id) => {
 
     if (!user) return null;
 
-    const history = await db.all(`
-        SELECT
-            CASE WHEN g.player1_id = ? THEN u2.username ELSE u1.username END as opponent,
-            g.result,
-            g.game_type as type
-        FROM games g
-        LEFT JOIN users u1 ON g.player1_id = u1.id
-        LEFT JOIN users u2 ON g.player2_id = u2.id
-        WHERE g.player1_id = ? OR g.player2_id = ?
-        ORDER BY g.id DESC LIMIT 10
-    `, [id, id, id]);
-
+    const history = await getPlayerGameHistory(id, 10);
     return { ...user, history: history || [] };
 };
 
@@ -968,19 +1140,62 @@ export async function getNextPuzzleForUser(userId) {
     return puzzle;
 }
 
-export const solvePuzzleUpdate = async (userId, puzzleId, points = 5) => {
+export const solvePuzzleUpdate = async (userId, puzzleId, points = PUZZLE_XP, submittedMove = '') => {
     const database = await getDbConnection();
-    await database.run('INSERT INTO user_puzzles (user_id, puzzle_id) VALUES (?, ?)', [userId, puzzleId]);
-    await database.run(`
-        UPDATE users
-        SET rating = rating + ?, puzzle_level = puzzle_level + 1
-        WHERE id = ?`, [points, userId]
+    const puzzle = await database.get('SELECT id, solution FROM puzzles WHERE id = ?', [puzzleId]);
+    if (!puzzle) {
+        return { success: false, reason: 'not_found' };
+    }
+    if (!puzzleMoveMatches(submittedMove, puzzle.solution)) {
+        return { success: false, reason: 'bad_move' };
+    }
+    const existing = await database.get(
+        'SELECT id FROM user_puzzles WHERE user_id = ? AND puzzle_id = ?',
+        [userId, puzzleId]
     );
-    const user = await database.get('SELECT rating FROM users WHERE id = ?', [userId]);
+    if (existing) {
+        const user = await database.get('SELECT rating, academic_xp FROM users WHERE id = ?', [userId]);
+        return {
+            success: true,
+            alreadySolved: true,
+            newRating: user?.rating,
+            academicXp: user?.academic_xp,
+            level: user ? getLevelByRating(user.rating) : undefined,
+        };
+    }
+    await database.exec('BEGIN IMMEDIATE');
+    try {
+        const raced = await database.get(
+            'SELECT id FROM user_puzzles WHERE user_id = ? AND puzzle_id = ?',
+            [userId, puzzleId]
+        );
+        if (raced) {
+            await database.exec('ROLLBACK');
+            const user = await database.get('SELECT rating, academic_xp FROM users WHERE id = ?', [userId]);
+            return {
+                success: true,
+                alreadySolved: true,
+                newRating: user?.rating,
+                academicXp: user?.academic_xp,
+                level: user ? getLevelByRating(user.rating) : undefined,
+            };
+        }
+        await database.run('INSERT INTO user_puzzles (user_id, puzzle_id) VALUES (?, ?)', [userId, puzzleId]);
+        await database.run('UPDATE users SET puzzle_level = puzzle_level + 1 WHERE id = ?', [userId]);
+        await applyAcademicXp(database, userId, points, 'puzzle', puzzleId);
+        await database.exec('COMMIT');
+    } catch (e) {
+        await database.exec('ROLLBACK');
+        throw e;
+    }
+    const user = await database.get('SELECT rating, academic_xp FROM users WHERE id = ?', [userId]);
     if (user) {
-        const newLevel = getLevelByRating(user.rating);
-        await database.run('UPDATE users SET level = ? WHERE id = ?', [newLevel, userId]);
-        return { success: true, newRating: user.rating, level: newLevel };
+        return {
+            success: true,
+            newRating: user.rating,
+            academicXp: user.academic_xp,
+            level: getLevelByRating(user.rating),
+        };
     }
     return { success: true };
 };
@@ -992,33 +1207,68 @@ export const completeDailyPuzzles = async (userId) => {
     // Перед начислением проверяем, не нужно ли сбросить старый стрик
     await checkAndResetStreak(userId);
 
-    const user = await database.get('SELECT last_puzzle_date, daily_streak, rating FROM users WHERE id = ?', [userId]);
+    const user = await database.get('SELECT last_puzzle_date, daily_streak, rating, academic_xp FROM users WHERE id = ?', [userId]);
+
+    if (user && user.last_puzzle_date === today) {
+        return {
+            success: true,
+            alreadyCompleted: true,
+            newStreak: user.daily_streak,
+            newRating: user.rating,
+            academicXp: user.academic_xp,
+        };
+    }
 
     let newStreak = 1;
-    if (user && user.last_puzzle_date === today) {
-        newStreak = user.daily_streak; // Уже решено сегодня
-    } else if (user && user.last_puzzle_date) {
+    if (user && user.last_puzzle_date) {
         const lastDate = new Date(user.last_puzzle_date);
         const currentDate = new Date(today);
         const diffDays = Math.ceil(Math.abs(currentDate - lastDate) / (1000 * 60 * 60 * 24));
 
         if (diffDays === 1) {
             newStreak = user.daily_streak + 1;
-        } else {
-            newStreak = 1;
         }
     }
 
-    await database.run(`
-        UPDATE users SET rating = rating + 50, daily_streak = ?, last_puzzle_date = ?, previous_streak = 0 WHERE id = ?`,
-        [newStreak, today, userId]
-    );
+    await database.exec('BEGIN IMMEDIATE');
+    try {
+        const fresh = await database.get(
+            'SELECT last_puzzle_date, daily_streak, rating, academic_xp FROM users WHERE id = ?',
+            [userId]
+        );
+        if (fresh && fresh.last_puzzle_date === today) {
+            await database.exec('ROLLBACK');
+            return {
+                success: true,
+                alreadyCompleted: true,
+                newStreak: fresh.daily_streak,
+                newRating: fresh.rating,
+                academicXp: fresh.academic_xp,
+            };
+        }
+        await database.run(
+            `UPDATE users
+             SET daily_streak = ?,
+                 last_puzzle_date = ?,
+                 previous_streak = 0
+             WHERE id = ?`,
+            [newStreak, today, userId]
+        );
+        await applyAcademicXp(database, userId, DAILY_BONUS_XP, 'daily_bonus');
+        await database.exec('COMMIT');
+    } catch (e) {
+        await database.exec('ROLLBACK');
+        throw e;
+    }
 
-    const updatedUser = await database.get('SELECT rating FROM users WHERE id = ?', [userId]);
+    const updatedUser = await database.get('SELECT rating, academic_xp FROM users WHERE id = ?', [userId]);
     if (updatedUser) {
-        const newLevel = getLevelByRating(updatedUser.rating);
-        await database.run('UPDATE users SET level = ? WHERE id = ?', [newLevel, userId]);
-        return { success: true, newStreak, newRating: updatedUser.rating };
+        return {
+            success: true,
+            newStreak,
+            newRating: updatedUser.rating,
+            academicXp: updatedUser.academic_xp,
+        };
     }
     return { success: true, newStreak };
 };
@@ -1198,7 +1448,7 @@ export const saveGroupSessionLog = async ({ teacherId, roomCode, studentIds, sum
 export const getParentChildren = async (parentUserId) => {
     const db = await getDbConnection();
     return db.all(
-        `SELECT u.id, u.username, u.rating, u.level, l.student_id
+        `SELECT u.id, u.username, u.display_name, u.rating, u.academic_xp, u.level, l.student_id
          FROM parent_student_links l
          JOIN users u ON u.id = l.student_id
          WHERE l.parent_user_id = ?`,
@@ -1252,23 +1502,41 @@ export const addPosition = async (teacherId, title, category, fen, big_folder) =
     );
 };
 
-export const getTeacherPositions = async () => {
+export const getTeacherPositions = async (teacherId = null) => {
     const db = await getDbConnection();
-    // Добавлен ORDER BY по big_folder для правильной группировки
-    return await db.all(`
+    if (teacherId) {
+        return db.all(
+            `SELECT pl.*, u.username as author_name FROM position_library pl
+             JOIN users u ON pl.teacher_id = u.id
+             WHERE pl.teacher_id = ?
+             ORDER BY big_folder, category, title`,
+            [teacherId]
+        );
+    }
+    return db.all(`
         SELECT pl.*, u.username as author_name FROM position_library pl
         JOIN users u ON pl.teacher_id = u.id ORDER BY big_folder, category, title`);
 };
 
-export const deletePosition = async (posId) => {
+export const deletePosition = async (posId, teacherId = null) => {
     const db = await getDbConnection();
-    return await db.run('DELETE FROM position_library WHERE id = ?', [posId]);
+    if (teacherId) {
+        return db.run('DELETE FROM position_library WHERE id = ? AND teacher_id = ?', [posId, teacherId]);
+    }
+    return db.run('DELETE FROM position_library WHERE id = ?', [posId]);
 };
 
 export const updatePosition = async (posId, teacherId, data) => {
     const db = await getDbConnection();
-    // Добавлено обновление big_folder
-    return await db.run(
+    if (teacherId) {
+        return db.run(
+            `UPDATE position_library
+             SET title = ?, category = ?, fen = ?, big_folder = ?
+             WHERE id = ? AND teacher_id = ?`,
+            [data.title, data.category, data.fen, data.big_folder, posId, teacherId]
+        );
+    }
+    return db.run(
         'UPDATE position_library SET title = ?, category = ?, fen = ?, big_folder = ? WHERE id = ?',
         [data.title, data.category, data.fen, data.big_folder, posId]
     );
@@ -1280,9 +1548,9 @@ export const updatePosition = async (posId, teacherId, data) => {
 
 export const saveGameResult = async (p1_id, p2_id, winner_id, type = 'Обычный') => {
     const db = await getDbConnection();
-    const date = new Date().toLocaleDateString('ru-RU');
+    const date = new Date().toISOString();
 
-    // Безопасная проверка результата для текста
+    // result relative to player1 (legacy column); history queries derive viewer-relative from winner_id
     let resText = 'Ничья';
     if (winner_id !== null) {
         resText = (String(winner_id) === String(p1_id)) ? 'Победа' : 'Поражение';
@@ -1298,33 +1566,31 @@ export const saveGameResult = async (p1_id, p2_id, winner_id, type = 'Обычн
     }
 };
 
-export const updateUserStats = async (winnerId, loserId, isDraw = false) => {
+export const updateUserStats = async (winnerId, loserId, isDraw = false, options = {}) => {
+    const { affectsRating = true, gameType = 'Обычный' } = options;
+    // Study / practice: never touch Elo, W-L-D, streak, or competitive history.
+    if (!affectsRating) {
+        return true;
+    }
     const db = await getDbConnection();
-    // Приводим к числам, чтобы избежать ошибок сравнения строк и чисел
     const wId = winnerId ? Number(winnerId) : null;
     const lId = loserId ? Number(loserId) : null;
 
     try {
         if (isDraw && wId && lId) {
-            // Ничья: +5 обоим, сброс стрика
             await db.run('UPDATE users SET draws = draws + 1, rating = rating + 5, win_streak = 0 WHERE id = ? OR id = ?', [wId, lId]);
-            await saveGameResult(wId, lId, null);
+            await saveGameResult(wId, lId, null, gameType);
         } else if (wId && lId) {
-            // Победа/Поражение
             const winner = await db.get('SELECT win_streak, rating FROM users WHERE id = ?', [wId]);
             const newStreak = (winner ? winner.win_streak : 0) + 1;
-
-            // Бонус за серию побед
             const points = newStreak >= 3 ? 25 : 15;
 
             await db.run('UPDATE users SET wins = wins + 1, rating = rating + ?, win_streak = ? WHERE id = ?', [points, newStreak, wId]);
             await db.run('UPDATE users SET losses = losses + 1, rating = MAX(0, rating - 10), win_streak = 0 WHERE id = ?', [lId]);
-
-            await saveGameResult(wId, lId, wId);
+            await saveGameResult(wId, lId, wId, gameType);
         }
 
-        // ВАЖНО: Обновляем текстовые уровни (звания) после изменения рейтинга
-        const affectedUsers = isDraw ? [wId, lId] : [wId, lId];
+        const affectedUsers = [wId, lId];
         for (const uId of affectedUsers) {
             if (uId) {
                 const user = await db.get('SELECT rating FROM users WHERE id = ?', [uId]);
@@ -1690,12 +1956,40 @@ export const completeHomework = async (id, studentId) => {
     const db = await getDbConnection();
     const hw = await db.get('SELECT * FROM homework_assignments WHERE id = ? AND student_id = ?', [id, studentId]);
     if (!hw) return false;
+    if (hw.status === 'completed' || hw.status === 'late') return true;
     const today = new Date().toISOString().slice(0, 10);
     const status = hw.due_date < today ? 'late' : 'completed';
-    await db.run(
-        `UPDATE homework_assignments SET status = ?, completed_at = CURRENT_TIMESTAMP WHERE id = ?`,
-        [status, id]
-    );
+    await db.exec('BEGIN IMMEDIATE');
+    try {
+        const fresh = await db.get(
+            'SELECT status FROM homework_assignments WHERE id = ? AND student_id = ?',
+            [id, studentId]
+        );
+        if (!fresh) {
+            await db.exec('ROLLBACK');
+            return false;
+        }
+        if (fresh.status === 'completed' || fresh.status === 'late') {
+            await db.exec('ROLLBACK');
+            return true;
+        }
+        await db.run(
+            `UPDATE homework_assignments SET status = ?, completed_at = CURRENT_TIMESTAMP WHERE id = ?`,
+            [status, id]
+        );
+        // Late homework still counts toward XP, but less than on-time.
+        await applyAcademicXp(
+            db,
+            studentId,
+            status === 'late' ? HW_XP_LATE : HW_XP_ON_TIME,
+            status === 'late' ? 'homework_late' : 'homework',
+            Number(id)
+        );
+        await db.exec('COMMIT');
+    } catch (e) {
+        await db.exec('ROLLBACK');
+        throw e;
+    }
     return true;
 };
 
@@ -1844,7 +2138,7 @@ export const ensureJournalShareToken = async (journalId, teacherId) => {
     ]);
     if (!entry) return null;
     if (entry.share_token) return entry.share_token;
-    const token = `jr_${journalId}_${Date.now().toString(36)}`;
+    const token = `jr_${crypto.randomBytes(24).toString('hex')}`;
     await db.run('UPDATE lesson_journals SET share_token = ? WHERE id = ?', [token, journalId]);
     return token;
 };
@@ -2573,30 +2867,39 @@ export const getTodayLessonsForTeacher = async (teacherId) => {
 };
 
 export const getTeacherStudentSnapshots = async (teacherId) => {
-    const db = await getDbConnection();
     const students = await getTeacherStudents(teacherId);
-    const snapshots = [];
-    for (const st of students) {
-        const pendingHw = await db.get(
-            `SELECT COUNT(*) as c FROM homework_assignments
-             WHERE student_id = ? AND teacher_id = ? AND status = 'pending'`,
-            [st.id, teacherId]
-        );
-        const lastJournal = await db.get(
-            `SELECT lesson_date FROM lesson_journals
-             WHERE student_id = ? AND teacher_id = ?
-             ORDER BY lesson_date DESC LIMIT 1`,
-            [st.id, teacherId]
-        );
-        const progress = await getStudentTopicProgress(st.id);
-        snapshots.push({
-            ...st,
+    return Promise.all(students.map(async (st) => {
+        const db = await getDbConnection();
+        const [pendingHw, lastJournal, progress, history] = await Promise.all([
+            db.get(
+                `SELECT COUNT(*) as c FROM homework_assignments
+                 WHERE student_id = ? AND teacher_id = ? AND status = 'pending'`,
+                [st.id, teacherId]
+            ),
+            db.get(
+                `SELECT lesson_date FROM lesson_journals
+                 WHERE student_id = ? AND teacher_id = ?
+                 ORDER BY lesson_date DESC LIMIT 1`,
+                [st.id, teacherId]
+            ),
+            getStudentTopicProgress(st.id),
+            getPlayerGameHistory(st.id, 12),
+        ]);
+        const tournamentElo = Number(st.rating) || 0;
+        const academicXp = Number(st.academic_xp) || 0;
+        return {
+            ...attachRatingFields(st),
+            tournamentElo,
+            academicXp,
+            eloSparkline: buildRatingSparkline(tournamentElo, history),
+            xpSparkline: await buildAcademicXpSparkline(st.id, academicXp),
             pendingHomework: pendingHw?.c || 0,
             lastLessonDate: lastJournal?.lesson_date || null,
             weakTopicsCount: progress.topicsPlanned?.length || 0,
-        });
-    }
-    return snapshots;
+            topicsDone: progress.topicsDone?.length || 0,
+            homeworkDone: progress.homeworkDone || 0,
+        };
+    }));
 };
 
 export const getTeacherHomeworkPendingTotal = async (teacherId) => {
@@ -2627,20 +2930,26 @@ const RESULT_LOSS = new Set(['Поражение', 'Loss']);
 
 export const getPlayerGameHistory = async (userId, limit = 10) => {
     const db = await getDbConnection();
+    const uid = Number(userId);
     return db.all(
         `SELECT
             CASE WHEN g.player1_id = ? THEN u2.username ELSE u1.username END as opponent,
-            g.result,
+            CASE
+                WHEN g.winner_id IS NULL THEN 'Ничья'
+                WHEN g.winner_id = ? THEN 'Победа'
+                ELSE 'Поражение'
+            END as result,
             g.game_type as type,
             g.date,
-            g.id
+            g.id,
+            g.winner_id
         FROM games g
         LEFT JOIN users u1 ON g.player1_id = u1.id
         LEFT JOIN users u2 ON g.player2_id = u2.id
         WHERE g.player1_id = ? OR g.player2_id = ?
         ORDER BY g.id DESC
         LIMIT ?`,
-        [userId, userId, userId, limit]
+        [uid, uid, uid, uid, limit]
     );
 };
 
@@ -2663,36 +2972,52 @@ export function summarizePlayerForm(games = []) {
     };
 }
 
-export function buildRatingSparkline(currentRating, games = []) {
-    const rating = Number(currentRating) || 0;
-    if (!games.length) return [rating];
-    const deltas = {
-        Победа: -15,
-        Win: -15,
-        Поражение: 10,
-        Loss: 10,
-        Ничья: -5,
-        Draw: -5,
-    };
-    let cursor = rating;
-    const points = [cursor];
-    for (const game of games) {
-        cursor += deltas[game.result] ?? 0;
-        points.unshift(Math.max(0, cursor));
+/** Reconstruct academic XP sparkline: prefer ledger (includes daily bonus), else HW+puzzles. */
+export async function buildAcademicXpSparkline(userId, currentXp = 0) {
+    const database = await getDbConnection();
+    const ledgerRows = await database.all(
+        `SELECT delta, created_at AS at
+         FROM academic_xp_events
+         WHERE user_id = ?
+         ORDER BY created_at DESC, id DESC
+         LIMIT 40`,
+        [userId]
+    );
+    if (ledgerRows.length) {
+        return buildXpSparklineFromEvents(
+            currentXp,
+            ledgerRows.map((row) => ({ at: row.at || '', delta: Number(row.delta) || 0 })),
+            12
+        );
     }
-    return points.slice(-12);
-}
-
-export function pickPlayerFunTitle(user, puzzleStreak = 0) {
-    const rating = Number(user?.rating) || 0;
-    const winStreak = Number(user?.win_streak) || 0;
-    const dailyStreak = Number(user?.daily_streak) || 0;
-    if (winStreak >= 5) return 'player_title_unstoppable';
-    if (dailyStreak >= 7 || puzzleStreak >= 7) return 'player_title_puzzle_king';
-    if (rating >= 4500) return 'player_title_master';
-    if (rating >= 2500) return 'player_title_sniper';
-    if (rating >= 1500) return 'player_title_fighter';
-    return 'player_title_rising';
+    const [hwRows, puzzleRows] = await Promise.all([
+        database.all(
+            `SELECT status, COALESCE(completed_at, due_date) AS at
+             FROM homework_assignments
+             WHERE student_id = ? AND status IN ('completed', 'late')
+             ORDER BY COALESCE(completed_at, due_date) DESC, id DESC
+             LIMIT 40`,
+            [userId]
+        ),
+        database.all(
+            `SELECT solved_at AS at FROM user_puzzles
+             WHERE user_id = ?
+             ORDER BY solved_at DESC, id DESC
+             LIMIT 40`,
+            [userId]
+        ),
+    ]);
+    const events = [
+        ...hwRows.map((row) => ({
+            at: row.at || '',
+            delta: row.status === 'late' ? HW_XP_LATE : HW_XP_ON_TIME,
+        })),
+        ...puzzleRows.map((row) => ({
+            at: row.at || '',
+            delta: PUZZLE_XP,
+        })),
+    ].sort((a, b) => String(b.at).localeCompare(String(a.at)));
+    return buildXpSparklineFromEvents(currentXp, events, 12);
 }
 
 export const getFeaturedTournaments = async (limit = 4) => {
@@ -2717,19 +3042,6 @@ const LUCKY_PIECES = [
     { piece: '♘', key: 'player_lucky_knight' },
 ];
 
-export function buildChessArmy(wins = 0) {
-    const w = Number(wins) || 0;
-    const tiers = [
-        { piece: '♙', min: 0, label: 'player_army_pawn' },
-        { piece: '♘', min: 3, label: 'player_army_knight' },
-        { piece: '♗', min: 8, label: 'player_army_bishop' },
-        { piece: '♖', min: 15, label: 'player_army_rook' },
-        { piece: '♕', min: 30, label: 'player_army_queen' },
-        { piece: '♔', min: 50, label: 'player_army_king' },
-    ];
-    return tiers.map((tier) => ({ ...tier, unlocked: w >= tier.min }));
-}
-
 export function pickPlaystyle(user, form = {}) {
     const wins = Number(user?.wins) || 0;
     const losses = Number(user?.losses) || 0;
@@ -2753,27 +3065,18 @@ export function pickLuckyPiece(username = '') {
     return LUCKY_PIECES[h % LUCKY_PIECES.length];
 }
 
-export function buildDailyQuest(puzzle, form = {}) {
-    if (puzzle?.completedToday) {
-        return { key: 'player_quest_done', done: true, icon: '✅' };
-    }
-    if ((puzzle?.solvedToday || 0) < 10) {
-        return {
-            key: 'player_quest_puzzle',
-            done: false,
-            icon: '🧩',
-            progress: puzzle?.solvedToday || 0,
-            target: 10,
-        };
-    }
-    const recentWin = form?.wins > 0;
+export function buildDailyQuest(_unused, form = {}) {
+    const recentWin = (form?.wins || 0) > 0;
     if (!recentWin && (form?.total || 0) >= 3) {
-        return { key: 'player_quest_win', done: false, icon: '⚔️' };
+        return { key: 'player_quest_win', done: false, icon: '⚔️', href: '/game' };
     }
-    return { key: 'player_quest_play', done: false, icon: '♟' };
+    if ((form?.total || 0) === 0) {
+        return { key: 'player_quest_play', done: false, icon: '♟', href: '/game' };
+    }
+    return { key: 'player_quest_done', done: true, icon: '✅' };
 }
 
-export function analyzePlayerExtras(history = [], user = {}, form = {}, puzzle = null) {
+export function analyzePlayerExtras(history = [], user = {}, form = {}) {
     const opponentCounts = {};
     const typeCounts = {};
     for (const game of history) {
@@ -2808,7 +3111,7 @@ export function analyzePlayerExtras(history = [], user = {}, form = {}, puzzle =
         army: buildChessArmy(user?.wins),
         playstyle: pickPlaystyle(user, form),
         luckyPiece: pickLuckyPiece(user?.username),
-        dailyQuest: buildDailyQuest(puzzle, form),
+        dailyQuest: buildDailyQuest(null, form),
         nemesis: bestCount >= 2 ? nemesis : null,
         favoriteMode: modeCount >= 2 ? favoriteMode : null,
         rivals,

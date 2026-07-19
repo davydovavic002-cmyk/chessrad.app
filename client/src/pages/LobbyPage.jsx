@@ -1,11 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { useAuth } from '../auth/AuthContext';
 import { useI18n } from '../i18n/I18nContext';
 import { apiJson } from '../api';
 import { getSocket } from '../socket';
-import Modal from '../components/Modal';
 import LanguageToggle from '../components/LanguageToggle';
 import ThemeToggle from '../components/ThemeToggle';
 import NotificationBell from '../components/NotificationBell';
@@ -16,34 +15,24 @@ import {
   LobbyLeaderMedal,
   LobbyMenuWatermark,
 } from '../components/lobby/LobbyChessDecor';
+import AcademicLockedGate from '../components/AcademicLockedGate';
 import '../styles/style.css';
 import '../styles/lobby.css';
 import '../styles/lobby-spotlight.css';
+import '../styles/academic-lock.css';
 
 export default function LobbyPage() {
   const { user, logout } = useAuth();
   const { t } = useI18n();
   const navigate = useNavigate();
-  const [puzzleStatus, setPuzzleStatus] = useState(null);
   const [studyCode, setStudyCode] = useState('');
-  const [restoreOpen, setRestoreOpen] = useState(false);
-  const [botOpen, setBotOpen] = useState(false);
   const [spotlight, setSpotlight] = useState(null);
   const [badges, setBadges] = useState([]);
 
   const role = (user?.role || '').toLowerCase();
-
-  const loadPuzzleStatus = useCallback(async () => {
-    try {
-      const { res, data } = await apiJson('/api/user/puzzle-status');
-      if (res.ok) setPuzzleStatus(data);
-    } catch (e) {
-      console.error(e);
-    }
-  }, []);
+  const academicLocked = role === 'student' && Boolean(user?.needs_teacher_link);
 
   useEffect(() => {
-    loadPuzzleStatus();
     getSocket();
     apiJson('/api/lobby/spotlight').then(({ data }) => {
       if (data.success) setSpotlight(data);
@@ -51,18 +40,7 @@ export default function LobbyPage() {
     apiJson('/api/achievements').then(({ data }) => {
       if (data.success) setBadges(data.badges || []);
     });
-  }, [loadPuzzleStatus]);
-
-  useEffect(() => {
-    const onMessage = (event) => {
-      if (event.data?.type === 'STREAK_RESTORED') {
-        setBotOpen(false);
-        loadPuzzleStatus();
-      }
-    };
-    window.addEventListener('message', onMessage);
-    return () => window.removeEventListener('message', onMessage);
-  }, [loadPuzzleStatus]);
+  }, []);
 
   async function handleLogout() {
     await logout();
@@ -98,7 +76,7 @@ export default function LobbyPage() {
       Swal.fire({ icon: 'info', text: t('lobby_enter_code') });
       return;
     }
-    const { res, data } = await apiJson('/api/study/join', {
+    const { data } = await apiJson('/api/study/join', {
       method: 'POST',
       body: JSON.stringify({ roomCode }),
     });
@@ -118,45 +96,18 @@ export default function LobbyPage() {
   }
 
   const streakHtml =
-    user?.daily_streak > 0 ? (
-      <span className="win-streak-badge streak-active">🔥 {user.daily_streak}</span>
+    user?.win_streak > 0 ? (
+      <span className="win-streak-badge streak-active">🔥 {user.win_streak}</span>
     ) : null;
 
-  let puzzleCardClass = 'menu-card glass-card streak-daily-card';
-  let puzzleTitle = t('lobby_daily');
-  let puzzleSubtitle = t('lobby_daily_loading');
-  let puzzleIcon = '🔥';
-  let barWidth = '0%';
-  let onPuzzleClick = () => navigate('/puzzle');
-
-  if (puzzleStatus?.canRestore) {
-    puzzleCardClass += ' streak-broken';
-    puzzleTitle = t('lobby_streak_threat');
-    puzzleSubtitle = t('lobby_streak_return', { n: puzzleStatus.previousStreak });
-    puzzleIcon = '💔';
-    onPuzzleClick = () => setRestoreOpen(true);
-  } else if (puzzleStatus?.completedToday) {
-    puzzleCardClass += ' streak-completed';
-    puzzleTitle = t('lobby_daily_done');
-    puzzleSubtitle = t('lobby_daily_done_sub');
-    puzzleIcon = '✅';
-    barWidth = '100%';
-  } else if (puzzleStatus) {
-    puzzleCardClass += ' streak-urgent';
-    puzzleTitle = t('lobby_daily_tasks');
-    puzzleSubtitle = t('lobby_daily_progress', { n: puzzleStatus.solvedToday || 0 });
-    barWidth = `${(puzzleStatus.solvedToday || 0) * 10}%`;
-  }
-
   return (
-    <>
+    <div className="lobby-page lobby-page--chess">
       <LobbyFloatingPieces />
-      <div className="lobby-container page-wrap" style={{ visibility: 'visible' }}>
+      <div className="lobby-container page-wrap">
         <header className="lobby-header">
-          <div className="logo-area">
-            <span className="logo-area__piece" aria-hidden>♔</span>
-            <h1>{t('app_name')}</h1>
-            <span className="badge badge-online">Online</span>
+          <div className="logo">
+            <span className="logo-icon">♞</span>
+            <span>ChessRad</span>
           </div>
           <div id="user-status" className="user-info">
             <ThemeToggle />
@@ -177,9 +128,9 @@ export default function LobbyPage() {
         </header>
 
         <main className="lobby-content">
-          <LobbyHeroBanner user={user} puzzleStatus={puzzleStatus} t={t} />
+          <LobbyHeroBanner user={user} t={t} academicLocked={academicLocked} />
 
-          {role === 'student' && user?.needs_teacher_link && (
+          {academicLocked && (
             <div className="lobby-link-banner">
               <p>{t('lobby_teacher_link_banner')}</p>
               <Link to="/profile" className="btn btn-primary btn-sm">
@@ -230,231 +181,212 @@ export default function LobbyPage() {
             </section>
           )}
 
-          <div className="menu-grid">
-            <div className="menu-card glass-card menu-card--profile menu-card--chess" onClick={() => navigate('/profile')}>
-              <LobbyMenuWatermark pieceKey="profile" />
-              <div className="card-icon">👤</div>
-              <div className="card-text">
-                <h3>{t('lobby_profile')}</h3>
-                <p>{t('lobby_profile_sub')}</p>
-              </div>
-            </div>
-
-            {role !== 'teacher' && role !== 'admin' && (
-            <div className="menu-card primary glass-card menu-card--chess" onClick={() => navigate('/game')}>
-              <LobbyMenuWatermark pieceKey="game" />
-              <div className="card-icon">⚔️</div>
-              <div className="card-text">
-                <h3>{t('lobby_find_game')}</h3>
-                <p>{t('lobby_find_game_sub')}</p>
-              </div>
-            </div>
-            )}
-
-            {(role === 'teacher' || role === 'admin') && (
-              <>
-              <div
-                className="menu-card primary glass-card game-feature-card game-feature-card--journal menu-card--chess"
-                onClick={() => navigate('/journal')}
-              >
-                <LobbyMenuWatermark pieceKey="journal" />
-                <div className="card-icon">📓</div>
-                <div className="card-text">
-                  <h3>{t('lobby_journal')}</h3>
-                  <p>{t('lobby_journal_sub')}</p>
-                </div>
-              </div>
-              <div className="menu-card glass-card menu-card--chess" onClick={() => navigate('/schedule')}>
-                <LobbyMenuWatermark pieceKey="schedule" />
-                <div className="card-icon">📅</div>
-                <div className="card-text">
-                  <h3>{t('lobby_schedule')}</h3>
-                  <p>{t('lobby_schedule_sub')}</p>
-                </div>
-              </div>
-              </>
-            )}
-
-            {role === 'student' && (
-            <div className="menu-card glass-card menu-card--chess" onClick={() => navigate('/schedule')}>
-              <LobbyMenuWatermark pieceKey="schedule" />
-              <div className="card-icon">📅</div>
-              <div className="card-text">
-                <h3>{t('lobby_schedule')}</h3>
-                <p>{t('lobby_schedule_sub')}</p>
-              </div>
-            </div>
-            )}
-
-            {role === 'student' && (
-              <>
-              <div
-                className="menu-card glass-card game-feature-card menu-card--chess"
-                onClick={() => navigate('/homework')}
-              >
-                <LobbyMenuWatermark pieceKey="homework" />
-                <div className="card-icon">📝</div>
-                <div className="card-text">
-                  <h3>{t('lobby_homework')}</h3>
-                  <p>{t('lobby_homework_sub')}</p>
-                </div>
-              </div>
-              <div
-                className="menu-card glass-card game-feature-card menu-card--chess"
-                onClick={() => navigate('/calendar')}
-              >
-                <LobbyMenuWatermark pieceKey="calendar" />
-                <div className="card-icon">🗓️</div>
-                <div className="card-text">
-                  <h3>{t('lobby_calendar')}</h3>
-                  <p>{t('lobby_calendar_sub')}</p>
-                </div>
-              </div>
-              </>
-            )}
-
-            <div className="menu-card glass-card menu-card--chess" onClick={() => navigate('/tournaments')}>
-              <LobbyMenuWatermark pieceKey="tournaments" />
-              <div className="card-icon">🏆</div>
-              <div className="card-text">
-                <h3>{t('lobby_tournaments')}</h3>
-                <p>{t('lobby_tournaments_sub')}</p>
-              </div>
-            </div>
-
-            {role !== 'teacher' && role !== 'admin' && (
-            <div className={puzzleCardClass + ' menu-card--chess'} onClick={onPuzzleClick}>
-              <LobbyMenuWatermark pieceKey="puzzle" />
-              <div className="card-icon">{puzzleIcon}</div>
-              <div className="card-text">
-                <h3>{puzzleTitle}</h3>
-                <p>{puzzleSubtitle}</p>
-                <div className="streak-progress-mini">
-                  <div id="streak-bar-fill" style={{ width: barWidth }} />
-                </div>
-              </div>
-            </div>
-            )}
-
-            {role === 'admin' && (
-              <div
-                className="menu-card glass-card menu-card--chess"
-                style={{ borderColor: 'rgba(255,107,107,0.4)', background: 'rgba(255,107,107,0.1)' }}
-                onClick={() => navigate('/admin')}
-              >
-                <LobbyMenuWatermark pieceKey="admin" />
-                <div className="card-icon">⚙️</div>
-                <div className="card-text">
-                  <h3>{t('lobby_admin')}</h3>
-                  <p>{t('lobby_admin_sub')}</p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {role !== 'player' && (
-          <div className="lobby-section study-section">
-            <h2>{t('lobby_study')}</h2>
-            <div id="study-controls">
-              {role === 'teacher' || role === 'admin' ? (
-                <>
-                <div
-                  className="menu-card primary study-card menu-card--chess"
-                  style={{ cursor: 'pointer', padding: 15 }}
-                  onClick={() => createStudy('duo')}
-                >
-                  <LobbyMenuWatermark pieceKey="study" />
-                  <div className="card-icon">👨‍🏫</div>
+          {role === 'student' ? (
+            <>
+              <div className="menu-grid">
+                <div className="menu-card glass-card menu-card--profile menu-card--chess" onClick={() => navigate('/profile')}>
+                  <LobbyMenuWatermark pieceKey="profile" />
+                  <div className="card-icon">👤</div>
                   <div className="card-text">
-                    <h3>{t('lobby_create_study')}</h3>
-                    <p>{t('lobby_create_study_sub')}</p>
+                    <h3>{t('lobby_profile')}</h3>
+                    <p>{t('lobby_profile_sub_dual')}</p>
                   </div>
                 </div>
-                <div
-                  className="menu-card study-card menu-card--chess"
-                  style={{ cursor: 'pointer', padding: 15, marginTop: 12 }}
-                  onClick={createGroupStudy}
-                >
-                  <LobbyMenuWatermark pieceKey="group" />
-                  <div className="card-icon">👥</div>
-                  <div className="card-text">
-                    <h3>{t('lobby_create_group')}</h3>
-                    <p>{t('lobby_create_group_sub')}</p>
+              </div>
+
+              <div className="lobby-section lobby-section--play">
+                <h2>🏆 {t('mode_tournament')}</h2>
+                <p className="subtitle lobby-section__hint">{t('mode_tournament_hint')}</p>
+                <div className="menu-grid">
+                  <div className="menu-card primary glass-card menu-card--chess" onClick={() => navigate('/game')}>
+                    <LobbyMenuWatermark pieceKey="game" />
+                    <div className="card-icon">⚔️</div>
+                    <div className="card-text">
+                      <h3>{t('lobby_find_game')}</h3>
+                      <p>{t('lobby_find_game_sub')}</p>
+                    </div>
                   </div>
-                </div>
-                </>
-              ) : (
-                <div className="menu-card study-card menu-card--chess" style={{ cursor: 'default', padding: 15, minHeight: 'auto' }}>
-                  <LobbyMenuWatermark pieceKey="study" />
-                  <div className="card-icon">🎓</div>
-                  <div className="card-text" style={{ width: '100%' }}>
-                    <h3>{t('lobby_join_study')}</h3>
-                    <div className="study-join-row">
-                      <input
-                        type="text"
-                        className="form-input study-join-input"
-                        placeholder={t('lobby_room_code')}
-                        value={studyCode}
-                        onChange={(e) => setStudyCode(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && joinStudy()}
-                      />
-                      <button type="button" className="btn btn-primary btn-sm study-join-btn" onClick={joinStudy}>
-                        {t('lobby_join')}
-                      </button>
+                  <div className="menu-card glass-card menu-card--chess" onClick={() => navigate('/tournaments')}>
+                    <LobbyMenuWatermark pieceKey="tournaments" />
+                    <div className="card-icon">🏆</div>
+                    <div className="card-text">
+                      <h3>{t('lobby_tournaments')}</h3>
+                      <p>{t('lobby_tournaments_sub')}</p>
                     </div>
                   </div>
                 </div>
+              </div>
+
+              <AcademicLockedGate locked={academicLocked} t={t} className="lobby-section-lock">
+                <div className="lobby-section lobby-section--learn">
+                  <h2>📚 {t('mode_academic')}</h2>
+                  <p className="subtitle lobby-section__hint">{t('mode_academic_hint')}</p>
+                  <div className="menu-grid">
+                    <div className="menu-card glass-card menu-card--chess" onClick={() => navigate('/schedule')}>
+                      <LobbyMenuWatermark pieceKey="schedule" />
+                      <div className="card-icon">📅</div>
+                      <div className="card-text">
+                        <h3>{t('lobby_schedule')}</h3>
+                        <p>{t('lobby_schedule_sub')}</p>
+                      </div>
+                    </div>
+                    <div className="menu-card glass-card game-feature-card menu-card--chess" onClick={() => navigate('/homework')}>
+                      <LobbyMenuWatermark pieceKey="homework" />
+                      <div className="card-icon">📝</div>
+                      <div className="card-text">
+                        <h3>{t('lobby_homework')}</h3>
+                        <p>{t('lobby_homework_sub')}</p>
+                      </div>
+                    </div>
+                    <div className="menu-card glass-card game-feature-card menu-card--chess" onClick={() => navigate('/calendar')}>
+                      <LobbyMenuWatermark pieceKey="calendar" />
+                      <div className="card-icon">🗓️</div>
+                      <div className="card-text">
+                        <h3>{t('lobby_calendar')}</h3>
+                        <p>{t('lobby_calendar_sub')}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="lobby-section study-section">
+                  <h2>{t('lobby_study')}</h2>
+                  <div id="study-controls">
+                    <div className="menu-card study-card menu-card--chess" style={{ cursor: 'default', padding: 15, minHeight: 'auto' }}>
+                      <LobbyMenuWatermark pieceKey="study" />
+                      <div className="card-icon">🎓</div>
+                      <div className="card-text" style={{ width: '100%' }}>
+                        <h3>{t('lobby_join_study')}</h3>
+                        <div className="study-join-row">
+                          <input
+                            type="text"
+                            className="form-input study-join-input"
+                            placeholder={t('lobby_room_code')}
+                            value={studyCode}
+                            onChange={(e) => setStudyCode(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && joinStudy()}
+                          />
+                          <button type="button" className="btn btn-primary btn-sm study-join-btn" onClick={joinStudy}>
+                            {t('lobby_join')}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </AcademicLockedGate>
+            </>
+          ) : (
+            <>
+              <div className="menu-grid">
+                <div className="menu-card glass-card menu-card--profile menu-card--chess" onClick={() => navigate('/profile')}>
+                  <LobbyMenuWatermark pieceKey="profile" />
+                  <div className="card-icon">👤</div>
+                  <div className="card-text">
+                    <h3>{t('lobby_profile')}</h3>
+                    <p>{t('lobby_profile_sub')}</p>
+                  </div>
+                </div>
+
+                {role !== 'teacher' && role !== 'admin' && (
+                  <div className="menu-card primary glass-card menu-card--chess" onClick={() => navigate('/game')}>
+                    <LobbyMenuWatermark pieceKey="game" />
+                    <div className="card-icon">⚔️</div>
+                    <div className="card-text">
+                      <h3>{t('lobby_find_game')}</h3>
+                      <p>{t('lobby_find_game_sub')}</p>
+                    </div>
+                  </div>
+                )}
+
+                {(role === 'teacher' || role === 'admin') && (
+                  <>
+                    <div
+                      className="menu-card primary glass-card game-feature-card game-feature-card--journal menu-card--chess"
+                      onClick={() => navigate('/journal')}
+                    >
+                      <LobbyMenuWatermark pieceKey="journal" />
+                      <div className="card-icon">📓</div>
+                      <div className="card-text">
+                        <h3>{t('lobby_journal')}</h3>
+                        <p>{t('lobby_journal_sub')}</p>
+                      </div>
+                    </div>
+                    <div className="menu-card glass-card menu-card--chess" onClick={() => navigate('/schedule')}>
+                      <LobbyMenuWatermark pieceKey="schedule" />
+                      <div className="card-icon">📅</div>
+                      <div className="card-text">
+                        <h3>{t('lobby_schedule')}</h3>
+                        <p>{t('lobby_schedule_sub')}</p>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                <div className="menu-card glass-card menu-card--chess" onClick={() => navigate('/tournaments')}>
+                  <LobbyMenuWatermark pieceKey="tournaments" />
+                  <div className="card-icon">🏆</div>
+                  <div className="card-text">
+                    <h3>{t('lobby_tournaments')}</h3>
+                    <p>{t('lobby_tournaments_sub')}</p>
+                  </div>
+                </div>
+
+                {role === 'admin' && (
+                  <div
+                    className="menu-card glass-card menu-card--chess"
+                    style={{ borderColor: 'rgba(255,107,107,0.4)', background: 'rgba(255,107,107,0.1)' }}
+                    onClick={() => navigate('/admin')}
+                  >
+                    <LobbyMenuWatermark pieceKey="admin" />
+                    <div className="card-icon">⚙️</div>
+                    <div className="card-text">
+                      <h3>{t('lobby_admin')}</h3>
+                      <p>{t('lobby_admin_sub')}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {role !== 'player' && (
+                <div className="lobby-section study-section">
+                  <h2>{t('lobby_study')}</h2>
+                  <div id="study-controls">
+                    {(role === 'teacher' || role === 'admin') && (
+                      <>
+                        <div
+                          className="menu-card primary study-card menu-card--chess"
+                          style={{ cursor: 'pointer', padding: 15 }}
+                          onClick={() => createStudy('duo')}
+                        >
+                          <LobbyMenuWatermark pieceKey="study" />
+                          <div className="card-icon">👨‍🏫</div>
+                          <div className="card-text">
+                            <h3>{t('lobby_create_study')}</h3>
+                            <p>{t('lobby_create_study_sub')}</p>
+                          </div>
+                        </div>
+                        <div
+                          className="menu-card study-card menu-card--chess"
+                          style={{ cursor: 'pointer', padding: 15, marginTop: 12 }}
+                          onClick={createGroupStudy}
+                        >
+                          <LobbyMenuWatermark pieceKey="group" />
+                          <div className="card-icon">👥</div>
+                          <div className="card-text">
+                            <h3>{t('lobby_create_group')}</h3>
+                            <p>{t('lobby_create_group_sub')}</p>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
               )}
-            </div>
-          </div>
+            </>
           )}
         </main>
       </div>
-
-      <Modal open={restoreOpen} onClose={() => setRestoreOpen(false)}>
-        <span className="modal-icon">💔</span>
-        <h2>{t('lobby_streak_threat')}</h2>
-        <p>
-          {t('lobby_streak_return', { n: puzzleStatus?.previousStreak })}
-        </p>
-        <button
-          className="btn btn-primary btn-block"
-          onClick={() => {
-            setRestoreOpen(false);
-            setBotOpen(true);
-          }}
-        >
-          ⚔️
-        </button>
-        <button className="btn btn-ghost btn-block mt-2" onClick={() => setRestoreOpen(false)}>
-          {t('cancel')}
-        </button>
-      </Modal>
-
-      <Modal
-        open={botOpen}
-        onClose={() => {
-          setBotOpen(false);
-          loadPuzzleStatus();
-        }}
-        contentClassName="bot-modal-panel"
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, textAlign: 'left' }}>
-          <h3 style={{ margin: 0, fontSize: '1.2rem' }}>🤖</h3>
-          <button
-            type="button"
-            className="close-btn"
-            style={{ background: 'none', border: 'none', color: 'var(--coral)', fontSize: 28, cursor: 'pointer' }}
-            onClick={() => {
-              setBotOpen(false);
-              loadPuzzleStatus();
-            }}
-          >
-            &times;
-          </button>
-        </div>
-        <iframe title="bot" src="/play-bot?mode=restore_streak" style={{ width: '100%', height: 520, border: 'none' }} />
-      </Modal>
-    </>
+    </div>
   );
 }

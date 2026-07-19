@@ -77,12 +77,40 @@
   border: none;
 }
 
-.lobby-hero-chip--fire {
-  background: rgba(255, 71, 87, 0.12);
+.lobby-hero-chip--xp {
+  background: linear-gradient(135deg, #3d9b7a, #2a7a5c);
+  color: #fff;
+  border: none;
 }
 
-.lobby-hero-chip--puzzle {
-  background: rgba(46, 213, 115, 0.15);
+.lobby-section__hint {
+  margin: -4px 0 12px;
+}
+
+.lobby-section--play,
+.lobby-section--learn {
+  margin-top: 18px;
+}
+
+.lobby-section--play > h2,
+.lobby-section--learn > h2 {
+  margin-bottom: 4px;
+}
+
+.lobby-section-lock {
+  margin-top: 18px;
+}
+
+.lobby-section-lock .lobby-section {
+  margin-top: 0;
+}
+
+.lobby-section-lock .lobby-section + .lobby-section {
+  margin-top: 18px;
+}
+
+.lobby-hero-chip--fire {
+  background: rgba(255, 71, 87, 0.12);
 }
 
 .lobby-hero__record {

@@ -33,15 +33,16 @@ export function LobbyFunClock({ t }) {
   );
 }
 
-export function LobbyHeroBanner({ user, puzzleStatus, t }) {
+export function LobbyHeroBanner({ user, t, academicLocked = false }) {
   const displayName = user?.display_name || user?.username || '';
   const piece = rolePiece(user?.role);
-  const rating = Number(user?.rating) || 0;
+  const rating = Number(user?.tournamentElo ?? user?.rating) || 0;
+  const academicXp = Number(user?.academicXp ?? user?.academic_xp) || 0;
+  const showDual = user?.role === 'student';
   const wins = Number(user?.wins) || 0;
   const losses = Number(user?.losses) || 0;
   const draws = Number(user?.draws) || 0;
   const winStreak = Number(user?.win_streak) || 0;
-  const dailyStreak = Number(user?.daily_streak) || 0;
   const mottoKey = pickChessItem(`${user?.username}-lobby`, [
     'lobby_motto_1',
     'lobby_motto_2',
@@ -75,19 +76,25 @@ export function LobbyHeroBanner({ user, puzzleStatus, t }) {
         <div className="lobby-hero__aside">
           <LobbyFunClock t={t} />
           <div className="lobby-hero__chips">
-            <span className="lobby-hero-chip lobby-hero-chip--rating">
-              <span aria-hidden>♚</span> {rating} Elo
-            </span>
+            {showDual ? (
+              <>
+                <span className="lobby-hero-chip lobby-hero-chip--rating" title={t('rating_tournament_hint')}>
+                  <span aria-hidden>🏆</span> {rating} Elo
+                </span>
+                <span
+                  className={`lobby-hero-chip lobby-hero-chip--xp${academicLocked ? ' academic-chip-locked' : ''}`}
+                  title={academicLocked ? t('academic_locked_title') : t('rating_academic_hint')}
+                >
+                  <span aria-hidden>📚</span> {academicXp} XP
+                </span>
+              </>
+            ) : (
+              <span className="lobby-hero-chip lobby-hero-chip--rating">
+                <span aria-hidden>♚</span> {rating} Elo
+              </span>
+            )}
             {winStreak > 0 && (
               <span className="lobby-hero-chip lobby-hero-chip--fire">🔥 {winStreak}</span>
-            )}
-            {dailyStreak > 0 && (
-              <span className="lobby-hero-chip lobby-hero-chip--puzzle">🧩 {dailyStreak}</span>
-            )}
-            {puzzleStatus && !puzzleStatus.completedToday && (
-              <span className="lobby-hero-chip">
-                {puzzleStatus.solvedToday || 0}/10 {t('lobby_daily_short')}
-              </span>
             )}
           </div>
           <div className="lobby-hero__record">

@@ -7,7 +7,6 @@ import AuthPage from './pages/AuthPage';
 import LobbyPage from './pages/LobbyPage';
 import ProfilePage from './pages/ProfilePage';
 import GamePage from './pages/GamePage';
-import PuzzlePage from './pages/PuzzlePage';
 import PlayBotPage from './pages/PlayBotPage';
 import TournamentPage from './pages/TournamentPage';
 import TournamentListPage from './pages/TournamentListPage';
@@ -46,7 +45,7 @@ export default function App() {
             <Route path="/profile" element={<Protected><ProfilePage /></Protected>} />
             <Route path="/game" element={<Protected><GamePage /></Protected>} />
             <Route path="/game/:gameId" element={<Protected><TournamentGamePage /></Protected>} />
-            <Route path="/puzzle" element={<Protected><PuzzlePage /></Protected>} />
+            <Route path="/puzzle" element={<Protected><Navigate to="/lobby" replace /></Protected>} />
             <Route path="/play-bot" element={<Protected><PlayBotPage /></Protected>} />
             <Route path="/tournaments" element={<Protected><TournamentListPage /></Protected>} />
             <Route path="/tournaments/:id" element={<Protected><TournamentPage /></Protected>} />

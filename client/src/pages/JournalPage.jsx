@@ -298,7 +298,7 @@ export default function JournalPage() {
                 <button
                   type="button"
                   className="btn btn-primary btn-sm"
-                  onClick={() => navigate(`/puzzle?theme=${encodeURIComponent(topic)}`)}
+                  onClick={() => navigate('/homework')}
                 >
                   {t('weak_topics_train')}
                 </button>

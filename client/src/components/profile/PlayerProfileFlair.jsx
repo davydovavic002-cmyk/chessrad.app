@@ -1,5 +1,3 @@
-import { Link } from 'react-router-dom';
-
 const STYLE_ICONS = {
   player_style_rookie: '♟',
   player_style_hot: '🔥',
@@ -83,7 +81,7 @@ export function PlayerDailyQuest({ quest, t, navigate }) {
         </div>
       )}
       {!quest.done && (
-        <button type="button" className="btn btn-primary btn-sm mt-2" onClick={() => navigate(quest.icon === '⚔️' ? '/game' : '/puzzle')}>
+        <button type="button" className="btn btn-primary btn-sm mt-2" onClick={() => navigate(quest.href || (quest.icon === '⚔️' ? '/game' : '/homework'))}>
           {t('player_quest_go')}
         </button>
       )}
@@ -202,9 +200,6 @@ export function PlayerQuickLinks({ t, navigate }) {
         <button type="button" className="profile-player-link" onClick={() => navigate('/tournaments')}>
           <span>♕</span> {t('lobby_tournaments')}
         </button>
-        <Link to="/puzzle" className="profile-player-link">
-          <span>♗</span> {t('lobby_daily')}
-        </Link>
       </div>
     </section>
   );

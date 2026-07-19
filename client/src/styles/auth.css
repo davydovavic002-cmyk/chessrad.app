@@ -136,6 +136,10 @@
     min-width: 90px;
 }
 
+.role-select--two .role-option {
+    flex: 1 1 calc(50% - 6px);
+}
+
 .auth-hint {
     font-size: 0.8rem;
     color: var(--text-muted);

@@ -1,6 +1,4 @@
-import { test, expect } from '@playwright/test';
-
-const BASE = process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:3569';
+const BASE = process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:3011';
 
 test.describe('ChessRad smoke', () => {
   test('home page loads', async ({ page }) => {
@@ -18,8 +16,15 @@ test.describe('ChessRad smoke', () => {
     expect(res?.status()).toBeLessThan(500);
   });
 
-  test('api health via puzzle status redirect', async ({ request }) => {
-    const res = await request.get(`${BASE}/api/user/puzzle-status`);
+  test('api profile requires auth', async ({ request }) => {
+    const res = await request.get(`${BASE}/api/profile`);
     expect([401, 403]).toContain(res.status());
+  });
+
+  test('puzzle routes are disabled', async ({ page, request }) => {
+    await page.goto(`${BASE}/puzzle`);
+    await expect(page).toHaveURL(/lobby|\/($|\?)/);
+    const res = await request.get(`${BASE}/api/user/puzzle-status`);
+    expect([401, 403, 410]).toContain(res.status());
   });
 });

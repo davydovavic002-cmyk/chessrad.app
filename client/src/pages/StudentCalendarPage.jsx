@@ -114,7 +114,7 @@ export default function StudentCalendarPage() {
                         type="button"
                         className="btn btn-primary btn-sm"
                         style={{ marginLeft: 8 }}
-                        onClick={() => navigate(`/puzzle?theme=${encodeURIComponent(topic)}`)}
+                        onClick={() => navigate('/homework')}
                       >
                         {t('weak_topics_train')}
                       </button>

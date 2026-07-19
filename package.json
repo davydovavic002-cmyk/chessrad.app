@@ -11,6 +11,9 @@
     "build": "node scripts/build-client.mjs",
     "deploy:server": "bash scripts/deploy.sh",
     "build:start": "npm run build && node server.js",
+    "test": "node --test test/ratings.test.js test/senior-invariants.test.js",
+    "test:ratings": "node --test test/ratings.test.js",
+    "test:senior": "node --test test/senior-invariants.test.js",
     "test:e2e": "playwright test"
   },
   "devDependencies": {

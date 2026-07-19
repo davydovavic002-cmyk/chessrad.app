@@ -51,17 +51,6 @@
                     </div>
                 </div>
 
-                <div class="menu-card glass-card streak-daily-card" id="puzzles-btn">
-                    <div class="card-icon" id="streak-icon">🔥</div>
-                    <div class="card-text">
-                        <h3 id="streak-title">Задание дня</h3>
-                        <p id="streak-subtitle">Загрузка прогресса...</p>
-                        <div class="streak-progress-mini">
-                            <div id="streak-bar-fill"></div>
-                        </div>
-                    </div>
-                </div>
-
                 <div id="admin-card-container"></div>
             </div>
 
@@ -76,53 +65,7 @@
         </main>
     </div>
 
-    <div id="restore-streak-modal" class="modal-overlay">
-        <div class="modal-glass">
-            <span class="modal-icon">💔</span>
-            <h2>Твой стрик сгорел!</h2>
-            <p id="restore-modal-text">Ты не решал задачи более 48 часов. Победи бота, чтобы воскресить серию!</p>
-            <button class="btn btn-primary btn-block" id="start-restore-battle">⚔️ Победить бота и вернуть</button>
-            <button class="btn btn-ghost btn-block mt-2" onclick="closeRestoreModal()">Позже</button>
-        </div>
-    </div>
-
-    <div id="bot-game-overlay" class="modal-overlay">
-        <div class="modal-glass" style="max-width:480px;height:680px;display:flex;flex-direction:column;text-align:left;padding:24px;">
-            <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-                <h3 style="margin:0;font-size:1.2rem;">Битва с ботом</h3>
-                <button onclick="closeBotGame()" class="close-btn" style="background:none;border:none;color:var(--coral);font-size:28px;cursor:pointer;">&times;</button>
-            </div>
-            <iframe id="bot-game-iframe" src="" title="Игра с ботом"></iframe>
-        </div>
-    </div>
-
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script>
-        function openBotGame(mode = 'restore_streak') {
-            document.getElementById('bot-game-overlay').style.display = 'flex';
-            document.getElementById('bot-game-iframe').src = `/play-bot.html?mode=${mode}`;
-        }
-        function closeBotGame() {
-            document.getElementById('bot-game-overlay').style.display = 'none';
-            document.getElementById('bot-game-iframe').src = '';
-            if (typeof setupDailyTaskCard === 'function') setupDailyTaskCard();
-        }
-        function openRestoreModal(days) {
-            document.getElementById('restore-modal-text').innerHTML =
-                `Ты не решал задачи более 48 часов. Твой стрик в <b>${days} дн.</b> превратился в пепел. Победи бота, чтобы воскресить его!`;
-            document.getElementById('restore-streak-modal').style.display = 'flex';
-        }
-        function closeRestoreModal() {
-            document.getElementById('restore-streak-modal').style.display = 'none';
-        }
-        document.getElementById('start-restore-battle').onclick = () => {
-            closeRestoreModal();
-            openBotGame('restore_streak');
-        };
-        window.addEventListener('message', (event) => {
-            if (event.data.type === 'STREAK_RESTORED') closeBotGame();
-        });
-    </script>
     <script src="/js/lobby.js"></script>
 </body>
 </html>

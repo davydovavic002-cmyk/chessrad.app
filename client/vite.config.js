@@ -28,7 +28,7 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
           {
-            urlPattern: /^https?:\/\/127\.0\.0\.1:3569\/api\/puzzle\//,
+            urlPattern: /^https?:\/\/127\.0\.0\.1:3011\/api\//,
             handler: 'NetworkFirst',
             options: { cacheName: 'puzzle-api', networkTimeoutSeconds: 5 },
           },
@@ -39,8 +39,8 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api': { target: 'http://127.0.0.1:3569', changeOrigin: true },
-      '/socket.io': { target: 'http://127.0.0.1:3569', ws: true, changeOrigin: true },
+      '/api': { target: 'http://127.0.0.1:3011', changeOrigin: true },
+      '/socket.io': { target: 'http://127.0.0.1:3011', ws: true, changeOrigin: true },
     },
   },
 });

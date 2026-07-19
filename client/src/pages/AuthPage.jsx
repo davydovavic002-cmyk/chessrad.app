@@ -78,6 +78,7 @@ export default function AuthPage() {
     const result = await register(username, password, selectedRole, {
       displayName: form.get('displayName'),
       teacherLinkCode: selectedRole === 'student' ? form.get('teacherLinkCode') : undefined,
+      teacherInviteCode: selectedRole === 'teacher' ? form.get('teacherInviteCode') : undefined,
     });
     if (result.ok) {
       const loginResult = await login(username, password);
@@ -211,7 +212,7 @@ export default function AuthPage() {
               </div>
               <div className="form-group">
                 <label>{t('auth_role')}</label>
-                <div className="role-select role-select--three">
+                <div className="role-select role-select--two">
                   <div
                     className={`role-option${selectedRole === 'student' ? ' selected' : ''}`}
                     onClick={() => setSelectedRole('student')}
@@ -226,15 +227,21 @@ export default function AuthPage() {
                     <span className="role-icon">📚</span>
                     {t('auth_teacher')}
                   </div>
-                  <div
-                    className={`role-option${selectedRole === 'player' ? ' selected' : ''}`}
-                    onClick={() => setSelectedRole('player')}
-                  >
-                    <span className="role-icon">♟️</span>
-                    {t('auth_player')}
-                  </div>
                 </div>
               </div>
+              {selectedRole === 'teacher' && (
+                <div className="form-group">
+                  <label htmlFor="reg-teacher-invite">{t('auth_teacher_invite')}</label>
+                  <input
+                    id="reg-teacher-invite"
+                    name="teacherInviteCode"
+                    className="form-input"
+                    placeholder={t('auth_teacher_invite_ph')}
+                    required
+                  />
+                  <p className="auth-hint">{t('auth_teacher_invite_hint')}</p>
+                </div>
+              )}
               {selectedRole === 'student' && (
                 <div className="form-group">
                   <label htmlFor="reg-teacher-code">{t('auth_teacher_code')}</label>
