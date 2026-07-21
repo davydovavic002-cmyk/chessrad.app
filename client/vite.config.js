@@ -26,13 +26,9 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        runtimeCaching: [
-          {
-            urlPattern: /^https?:\/\/127\.0\.0\.1:3011\/api\//,
-            handler: 'NetworkFirst',
-            options: { cacheName: 'puzzle-api', networkTimeoutSeconds: 5 },
-          },
-        ],
+        // Never cache API or sockets — stale/corrupt SW cache caused ERR_CACHE_READ_FAILURE.
+        navigateFallbackDenylist: [/^\/api\//, /^\/socket\.io\//],
+        runtimeCaching: [],
       },
     }),
   ],
